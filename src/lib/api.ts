@@ -1,0 +1,692 @@
+const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000"
+
+// ── Types ─────────────────────────────────────────────────────────────────────
+
+export interface OrgMembership {
+  id: string
+  name: string
+  slug: string
+  role: "owner" | "member"
+}
+
+export interface CurrentUser {
+  id: string
+  email: string
+  name: string
+  avatar_url: string | null
+  organizations: OrgMembership[]
+}
+
+export interface Invitation {
+  id: string
+  organization_id: string
+  organization_name: string
+  invited_by_name: string
+  role: "owner" | "member"
+  created_at: string
+}
+
+// ── Core fetch ────────────────────────────────────────────────────────────────
+
+async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
+  const res = await fetch(`${API_BASE}${path}`, {
+    credentials: "include", // send HttpOnly cookie automatically
+    headers: { "Content-Type": "application/json" },
+    ...init,
+  })
+
+  if (!res.ok) {
+    const error = await res.json().catch(() => ({ detail: res.statusText }))
+    throw new Error(error.detail ?? "API error")
+  }
+
+  if (res.status === 204 || res.headers.get("content-length") === "0") {
+    return undefined as T
+  }
+
+  return res.json() as Promise<T>
+}
+
+// ── Auth ──────────────────────────────────────────────────────────────────────
+
+export const auth = {
+  /** Redirect browser to Google login (handled by FastAPI) */
+  loginWithGoogle: () => {
+    window.location.href = `${API_BASE}/auth/google/login`
+  },
+
+  me: (): Promise<CurrentUser> => apiFetch("/auth/me"),
+
+  logout: (): Promise<{ ok: boolean }> =>
+    apiFetch("/auth/logout", { method: "POST" }),
+}
+
+// ── Connectors ────────────────────────────────────────────────────────────────
+
+export type ConnectorType = "gmail" | "telegram_bot" | "telegram_client" | "twilio" | "webhook" | "openai" | "anthropic" | "mcp"
+export type ConnectorStatus = "active" | "error" | "pending_auth" | "revoked"
+
+export interface Connector {
+  id: string
+  name: string
+  type: ConnectorType
+  status: ConnectorStatus
+  created_at: string
+  updated_at: string
+}
+
+export const connectors = {
+  list: (orgId: string): Promise<Connector[]> =>
+    apiFetch(`/connectors/?org_id=${orgId}`),
+
+  delete: (id: string, orgId: string): Promise<void> =>
+    apiFetch(`/connectors/${id}?org_id=${orgId}`, { method: "DELETE" }),
+
+  test: (id: string, orgId: string): Promise<{ ok: boolean; detail: string }> =>
+    apiFetch(`/connectors/${id}/test?org_id=${orgId}`, { method: "POST" }),
+
+  connectGmail: (orgId: string) => {
+    window.location.href = `${API_BASE}/connectors/oauth/google/start?org_id=${orgId}`
+  },
+
+  startTelegramClient: (orgId: string, phone: string): Promise<{ session_id: string }> =>
+    apiFetch("/connectors/telegram-client/start", {
+      method: "POST",
+      body: JSON.stringify({ org_id: orgId, phone }),
+    }),
+
+  verifyTelegramClient: (
+    sessionId: string,
+    code?: string,
+    password?: string,
+  ): Promise<{ ok: boolean; needs_2fa?: boolean; user?: { name: string; phone: string; username: string } }> =>
+    apiFetch("/connectors/telegram-client/verify", {
+      method: "POST",
+      body: JSON.stringify({ session_id: sessionId, code, password }),
+    }),
+
+  saveTelegramClient: (sessionId: string, name: string, orgId: string): Promise<Connector> =>
+    apiFetch("/connectors/telegram-client/save", {
+      method: "POST",
+      body: JSON.stringify({ session_id: sessionId, name, org_id: orgId }),
+    }),
+
+  validateLLM: (provider: "openai" | "anthropic", apiKey: string): Promise<{ ok: boolean; detail: string }> =>
+    apiFetch("/connectors/llm/validate", {
+      method: "POST",
+      body: JSON.stringify({ provider, api_key: apiKey }),
+    }),
+
+  createLLM: (orgId: string, name: string, provider: "openai" | "anthropic", apiKey: string): Promise<Connector> =>
+    apiFetch("/connectors/llm", {
+      method: "POST",
+      body: JSON.stringify({ org_id: orgId, name, provider, api_key: apiKey }),
+    }),
+
+  createTelegramBot: (
+    orgId: string,
+    name: string,
+    botToken: string,
+    adminChatId: number,
+    adminUsername: string,
+    adminFirstName: string,
+  ): Promise<Connector> =>
+    apiFetch("/connectors/telegram-bot", {
+      method: "POST",
+      body: JSON.stringify({
+        org_id: orgId,
+        name,
+        bot_token: botToken,
+        admin_chat_id: adminChatId,
+        admin_username: adminUsername,
+        admin_first_name: adminFirstName,
+      }),
+    }),
+
+  validateTwilio: (
+    accountSid: string,
+    authToken: string,
+    phoneNumber: string,
+  ): Promise<{ ok: boolean; friendly_name: string; detail: string }> =>
+    apiFetch("/connectors/twilio/validate", {
+      method: "POST",
+      body: JSON.stringify({ account_sid: accountSid, auth_token: authToken, phone_number: phoneNumber }),
+    }),
+
+  createTwilio: (
+    orgId: string,
+    accountSid: string,
+    authToken: string,
+    phoneNumber: string,
+    name: string,
+  ): Promise<Connector> =>
+    apiFetch("/connectors/twilio", {
+      method: "POST",
+      body: JSON.stringify({ org_id: orgId, account_sid: accountSid, auth_token: authToken, phone_number: phoneNumber, name }),
+    }),
+
+  twilioSendTestSms: (connectorId: string, orgId: string, to: string): Promise<{ ok: boolean; detail: string }> =>
+    apiFetch(`/connectors/twilio/${connectorId}/send-test-sms`, {
+      method: "POST",
+      body: JSON.stringify({ org_id: orgId, to }),
+    }),
+
+  probeMcp: (orgId: string, url: string, token?: string): Promise<{
+    url: string
+    auth: "none" | "bearer" | "oauth"
+    tools: { name: string; description: string }[] | null
+    oauth: Record<string, unknown> | null
+  }> =>
+    apiFetch("/connectors/mcp/probe", {
+      method: "POST",
+      body: JSON.stringify({ org_id: orgId, url, token: token || null }),
+    }),
+
+  createMcp: (orgId: string, data: { name?: string; url: string; catalog_key: string; token?: string }): Promise<Connector> =>
+    apiFetch("/connectors/mcp", {
+      method: "POST",
+      body: JSON.stringify({ org_id: orgId, ...data }),
+    }),
+
+  connectMcpOAuth: (orgId: string, catalogKey: string, url?: string, name?: string) => {
+    const params = new URLSearchParams({ org_id: orgId, catalog_key: catalogKey })
+    if (url) params.set("url", url)
+    if (name) params.set("name", name)
+    window.location.href = `${API_BASE}/connectors/oauth/mcp/start?${params}`
+  },
+
+  startMcpOAuth: (orgId: string, data: {
+    catalog_key: string
+    url?: string
+    name?: string
+    client_id?: string
+    client_secret?: string
+  }): Promise<{ redirect: string }> =>
+    apiFetch("/connectors/oauth/mcp/start", {
+      method: "POST",
+      body: JSON.stringify({ org_id: orgId, ...data }),
+    }),
+
+  mcpCatalog: (): Promise<{
+    key: string
+    label: string
+    url: string
+    preferred_auth: string
+    description: string
+    oauth_ready: boolean
+    needs_oauth_app: boolean
+    redirect_uri: string
+  }[]> => apiFetch("/connectors/mcp/catalog"),
+
+  resyncMcp: (id: string, orgId: string): Promise<{ ok: boolean; detail: string }> =>
+    apiFetch(`/connectors/${id}/mcp/resync?org_id=${orgId}`, { method: "POST" }),
+}
+
+// ── Agents ────────────────────────────────────────────────────────────────────
+
+export type AgentStatus = "draft" | "published" | "archived"
+export type TriggerType = "schedule" | "channel" | "manual" | "agent"
+export type SessionStatus = "running" | "succeeded" | "error" | "waiting_approval"
+export type MessageRole = "user" | "assistant" | "tool" | "system"
+
+export interface AgentSettings {
+  max_iterations: number
+  tool_concurrency: number
+  web_search: boolean
+  web_search_provider: string
+  live_page_access: boolean
+  search_context: "low" | "medium" | "high"
+  reasoning: boolean
+  episodic_memory: boolean
+  daily_token_budget: number
+}
+
+export interface Agent {
+  id: string
+  org_id: string
+  name: string
+  icon: string
+  instructions: string
+  template_key: string | null
+  model_connector_id: string | null
+  model: string
+  status: AgentStatus
+  settings: AgentSettings
+  has_unpublished_changes: boolean
+  published_at: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface AgentTemplate {
+  key: string
+  name: string
+  icon: string
+  tagline: string
+  description: string
+  instructions: string
+  required_connectors: ConnectorType[]
+  optional_connectors: ConnectorType[]
+  trigger_type: TriggerType
+  schedule_preset: string | null
+  settings: Partial<AgentSettings>
+  /** Required connector types this workspace has not connected yet. */
+  missing_connectors: ConnectorType[]
+  ready: boolean
+  /** Tools to enable by default per connector type. Empty = all tools on. */
+  default_tools: Partial<Record<ConnectorType, string[]>>
+}
+
+export interface ModelList {
+  models: { id: string; label: string }[]
+  default?: string
+  detail?: string
+}
+
+export interface Tool {
+  name: string
+  description: string
+  enabled: boolean
+  requires_approval: boolean
+}
+
+export interface AgentTool {
+  id: string
+  connector_id: string
+  connector_name: string
+  connector_type: ConnectorType
+  connector_status: ConnectorStatus
+  alias: string
+  tools: Tool[]
+}
+
+export interface Trigger {
+  id: string
+  type: TriggerType
+  config: Record<string, unknown>
+  enabled: boolean
+  summary: string
+  last_run_at: string | null
+  next_run_at: string | null
+}
+
+export interface SchedulePreset {
+  key: string
+  cron: string
+  label: string
+}
+
+export interface Session {
+  id: string
+  agent_id: string
+  trigger_type: TriggerType
+  status: SessionStatus
+  name: string
+  dry_run: boolean
+  prompt_tokens: number
+  completion_tokens: number
+  total_tokens: number
+  iterations: number
+  error: string | null
+  started_at: string
+  finished_at: string | null
+  triggered_by_session_id: string | null
+  triggered_by_agent_name: string | null
+}
+
+export interface AgentLink {
+  id: string
+  agent_id: string
+  target_agent_id: string
+  target_agent_name: string
+  target_agent_status: string
+  description: string
+  created_at: string
+}
+
+export interface SessionMessage {
+  id: string
+  sequence: number
+  role: MessageRole
+  content: string
+  tool_name: string | null
+  tool_args: Record<string, unknown> | null
+  created_at: string
+}
+
+export interface SessionDetail extends Session {
+  messages: SessionMessage[]
+}
+
+export interface OverviewSession extends Session {
+  agent_name: string
+  agent_icon: string
+}
+
+export interface DailyRuns {
+  date: string
+  runs: number
+  failures: number
+}
+
+export type KnowledgeFileStatus = "pending" | "processing" | "ready" | "error"
+
+export interface KnowledgeFile {
+  id: string
+  filename: string
+  size_bytes: number
+  status: KnowledgeFileStatus
+  error: string | null
+  chunk_count: number
+  created_at: string
+}
+
+export interface Overview {
+  agents_live: number
+  agents_total: number
+  runs_today: number
+  failures_today: number
+  tokens_today: number
+  runs_yesterday: number
+  failures_yesterday: number
+  tokens_yesterday: number
+  daily_runs: DailyRuns[]
+  recent_sessions: OverviewSession[]
+}
+
+export const agents = {
+  list: (orgId: string): Promise<Agent[]> => apiFetch(`/agents/?org_id=${orgId}`),
+
+  get: (id: string): Promise<Agent> => apiFetch(`/agents/${id}`),
+
+  create: (body: {
+    org_id: string
+    name?: string
+    icon?: string
+    instructions?: string
+    template_key?: string | null
+    model_connector_id?: string | null
+    model?: string
+    settings?: Partial<AgentSettings>
+  }): Promise<Agent> =>
+    apiFetch("/agents/", { method: "POST", body: JSON.stringify(body) }),
+
+  /** PATCH not PUT  -  the builder autosaves one field at a time. */
+  update: (
+    id: string,
+    body: Partial<{
+      name: string
+      icon: string
+      instructions: string
+      model_connector_id: string | null
+      model: string
+      settings: Partial<AgentSettings>
+    }>,
+  ): Promise<Agent> =>
+    apiFetch(`/agents/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
+
+  delete: (id: string): Promise<void> => apiFetch(`/agents/${id}`, { method: "DELETE" }),
+
+  publish: (id: string): Promise<Agent> => apiFetch(`/agents/${id}/publish`, { method: "POST" }),
+
+  unpublish: (id: string): Promise<Agent> =>
+    apiFetch(`/agents/${id}/unpublish`, { method: "POST" }),
+
+  /** Runs are real by default  -  actions are performed, not simulated. Pass dry_run: true
+      explicitly if a simulated preview is ever wanted. */
+  run: (
+    id: string,
+    orgId: string,
+    opts: { message?: string; dry_run?: boolean; use_draft?: boolean } = {},
+  ): Promise<Session> =>
+    apiFetch(`/agents/${id}/run`, {
+      method: "POST",
+      body: JSON.stringify({ org_id: orgId, dry_run: false, ...opts }),
+    }),
+
+  templates: (orgId: string): Promise<AgentTemplate[]> =>
+    apiFetch(`/agents/templates?org_id=${orgId}`),
+
+  /** Empty `models` means the provider could not be reached; fall back to its default. */
+  models: (connectorId: string): Promise<ModelList> =>
+    apiFetch(`/agents/models?connector_id=${connectorId}`),
+
+  schedulePresets: (): Promise<SchedulePreset[]> => apiFetch("/agents/schedule-presets"),
+
+  /** Everything the dashboard needs in one call. */
+  overview: (orgId: string): Promise<Overview> => {
+    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone
+    return apiFetch(`/agents/overview?org_id=${orgId}&tz=${encodeURIComponent(tz)}`)
+  },
+
+  // ── Tools ──
+  listTools: (id: string): Promise<AgentTool[]> => apiFetch(`/agents/${id}/tools`),
+
+  attachTool: (
+    id: string,
+    body: { connector_id: string; alias?: string; enabled_tools?: string[] | null; approval_tools?: string[] | null },
+  ): Promise<AgentTool> =>
+    apiFetch(`/agents/${id}/tools`, { method: "POST", body: JSON.stringify(body) }),
+
+  detachTool: (id: string, connectorId: string): Promise<void> =>
+    apiFetch(`/agents/${id}/tools/${connectorId}`, { method: "DELETE" }),
+
+  // ── Agent calls ──
+  listCalls: (id: string): Promise<AgentLink[]> =>
+    apiFetch(`/agents/${id}/calls`),
+
+  attachCall: (id: string, data: { target_agent_id: string; description: string }): Promise<AgentLink> =>
+    apiFetch(`/agents/${id}/calls`, { method: "POST", body: JSON.stringify(data) }),
+
+  detachCall: (id: string, linkId: string): Promise<void> =>
+    apiFetch(`/agents/${id}/calls/${linkId}`, { method: "DELETE" }),
+
+  // ── Triggers ──
+  listTriggers: (id: string): Promise<Trigger[]> => apiFetch(`/agents/${id}/triggers`),
+
+  createTrigger: (
+    id: string,
+    body: { type: TriggerType; config: Record<string, unknown>; enabled?: boolean },
+  ): Promise<Trigger> =>
+    apiFetch(`/agents/${id}/triggers`, { method: "POST", body: JSON.stringify(body) }),
+
+  updateTrigger: (
+    id: string,
+    triggerId: string,
+    body: { type: TriggerType; config: Record<string, unknown>; enabled: boolean },
+  ): Promise<Trigger> =>
+    apiFetch(`/agents/${id}/triggers/${triggerId}`, {
+      method: "PATCH",
+      body: JSON.stringify(body),
+    }),
+
+  deleteTrigger: (id: string, triggerId: string): Promise<void> =>
+    apiFetch(`/agents/${id}/triggers/${triggerId}`, { method: "DELETE" }),
+
+  // ── Sessions ──
+  listSessions: (id: string, limit = 50): Promise<Session[]> =>
+    apiFetch(`/agents/${id}/sessions?limit=${limit}`),
+
+  getSession: (id: string, sessionId: string): Promise<SessionDetail> =>
+    apiFetch(`/agents/${id}/sessions/${sessionId}`),
+
+  // ── Knowledge ──
+  listKnowledge: (id: string): Promise<KnowledgeFile[]> =>
+    apiFetch(`/agents/${id}/knowledge`),
+
+  // Multipart, so apiFetch (which forces a JSON content type) is bypassed: the browser
+  // must set the boundary header itself.
+  uploadKnowledge: async (id: string, file: File): Promise<KnowledgeFile> => {
+    const form = new FormData()
+    form.append("file", file)
+    const res = await fetch(`${API_BASE}/agents/${id}/knowledge`, {
+      method: "POST",
+      credentials: "include",
+      body: form,
+    })
+    if (!res.ok) {
+      const error = await res.json().catch(() => ({ detail: res.statusText }))
+      throw new Error(error.detail ?? "Upload failed")
+    }
+    return res.json()
+  },
+
+  deleteKnowledge: (id: string, fileId: string): Promise<void> =>
+    apiFetch(`/agents/${id}/knowledge/${fileId}`, { method: "DELETE" }),
+
+  // ── Publish history ──
+  publishHistory: (id: string): Promise<{
+    id: string
+    version: number
+    published_at: string
+    model: string
+    instructions_preview: string
+  }[]> => apiFetch(`/agents/${id}/publish-history`),
+
+  rollback: (id: string, snapshotId: string): Promise<Agent> =>
+    apiFetch(`/agents/${id}/rollback/${snapshotId}`, { method: "POST" }),
+
+  // ── Assistant ──
+  assistMessages: (id: string): Promise<{ id: string; role: string; content: string }[]> =>
+    apiFetch(`/agents/${id}/assist/messages`),
+
+  clearAssistThread: (id: string): Promise<void> =>
+    apiFetch(`/agents/${id}/assist/messages`, { method: "DELETE" }),
+}
+
+// ── Approvals ─────────────────────────────────────────────────────────────────
+
+export type ApprovalStatus = "pending" | "approved" | "rejected" | "expired"
+
+export interface ApprovalRequest {
+  id: string
+  session_id: string
+  agent_id: string
+  agent_name: string
+  agent_icon: string
+  tool_name: string
+  tool_args: Record<string, unknown>
+  summary: string
+  status: ApprovalStatus
+  response_note: string | null
+  created_at: string
+  resolved_at: string | null
+  expires_at: string
+}
+
+export const approvals = {
+  list: (orgId: string, resolved = false): Promise<ApprovalRequest[]> =>
+    apiFetch(`/approvals/?org_id=${orgId}&resolved=${resolved}`),
+
+  count: (orgId: string): Promise<{ count: number }> =>
+    apiFetch(`/approvals/count?org_id=${orgId}`),
+
+  approve: (id: string, note = ""): Promise<ApprovalRequest> =>
+    apiFetch(`/approvals/${id}/approve`, { method: "POST", body: JSON.stringify({ note }) }),
+
+  reject: (id: string, note = ""): Promise<ApprovalRequest> =>
+    apiFetch(`/approvals/${id}/reject`, { method: "POST", body: JSON.stringify({ note }) }),
+}
+
+// ── Invitations ───────────────────────────────────────────────────────────────
+
+export const invitations = {
+  /** Invitations pending for the current user's email */
+  listMine: (): Promise<Invitation[]> => apiFetch("/invitations/mine"),
+
+  /** Owner: invite someone by email */
+  create: (orgId: string, email: string): Promise<{ id: string }> =>
+    apiFetch(`/organizations/${orgId}/invitations`, {
+      method: "POST",
+      body: JSON.stringify({ email }),
+    }),
+
+  /** Accept an invitation by id */
+  accept: (invitationId: string): Promise<{ ok: boolean }> =>
+    apiFetch(`/invitations/${invitationId}/accept`, { method: "POST" }),
+}
+
+// ── Skills ────────────────────────────────────────────────────────────────────
+
+export type SkillCategory = "Behaviour" | "Output" | "Safety" | "Domain" | "Custom"
+
+export interface Skill {
+  id: string
+  org_id: string
+  key: string | null
+  name: string
+  tagline: string
+  category: SkillCategory
+  content: string
+  is_default: boolean
+  created_at: string
+  updated_at: string
+}
+
+// ── Notes ─────────────────────────────────────────────────────────────────────
+
+export type OwnerNote = {
+  id: string
+  org_id: string
+  created_by: string
+  body: string
+  agent_ids: string[] | null
+  expires_at: string | null
+  agent_resolvable: boolean
+  resolved_at: string | null
+  resolved_by: string | null
+  resolution: string
+  created_at: string
+  updated_at: string
+}
+
+export const notes = {
+  list: (orgId: string): Promise<OwnerNote[]> =>
+    apiFetch(`/notes?org_id=${orgId}`),
+
+  create: (orgId: string, data: {
+    body: string
+    agent_ids?: string[] | null
+    expires_at?: string | null
+    agent_resolvable?: boolean
+  }): Promise<OwnerNote> =>
+    apiFetch("/notes", { method: "POST", body: JSON.stringify({ org_id: orgId, ...data }) }),
+
+  update: (id: string, data: {
+    body?: string
+    agent_ids?: string[] | null
+    expires_at?: string | null
+    agent_resolvable?: boolean
+  }): Promise<OwnerNote> =>
+    apiFetch(`/notes/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
+
+  reopen: (id: string): Promise<OwnerNote> =>
+    apiFetch(`/notes/${id}/reopen`, { method: "POST" }),
+
+  delete: (id: string): Promise<void> =>
+    apiFetch(`/notes/${id}`, { method: "DELETE" }),
+}
+
+export const skills = {
+  list: (orgId: string): Promise<Skill[]> =>
+    apiFetch(`/skills?org_id=${orgId}`),
+
+  create: (orgId: string, data: { name: string; tagline?: string; category?: string; content: string }): Promise<Skill> =>
+    apiFetch("/skills", { method: "POST", body: JSON.stringify({ org_id: orgId, ...data }) }),
+
+  update: (id: string, data: Partial<Pick<Skill, "name" | "tagline" | "category" | "content">>): Promise<Skill> =>
+    apiFetch(`/skills/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
+
+  delete: (id: string): Promise<void> =>
+    apiFetch(`/skills/${id}`, { method: "DELETE" }),
+
+  // Agent attach / detach
+  listForAgent: (agentId: string): Promise<Skill[]> =>
+    apiFetch(`/skills/agent/${agentId}`),
+
+  attach: (agentId: string, skillId: string): Promise<void> =>
+    apiFetch(`/skills/agent/${agentId}/${skillId}`, { method: "POST" }),
+
+  detach: (agentId: string, skillId: string): Promise<void> =>
+    apiFetch(`/skills/agent/${agentId}/${skillId}`, { method: "DELETE" }),
+}
