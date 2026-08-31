@@ -52,11 +52,11 @@ const CATALOGUE: CatalogueEntry[] = [
   },
   {
     type: "gmail",
-    label: "Google",
-    description: "Gmail and Google Calendar.",
+    label: "Gmail",
+    description: "Gmail inbox and Google Calendar via App Password.",
     icon: "✉️",
     iconSrc: "/google.svg",
-    authMethod: "oauth",
+    authMethod: "api_key",
     available: true,
     category: "Email",
   },
@@ -510,6 +510,96 @@ function LLMConnectorModal({ orgId, provider, label, onSaved }: {
               <Button size="sm" variant="ghost" onClick={() => setOpen(false)} className="text-xs">Cancel</Button>
               <Button size="sm" onClick={handleSave} disabled={saving || !apiKey.trim()} className="text-xs">
                 {saving ? "Saving…" : "Save connector"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  )
+}
+
+// ── Gmail connector modal ─────────────────────────────────────────────────────
+
+function GmailConnectorModal({ orgId, onSaved }: { orgId: string; onSaved: () => void }) {
+  const [open, setOpen] = useState(false)
+  const [email, setEmail] = useState("")
+  const [appPassword, setAppPassword] = useState("")
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  function reset() { setEmail(""); setAppPassword(""); setError(null) }
+
+  async function handleSave() {
+    if (!email.trim() || !appPassword.trim()) { setError("Email and App Password are required"); return }
+    setSaving(true); setError(null)
+    try {
+      await connectors.createGmail(orgId, email.trim(), appPassword.trim())
+      setOpen(false); reset(); onSaved()
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Failed to save")
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <>
+      <Button size="sm" variant="outline" className="text-xs" onClick={() => { reset(); setOpen(true) }}>
+        Connect
+      </Button>
+
+      {open && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/40" onClick={() => setOpen(false)} />
+          <div className="relative z-10 w-full max-w-md rounded-xl border bg-card shadow-xl p-6 space-y-5">
+            <div className="flex items-center justify-between">
+              <h2 className="font-semibold text-base">Connect Gmail</h2>
+              <button onClick={() => setOpen(false)} className="text-muted-foreground hover:text-foreground"><X className="size-4" /></button>
+            </div>
+
+            <div className="rounded-md bg-muted/60 border px-4 py-3 text-xs text-muted-foreground space-y-1.5">
+              <p className="font-medium text-foreground">How to get an App Password</p>
+              <p className="inline-flex items-center gap-1.5 rounded-full bg-amber-100 px-2.5 py-1 text-xs font-medium text-amber-800">
+                <span>⚠</span> 2-Step Verification must be enabled on your Google account.
+              </p>
+              <ol className="list-decimal list-inside space-y-1">
+                <li>Go to <a href="https://myaccount.google.com/apppasswords" target="_blank" rel="noreferrer" className="underline text-foreground">myaccount.google.com/apppasswords</a></li>
+                <li>Select <strong>Mail</strong> and your device, then click <strong>Generate</strong></li>
+                <li>Copy the 16-character password and paste it below</li>
+              </ol>
+            </div>
+
+            <div className="space-y-3">
+              <div className="space-y-1.5">
+                <Label className="text-xs">Gmail address</Label>
+                <Input
+                  type="email"
+                  placeholder="you@gmail.com"
+                  value={email}
+                  onChange={(e) => { setEmail(e.target.value); setError(null) }}
+                  className="text-xs"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs">App Password</Label>
+                <Input
+                  type="password"
+                  placeholder="xxxx xxxx xxxx xxxx"
+                  value={appPassword}
+                  onChange={(e) => { setAppPassword(e.target.value); setError(null) }}
+                  className="text-xs font-mono"
+                />
+                <p className="text-xs text-muted-foreground">The 16-character password generated from your Google Account settings.</p>
+              </div>
+            </div>
+
+            {error && <p className="text-xs text-red-600">{error}</p>}
+
+            <div className="flex justify-end gap-2">
+              <Button size="sm" variant="ghost" onClick={() => setOpen(false)} className="text-xs">Cancel</Button>
+              <Button size="sm" onClick={handleSave} disabled={saving || !email.trim() || !appPassword.trim()} className="text-xs">
+                {saving ? "Connecting…" : "Save connector"}
               </Button>
             </div>
           </div>
@@ -1439,11 +1529,7 @@ function AvailableCard({ type, catalogKey, label, description, icon, iconSrc, au
     if (!available) return null
     if (type === "openai") return <LLMConnectorModal orgId={orgId} provider="openai" label="OpenAI" onSaved={onSaved} />
     if (type === "anthropic") return <LLMConnectorModal orgId={orgId} provider="anthropic" label="Anthropic" onSaved={onSaved} />
-    if (type === "gmail") return (
-      <Button size="sm" variant="outline" className="text-xs" onClick={() => connectors.connectGmail(orgId)}>
-        {buttonLabel}
-      </Button>
-    )
+    if (type === "gmail") return <GmailConnectorModal orgId={orgId} onSaved={onSaved} />
     if (type === "telegram_bot") return <TelegramBotModal orgId={orgId} onSaved={onSaved} />
     if (type === "telegram_client") return <TelegramClientModal orgId={orgId} onSaved={onSaved} />
     if (type === "twilio") return <TwilioModal orgId={orgId} onSaved={onSaved} />
@@ -1832,7 +1918,7 @@ function ConnectorsPageInner() {
         <div className="flex items-center gap-2 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800">
           <Check className="size-4 shrink-0" />
           <span>
-            {justConnected === "gmail" ? "Google" : justConnected === "mcp" ? "MCP server" : justConnected} connected successfully.
+            {justConnected === "mcp" ? "MCP server" : justConnected} connected successfully.
           </span>
           <button
             className="ml-auto text-green-600 hover:text-green-800"

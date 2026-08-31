@@ -85,9 +85,11 @@ export const connectors = {
   test: (id: string, orgId: string): Promise<{ ok: boolean; detail: string }> =>
     apiFetch(`/connectors/${id}/test?org_id=${orgId}`, { method: "POST" }),
 
-  connectGmail: (orgId: string) => {
-    window.location.href = `${API_BASE}/connectors/oauth/google/start?org_id=${orgId}`
-  },
+  createGmail: (orgId: string, email: string, appPassword: string): Promise<Connector> =>
+    apiFetch("/connectors/gmail", {
+      method: "POST",
+      body: JSON.stringify({ org_id: orgId, email, app_password: appPassword }),
+    }),
 
   startTelegramClient: (orgId: string, phone: string): Promise<{ session_id: string }> =>
     apiFetch("/connectors/telegram-client/start", {

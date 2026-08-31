@@ -19,28 +19,38 @@ export default function ConnectorsHelp() {
         </p>
       </Callout>
 
-      <Section title="Google (Gmail and Calendar)" id="gmail">
+      <Section title="Gmail and Google Calendar" id="gmail">
         <P>
-          Connect through Google&apos;s consent screen  -  the platform never sees your
-          password. You will be asked to grant permission to read and send mail, and to
-          read and create events on your primary calendar. Same Google Cloud app as before.
+          Uses a Google App Password  -  a 16-character credential you generate from your Google
+          Account. The platform connects directly over IMAP (read mail) and SMTP (send mail), and
+          CalDAV (calendar). No Google consent screen, no expiring tokens.
+        </P>
+        <Steps>
+          <li>Go to <a href="https://myaccount.google.com/security" target="_blank" rel="noreferrer" className="underline underline-offset-2">myaccount.google.com/security</a> and make sure <strong>2-Step Verification</strong> is turned on.</li>
+          <li>Go to <a href="https://myaccount.google.com/apppasswords" target="_blank" rel="noreferrer" className="underline underline-offset-2">myaccount.google.com/apppasswords</a>, select <strong>Mail</strong>, click <strong>Generate</strong>.</li>
+          <li>Copy the 16-character password and paste it into the connector form along with your Gmail address.</li>
+        </Steps>
+        <Callout tone="warn" title="Google Workspace accounts">
+          <p>
+            If your email ends in a company domain (not @gmail.com), the App Passwords page may
+            say the setting is not available. Your Google Workspace admin must enable it under
+            Admin Console → Security → Less secure apps.
+          </p>
+        </Callout>
+        <P>
+          <strong>Mail.</strong> Agents can read unread inbox messages (with full body content),
+          search mail, send new messages, reply in-thread, and archive emails (removed from inbox,
+          never deleted).
         </P>
         <P>
-          <strong>Mail.</strong> Unread mail returns sender, subject, date and Gmail&apos;s
-          short preview snippet  -  not the full body or attachments. The agent can send
-          plain-text mail, reply in-thread, and archive (remove from inbox, not delete).
+          <strong>Calendar.</strong> List events between two dates and create new events,
+          optionally with attendees. Times use the calendar&apos;s default timezone unless the
+          agent specifies one.
         </P>
         <P>
-          <strong>Calendar.</strong> List events between two dates, and create events
-          (optionally inviting attendees). Times use the calendar&apos;s timezone unless the
-          agent sets one. If you connected Gmail before Calendar existed, reconnect so Google
-          can grant the new permission. Enable the Calendar API on the Cloud project if Test
-          says it is missing.
-        </P>
-        <P>
-          <strong>If it breaks.</strong> Access refreshes itself in the background. If you
-          revoke access from your Google account, or leave it untouched for a very long time,
-          the connector turns red and its agents lose those tools. Reconnect from the
+          <strong>If it breaks.</strong> The App Password never expires on its own. If you
+          delete the App Password from your Google Account, or change your Google password,
+          the connector will fail. Generate a new App Password and reconnect from the
           Connectors page.
         </P>
       </Section>
