@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react"
 import Image from "next/image"
 import ReactMarkdown from "react-markdown"
-import { Bot, ChevronDown, Loader2, RotateCcw, Send, Sparkles } from "lucide-react"
+import { Bot, Check, ChevronDown, ClipboardCopy, Loader2, RotateCcw, Send, Sparkles } from "lucide-react"
 import { agents, connectors, type Agent, type Connector } from "@/lib/api"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
@@ -103,6 +103,42 @@ function ThinkingDots() {
   )
 }
 
+function PromptBlock({ text }: { text: string }) {
+  const [copied, setCopied] = useState(false)
+
+  function copy() {
+    navigator.clipboard.writeText(text).then(() => {
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    })
+  }
+
+  return (
+    <div className="my-2 rounded-lg border border-primary/20 bg-primary/5 overflow-hidden">
+      {/* Header bar */}
+      <div className="flex items-center justify-between px-3 py-1.5 border-b border-primary/10 bg-primary/10">
+        <span className="text-[10px] font-medium text-primary/70 uppercase tracking-wide">
+          Agent instructions
+        </span>
+        <button
+          type="button"
+          onClick={copy}
+          className="flex items-center gap-1 text-[10px] text-primary/60 hover:text-primary transition-colors"
+        >
+          {copied
+            ? <><Check className="size-3" /> Copied</>
+            : <><ClipboardCopy className="size-3" /> Copy</>
+          }
+        </button>
+      </div>
+      {/* Content */}
+      <pre className="p-3 text-xs overflow-x-auto whitespace-pre-wrap text-foreground/90 font-mono leading-relaxed">
+        <code>{text}</code>
+      </pre>
+    </div>
+  )
+}
+
 function MessageContent({
   content,
 }: {
@@ -116,13 +152,7 @@ function MessageContent({
             const isBlock = !props.ref && String(children).includes("\n")
             const text = String(children).replace(/\n$/, "")
             if (isBlock) {
-              return (
-                <div className="my-2">
-                  <pre className="rounded-lg bg-muted/60 p-3 text-xs overflow-x-auto whitespace-pre-wrap">
-                    <code>{text}</code>
-                  </pre>
-                </div>
-              )
+              return <PromptBlock text={text} />
             }
             return (
               <code className="rounded bg-muted/60 px-1 py-0.5 text-xs font-mono" {...props}>
