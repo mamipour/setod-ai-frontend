@@ -148,7 +148,7 @@ export function SettingsTab({
 
           <Row
             title="Read full pages"
-            help="Beyond search results, fetch and read the pages themselves. Slower, and much more text for the model to work through."
+            help="Beyond search results, open URLs and read them — web pages with their links intact, and data files like CSV or JSON. Slower, and much more text for the model to work through."
           >
             <Switch
               checked={s.live_page_access}
@@ -160,7 +160,7 @@ export function SettingsTab({
 
       <Row
         title="Remember past runs"
-        help="Starts each run with a short note of what it concluded on its last five runs. Useful for agents that should not repeat themselves, and it adds a little to every run's cost."
+        help="The agent ends each run with a short note to its future self — what it acted on, what it skipped — and reads those notes back on the next run. Useful for agents that should not repeat themselves, and it adds a little to every run's cost."
       >
         <Switch
           checked={s.episodic_memory}

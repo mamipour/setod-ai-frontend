@@ -77,11 +77,14 @@ export default function MemoryHelp() {
 
       <Section title="Remembering past runs is a different thing">
         <P>
-          The handled list is always on and is about specific messages. The{" "}
-          <strong>Remember past runs</strong> setting is optional and about conclusions: it
-          starts each run with a short note of what the agent decided on its last five runs.
-          Useful when you want continuity of judgement, unnecessary for most agents, and it
-          adds a little to the cost of every run.
+          The handled list is always on, is maintained for you, and is about specific
+          messages. The <strong>Remember past runs</strong> setting is optional and is
+          written by the agent itself: it ends each run with a short note to its future self
+          and reads those notes back on the next run. Because the agent decides what the
+          note contains, it works for things the handled list does not cover — the tender
+          identifiers it already sent, a decision it made and should stick to. Useful when
+          you want continuity of judgement, unnecessary for most agents, and it adds a
+          little to the cost of every run.
         </P>
       </Section>
 

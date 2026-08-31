@@ -22,6 +22,8 @@ interface ChatMessage {
   role: "user" | "assistant"
   content: string
   streaming?: boolean
+  /** Transient research activity line, replaced by each new [STATUS] event */
+  status?: string
 }
 
 // ── Sub-components ─────────────────────────────────────────────────────────────
@@ -212,10 +214,21 @@ export function AssistantTab({
           if (!line.startsWith("data: ")) continue
           const payload = line.slice(6)
           if (payload === "[DONE]") break
+          if (payload.startsWith("[STATUS] ")) {
+            // Transient activity line — replace previous status, keep content unchanged
+            const statusText = payload.slice(9)
+            setMessages((prev) => {
+              const next = [...prev]
+              next[next.length - 1] = { ...next[next.length - 1], status: statusText, streaming: true }
+              return next
+            })
+            continue
+          }
+          // Content chunk — clear status once text starts arriving
           accumulated += payload.replace(/\\n/g, "\n")
           setMessages((prev) => {
             const next = [...prev]
-            next[next.length - 1] = { role: "assistant", content: accumulated, streaming: true }
+            next[next.length - 1] = { role: "assistant", content: accumulated, streaming: true, status: undefined }
             return next
           })
         }
@@ -314,11 +327,19 @@ export function AssistantTab({
               )}
             >
               {m.role === "assistant" ? (
-                  <MessageContent content={m.content} />
+                <>
+                  {m.status && !m.content && (
+                    <p className="text-xs text-muted-foreground italic flex items-center gap-1.5">
+                      <Loader2 className="size-3 animate-spin shrink-0" />
+                      {m.status}
+                    </p>
+                  )}
+                  {m.content && <MessageContent content={m.content} />}
+                </>
               ) : (
                 <p className="text-sm leading-relaxed whitespace-pre-wrap">{m.content}</p>
               )}
-              {m.streaming && (
+              {m.streaming && m.content && (
                 <span className="inline-block size-1.5 rounded-full bg-current animate-pulse ml-0.5" />
               )}
             </div>

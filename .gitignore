@@ -30,8 +30,12 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files — keep the example so clones know what to set
-.env*
+# env files
+# .env.local and .env.*.local are machine-specific (never commit)
+# .env.production is not sensitive (just a URL) and is committed so `next build` works anywhere
+.env*.local
+.env.local
+!.env.production
 !.env.example
 
 # vercel

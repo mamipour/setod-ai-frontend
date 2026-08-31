@@ -60,18 +60,32 @@ export default function SettingsHelp() {
           ]}
         />
         <P>
-          <strong>Read full pages</strong> adds a second tool that opens a page and reads its
-          text, for when a snippet is not enough. It is slower and much heavier on tokens,
-          which is why it is separate. Long pages are truncated.
+          <strong>Read full pages</strong> adds a second tool that opens a URL and reads it,
+          for when a snippet is not enough. It is slower and much heavier on tokens, which is
+          why it is separate. Long content is truncated.
+        </P>
+        <P>
+          It reads data files as well as pages. If a site publishes a CSV, JSON, or XML feed,
+          point the agent at that instead of the page — it is cleaner, more complete, and far
+          less likely to break when the site is redesigned. When the agent does read a page,
+          links are kept alongside their text, so it can follow a list of results through to
+          the individual entries rather than only seeing their titles.
         </P>
       </Section>
 
       <Section title="Remember past runs">
         <P>
-          Starts each run with a summary of what the agent concluded on its last five
-          successful runs. Useful for agents that should notice a pattern across days;
-          unnecessary for agents where each run stands alone. Costs a small amount on every
-          run.
+          The agent finishes each run by writing itself a short note — which items it acted
+          on, what it decided to skip — and the next few runs start with those notes in
+          front of them. Because the agent chooses what goes in the note, it can carry
+          forward exactly the identifiers it needs to avoid doing the same work twice.
+        </P>
+        <P>
+          Notes are kept from the last five successful runs, newest first, up to a fixed
+          size — so an agent that writes a lot pushes out its older notes rather than
+          everything getting squeezed. Useful for agents that should notice a pattern across
+          days or must not repeat themselves; unnecessary for agents where each run stands
+          alone. Costs a small amount on every run.
         </P>
       </Section>
 

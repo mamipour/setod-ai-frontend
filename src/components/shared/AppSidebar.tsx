@@ -89,7 +89,7 @@ export function AppSidebar() {
 
   async function handleLogout() {
     await auth.logout()
-    window.location.href = "/login"
+    window.location.href = "/"
   }
 
   /** The same nav in three places: desktop rail, collapsed rail, and mobile drawer. */

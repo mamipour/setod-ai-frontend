@@ -4,7 +4,7 @@ import { Suspense, useEffect, useRef, useState } from "react"
 import Image from "next/image"
 import { useSearchParams } from "next/navigation"
 import { Check, Lock, X } from "lucide-react"
-import { connectors, type Connector, type ConnectorType } from "@/lib/api"
+import { connectors, workspace, type Connector, type ConnectorType, type WebSearchSettings } from "@/lib/api"
 import { useUser } from "@/hooks/useUser"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -186,6 +186,15 @@ const CATALOGUE: CatalogueEntry[] = [
 ]
 
 const CATEGORIES: CatalogueEntry["category"][] = ["AI Models", "Email", "Messaging", "SMS & Voice", "Automation", "MCP servers"]
+
+const CATEGORY_LABEL: Record<CatalogueEntry["category"], string> = {
+  "AI Models":    "LLM providers",
+  "Email":        "Email",
+  "Messaging":    "Messaging",
+  "SMS & Voice":  "SMS & Voice",
+  "Automation":   "Automation",
+  "MCP servers":  "MCP servers",
+}
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -1484,6 +1493,297 @@ function AvailableCard({ type, catalogKey, label, description, icon, iconSrc, au
   )
 }
 
+// ── LLM provider card ─────────────────────────────────────────────────────────
+
+const LLM_META: Record<"openai" | "anthropic", { label: string; iconSrc: string; keyPlaceholder: string }> = {
+  openai:    { label: "OpenAI",    iconSrc: "/openai.svg",    keyPlaceholder: "sk-…" },
+  anthropic: { label: "Anthropic", iconSrc: "/anthropic.svg", keyPlaceholder: "sk-ant-…" },
+}
+
+function LLMProviderCard({
+  provider,
+  orgId,
+  existing,
+  onSaved,
+}: {
+  provider: "openai" | "anthropic"
+  orgId: string
+  existing: Connector | undefined
+  onSaved: () => void
+}) {
+  const meta = LLM_META[provider]
+  const [editing, setEditing] = useState(false)
+  const [key, setKey] = useState("")
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [testing, setTesting] = useState(false)
+  const [testResult, setTestResult] = useState<{ ok: boolean; detail: string } | null>(null)
+  const [deleting, setDeleting] = useState(false)
+
+  const isConnected = !!existing && existing.status !== "revoked"
+
+  async function handleSave() {
+    setSaving(true); setError(null)
+    try {
+      if (existing) {
+        // Replace in place — deleting would unbind agents that use this connector as their model.
+        await connectors.updateLLMKey(existing.id, orgId, key.trim())
+      } else {
+        await connectors.createLLM(orgId, meta.label, provider, key.trim())
+      }
+      setEditing(false); setKey(""); setTestResult(null)
+      onSaved()
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Failed to save")
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  async function handleTest() {
+    if (!existing) return
+    setTesting(true); setTestResult(null)
+    try {
+      setTestResult(await connectors.test(existing.id, orgId))
+    } catch (e: unknown) {
+      setTestResult({ ok: false, detail: e instanceof Error ? e.message : "Test failed" })
+    } finally {
+      setTesting(false)
+    }
+  }
+
+  async function handleRemove() {
+    if (!existing) return
+    setDeleting(true); setError(null)
+    try {
+      await connectors.delete(existing.id, orgId)
+      setTestResult(null)
+      onSaved()
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Failed to remove")
+    } finally {
+      setDeleting(false)
+    }
+  }
+
+  return (
+    <Card className="flex flex-col">
+      <CardHeader className="pb-3">
+        <div className="flex items-center gap-3">
+          <Image src={meta.iconSrc} alt={meta.label} width={32} height={32} className="shrink-0" />
+          <div>
+            <CardTitle className="text-sm font-semibold leading-tight">{meta.label}</CardTitle>
+            <CardDescription className="text-xs">
+              {isConnected
+                ? existing!.status === "active" ? "Active" : "Connected"
+                : "Not connected"}
+            </CardDescription>
+          </div>
+          {isConnected && (
+            <span className="ml-auto">
+              <StatusDot status={existing!.status} />
+            </span>
+          )}
+        </div>
+      </CardHeader>
+      <CardContent className="flex flex-1 flex-col gap-3 pt-0">
+        {testResult && (
+          <p className={cn("text-xs", testResult.ok ? "text-green-700" : "text-destructive")}>
+            {testResult.ok ? "✓" : "✗"} {testResult.detail}
+          </p>
+        )}
+        {error && !editing && <p className="text-xs text-destructive">{error}</p>}
+        {!editing ? (
+          <div className="flex items-center gap-2 mt-auto flex-wrap">
+            {isConnected ? (
+              <>
+                <Button size="sm" variant="outline" onClick={handleTest} disabled={testing || deleting}>
+                  {testing ? "Testing…" : "Test"}
+                </Button>
+                <Button size="sm" variant="outline" onClick={() => { setEditing(true); setTestResult(null) }} disabled={deleting}>
+                  Replace key
+                </Button>
+                <Button size="sm" variant="ghost" className="text-destructive hover:text-destructive" onClick={handleRemove} disabled={deleting}>
+                  {deleting ? "Removing…" : "Remove"}
+                </Button>
+              </>
+            ) : (
+              <Button size="sm" variant="outline" onClick={() => setEditing(true)}>
+                Add API key
+              </Button>
+            )}
+          </div>
+        ) : (
+          <div className="space-y-2">
+            <Label htmlFor={`llm-key-${provider}`} className="text-xs">API key</Label>
+            <Input
+              id={`llm-key-${provider}`}
+              type="password"
+              placeholder={meta.keyPlaceholder}
+              value={key}
+              onChange={(e) => setKey(e.target.value)}
+              className="font-mono text-xs h-8"
+              autoFocus
+            />
+            {error && <p className="text-xs text-destructive">{error}</p>}
+            <div className="flex gap-2">
+              <Button size="sm" onClick={handleSave} disabled={saving || !key.trim()}>
+                {saving ? "Saving…" : "Save"}
+              </Button>
+              <Button size="sm" variant="ghost" onClick={() => { setEditing(false); setKey(""); setError(null) }}>
+                Cancel
+              </Button>
+            </div>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  )
+}
+
+// ── Tavily card ───────────────────────────────────────────────────────────────
+
+function TavilyCard({ orgId }: { orgId: string }) {
+  const [settings, setSettings] = useState<WebSearchSettings | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [editing, setEditing] = useState(false)
+  const [key, setKey] = useState("")
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [testResult, setTestResult] = useState<{ ok: boolean; detail: string } | null>(null)
+  const [testing, setTesting] = useState(false)
+
+  useEffect(() => {
+    workspace.getWebSearch(orgId)
+      .then(setSettings)
+      .catch(() => setSettings({ provider: "duckduckgo", tavily_key_set: false }))
+      .finally(() => setLoading(false))
+  }, [orgId])
+
+  async function handleSave() {
+    setSaving(true); setError(null)
+    try {
+      const updated = await workspace.updateWebSearch(orgId, {
+        provider: key.trim() ? "tavily" : "duckduckgo",
+        tavily_api_key: key.trim() || "",
+      })
+      setSettings(updated)
+      setEditing(false)
+      setKey("")
+      setTestResult(null)
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Failed to save")
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  async function handleRemove() {
+    setSaving(true); setError(null)
+    try {
+      const updated = await workspace.updateWebSearch(orgId, {
+        provider: "duckduckgo",
+        tavily_api_key: "",
+      })
+      setSettings(updated)
+      setEditing(false)
+      setTestResult(null)
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Failed to save")
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  async function handleTest() {
+    setTesting(true); setTestResult(null)
+    try {
+      const result = await workspace.testWebSearch(orgId)
+      setTestResult(result)
+    } catch (e: unknown) {
+      setTestResult({ ok: false, detail: e instanceof Error ? e.message : "Test failed" })
+    } finally {
+      setTesting(false)
+    }
+  }
+
+  return (
+    <Card className="flex flex-col">
+      <CardHeader className="pb-3">
+        <div className="flex items-center gap-3">
+          <Image src="/tavily.svg" alt="Tavily" width={32} height={32} className="shrink-0" />
+          <div>
+            <CardTitle className="text-sm font-semibold leading-tight">Tavily</CardTitle>
+            <CardDescription className="text-xs">
+              {loading
+                ? "Loading…"
+                : settings?.provider === "tavily"
+                ? "Active — reliable search built for AI agents"
+                : "Not configured — using DuckDuckGo (rate-limited)"}
+            </CardDescription>
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent className="flex flex-1 flex-col gap-3 pt-0">
+        {testResult && (
+          <p className={cn("text-xs", testResult.ok ? "text-green-700" : "text-destructive")}>
+            {testResult.ok ? "✓" : "✗"} {testResult.detail}
+          </p>
+        )}
+        {!editing ? (
+          <div className="flex items-center gap-2 mt-auto">
+            {settings?.tavily_key_set ? (
+              <>
+                <Button size="sm" variant="outline" onClick={handleTest} disabled={testing || loading}>
+                  {testing ? "Testing…" : "Test"}
+                </Button>
+                <Button size="sm" variant="outline" onClick={() => setEditing(true)} disabled={loading}>
+                  Replace key
+                </Button>
+                <Button size="sm" variant="ghost" className="text-destructive hover:text-destructive" onClick={handleRemove} disabled={saving}>
+                  Remove
+                </Button>
+              </>
+            ) : (
+              <Button size="sm" variant="outline" onClick={() => setEditing(true)} disabled={loading}>
+                Add Tavily key
+              </Button>
+            )}
+          </div>
+        ) : (
+          <div className="space-y-2">
+            <Label htmlFor="tavily-key" className="text-xs">Tavily API key</Label>
+            <Input
+              id="tavily-key"
+              type="password"
+              placeholder="tvly-…"
+              value={key}
+              onChange={(e) => setKey(e.target.value)}
+              className="font-mono text-xs h-8"
+              autoFocus
+            />
+            {error && <p className="text-xs text-destructive">{error}</p>}
+            <div className="flex gap-2">
+              <Button size="sm" onClick={handleSave} disabled={saving || !key.trim()}>
+                {saving ? "Saving…" : "Save"}
+              </Button>
+              <Button size="sm" variant="ghost" onClick={() => { setEditing(false); setKey("") }}>
+                Cancel
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Key is encrypted at rest and never returned to the browser.{" "}
+              <a href="https://app.tavily.com/home" target="_blank" rel="noopener noreferrer" className="underline">
+                Get a key ↗
+              </a>
+            </p>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  )
+}
+
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 function ConnectorsPageInner() {
@@ -1544,62 +1844,99 @@ function ConnectorsPageInner() {
       )}
 
       {/* ── Connected ─────────────────────────────────────────────────────── */}
-      <section>
-        <div className="flex items-center gap-2 mb-4">
-          <h2 className="text-base font-semibold">Connected</h2>
-          {list.length > 0 && (
-            <span className="inline-flex items-center rounded-full bg-primary/10 text-primary text-xs font-medium px-2 py-0.5">
-              {list.length}
-            </span>
-          )}
-        </div>
+      {(() => {
+        // LLM providers live in "Workspace integrations" — exclude them here.
+        const LLM_TYPES: ConnectorType[] = ["openai", "anthropic"]
+        const connectedList = list.filter((c) => !LLM_TYPES.includes(c.type))
+        return (
+          <section>
+            <div className="flex items-center gap-2 mb-4">
+              <h2 className="text-base font-semibold">Connected</h2>
+              {connectedList.length > 0 && (
+                <span className="inline-flex items-center rounded-full bg-primary/10 text-primary text-xs font-medium px-2 py-0.5">
+                  {connectedList.length}
+                </span>
+              )}
+            </div>
 
-        {fetching && list.length === 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-3">
-            {[0, 1, 2].map((i) => (
-              <Card key={i} className="min-h-[140px]">
-                <CardHeader className="pb-2">
-                  <div className="flex items-center gap-3">
-                    <Skeleton className="size-8 rounded" />
-                    <div className="space-y-1.5">
-                      <Skeleton className="h-3.5 w-28" />
-                      <Skeleton className="h-2.5 w-20" />
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent className="flex flex-1 items-end pt-0">
-                  <Skeleton className="h-7 w-24 rounded-md" />
-                </CardContent>
-              </Card>
+            {fetching && connectedList.length === 0 ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-3">
+                {[0, 1, 2].map((i) => (
+                  <Card key={i} className="min-h-[140px]">
+                    <CardHeader className="pb-2">
+                      <div className="flex items-center gap-3">
+                        <Skeleton className="size-8 rounded" />
+                        <div className="space-y-1.5">
+                          <Skeleton className="h-3.5 w-28" />
+                          <Skeleton className="h-2.5 w-20" />
+                        </div>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="flex flex-1 items-end pt-0">
+                      <Skeleton className="h-7 w-24 rounded-md" />
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            ) : connectedList.length === 0 ? (
+              <div className="rounded-xl border border-dashed px-6 py-12 text-center">
+                <p className="text-sm font-medium text-muted-foreground">No connectors yet</p>
+                <p className="text-xs text-muted-foreground/70 mt-1">Connect your first service below to start building agents.</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-3">
+                {connectedList.map((c) => (
+                  <ConnectedCard key={c.id} connector={c} orgId={orgId} onDelete={fetchList} />
+                ))}
+              </div>
+            )}
+          </section>
+        )
+      })()}
+
+      {/* ── Workspace integrations ────────────────────────────────────────── */}
+      <section className="space-y-6 border-t pt-8">
+        <div>
+          <h2 className="text-base font-semibold">Workspace integrations</h2>
+          <p className="text-sm text-muted-foreground mt-0.5">
+            Platform-wide settings shared across all agents in this workspace.
+          </p>
+        </div>
+        <div>
+          <p className="text-xs font-semibold text-muted-foreground/60 uppercase tracking-widest mb-3">LLM providers</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {(["openai", "anthropic"] as const).map((p) => (
+              <LLMProviderCard
+                key={p}
+                provider={p}
+                orgId={orgId}
+                existing={list.find((c) => c.type === p)}
+                onSaved={fetchList}
+              />
             ))}
           </div>
-        ) : list.length === 0 ? (
-          <div className="rounded-xl border border-dashed px-6 py-12 text-center">
-            <p className="text-sm font-medium text-muted-foreground">No connectors yet</p>
-            <p className="text-xs text-muted-foreground/70 mt-1">Connect your first service below to start building agents.</p>
+        </div>
+        <div>
+          <p className="text-xs font-semibold text-muted-foreground/60 uppercase tracking-widest mb-3">Search</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <TavilyCard orgId={orgId} />
           </div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-3">
-            {list.map((c) => (
-              <ConnectedCard key={c.id} connector={c} orgId={orgId} onDelete={fetchList} />
-            ))}
-          </div>
-        )}
+        </div>
       </section>
 
-      {/* ── Catalog ───────────────────────────────────────────────────────── */}
+      {/* ── Add connector ─────────────────────────────────────────────────── */}
       <section className="space-y-6 border-t pt-8">
         <div>
           <h2 className="text-base font-semibold">Add connector</h2>
           <p className="text-sm text-muted-foreground mt-0.5">
-            Browse and connect services your agents can use.
+            Connect services your agents can send messages, read data, or trigger actions through.
           </p>
         </div>
-        {CATEGORIES.map((cat) => {
+        {CATEGORIES.filter((c) => c !== "AI Models").map((cat) => {
           const items = CATALOGUE.filter((c) => c.category === cat)
           return (
             <div key={cat}>
-              <p className="text-xs font-semibold text-muted-foreground/60 uppercase tracking-widest mb-3">{cat}</p>
+              <p className="text-xs font-semibold text-muted-foreground/60 uppercase tracking-widest mb-3">{CATEGORY_LABEL[cat]}</p>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {items.map((c) => (
                   <AvailableCard

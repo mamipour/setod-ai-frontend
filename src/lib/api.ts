@@ -123,6 +123,13 @@ export const connectors = {
       body: JSON.stringify({ org_id: orgId, name, provider, api_key: apiKey }),
     }),
 
+  // In-place key replacement — keeps the connector id, so agents bound to it stay bound.
+  updateLLMKey: (connectorId: string, orgId: string, apiKey: string): Promise<Connector> =>
+    apiFetch(`/connectors/llm/${connectorId}`, {
+      method: "PATCH",
+      body: JSON.stringify({ org_id: orgId, api_key: apiKey }),
+    }),
+
   createTelegramBot: (
     orgId: string,
     name: string,
@@ -689,4 +696,28 @@ export const skills = {
 
   detach: (agentId: string, skillId: string): Promise<void> =>
     apiFetch(`/skills/agent/${agentId}/${skillId}`, { method: "DELETE" }),
+}
+
+// ── Workspace integrations ─────────────────────────────────────────────────────
+
+export interface WebSearchSettings {
+  provider: "duckduckgo" | "tavily"
+  tavily_key_set: boolean
+}
+
+export const workspace = {
+  getWebSearch: (orgId: string): Promise<WebSearchSettings> =>
+    apiFetch(`/workspace/${orgId}/web-search`),
+
+  updateWebSearch: (
+    orgId: string,
+    data: { provider: "duckduckgo" | "tavily"; tavily_api_key?: string },
+  ): Promise<WebSearchSettings> =>
+    apiFetch(`/workspace/${orgId}/web-search`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    }),
+
+  testWebSearch: (orgId: string): Promise<{ ok: boolean; detail: string }> =>
+    apiFetch(`/workspace/${orgId}/web-search/test`, { method: "POST" }),
 }

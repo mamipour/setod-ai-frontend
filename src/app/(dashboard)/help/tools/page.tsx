@@ -114,7 +114,7 @@ export default function ToolsHelp() {
             ],
             [
               <C key="b">fetch_page</C>,
-              "Reads a web page and returns its text with the markup stripped, truncated if the page is long. Only appears when Read full pages is also on.",
+              "Reads a URL. Web pages come back as text with the markup stripped and every link kept as 'label (url)', so the agent can follow a listing through to its detail pages. Data files — CSV, JSON, XML — come back as-is, which is usually the better source when a site publishes one. Long content is truncated. Only appears when Read full pages is also on.",
             ],
           ]}
         />
