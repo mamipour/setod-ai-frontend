@@ -89,6 +89,20 @@ function ModelSelect({
   )
 }
 
+function ThinkingDots() {
+  return (
+    <span className="flex items-center gap-1 py-0.5" aria-label="Thinking">
+      {[0, 1, 2].map((i) => (
+        <span
+          key={i}
+          className="size-1.5 rounded-full bg-muted-foreground/50 animate-bounce"
+          style={{ animationDelay: `${i * 150}ms`, animationDuration: "900ms" }}
+        />
+      ))}
+    </span>
+  )
+}
+
 function MessageContent({
   content,
 }: {
@@ -328,6 +342,9 @@ export function AssistantTab({
             >
               {m.role === "assistant" ? (
                 <>
+                  {/* Initial wait — no content, no status yet */}
+                  {m.streaming && !m.content && !m.status && <ThinkingDots />}
+                  {/* Tool-call activity line */}
                   {m.status && !m.content && (
                     <p className="text-xs text-muted-foreground italic flex items-center gap-1.5">
                       <Loader2 className="size-3 animate-spin shrink-0" />
