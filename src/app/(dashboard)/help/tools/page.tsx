@@ -17,7 +17,7 @@ export default function ToolsHelp() {
           rows={[
             [
               <C key="a">read_unread_emails</C>,
-              "Lists unread inbox mail: sender, subject, date and a short preview snippet. Skips anything this agent already handled, and tells you how many it skipped. Does not include the full body or attachments.",
+              "Lists unread inbox mail: sender, subject, date and a short preview snippet. Only considers mail received on or after the day the agent was created — older unread messages are out of scope. Skips anything this agent already handled, and tells you how many it skipped. Does not include the full body or attachments.",
             ],
             [
               <C key="b">search_emails</C>,
