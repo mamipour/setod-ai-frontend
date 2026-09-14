@@ -1,4 +1,8 @@
-# Setod — Dashboard
+<p align="center">
+  <img src="public/logo.svg" alt="Setod" width="56" />
+</p>
+
+<h1 align="center">Setod — Dashboard</h1>
 
 Next.js dashboard for [Setod](https://setod.com): an AI agent platform for small-business back-office work. This is the UI. The API, worker, and database live in [`setod-ai-backend`](https://github.com/mamipour/setod-ai-backend).
 
@@ -54,6 +58,10 @@ npm run lint     # eslint
 ## Stack
 
 Next.js 16 (App Router), React 19, Tailwind 4. Pages under `src/app/(dashboard)/` talk to the API through `src/lib/api.ts`.
+
+## License
+
+[MIT](LICENSE)
 
 ## Related
 

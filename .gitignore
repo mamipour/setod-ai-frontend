@@ -44,3 +44,7 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Next.js recreates these on `next dev`. They are editor stubs, not product docs.
+AGENTS.md
+CLAUDE.md
