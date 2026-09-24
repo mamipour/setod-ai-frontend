@@ -643,6 +643,8 @@ function ConnectorRow({
 }
 
 
+const SIMULATED_PREFIX = "[simulated]"
+
 export function MessageRow({
   role,
   toolName,
@@ -652,19 +654,24 @@ export function MessageRow({
   toolName: string | null
   content: string
 }) {
+  const isSimulated = content.startsWith(SIMULATED_PREFIX)
+  const displayContent = isSimulated ? content.slice(SIMULATED_PREFIX.length).trimStart() : content
   const label = toolName ?? role
-  const tone =
-    role === "tool"
+  const tone = isSimulated
+    ? "text-amber-600"
+    : role === "tool"
       ? "text-blue-700"
       : role === "assistant"
         ? "text-foreground"
         : "text-muted-foreground"
 
   return (
-    <div className="flex gap-3 text-xs">
-      <span className={cn("w-32 shrink-0 truncate font-mono", tone)}>{label}</span>
-      <span className="min-w-0 flex-1 whitespace-pre-wrap break-words text-muted-foreground">
-        {content}
+    <div className={cn("flex gap-3 text-xs", isSimulated && "opacity-70")}>
+      <span className={cn("w-32 shrink-0 truncate font-mono", tone)}>
+        {isSimulated ? "⬡ " : ""}{label}
+      </span>
+      <span className="min-w-0 flex-1 whitespace-pre-wrap break-words text-muted-foreground italic-if-simulated">
+        {displayContent}
       </span>
     </div>
   )

@@ -3,7 +3,7 @@
 import { use, useEffect, useRef, useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { ArrowLeft, BookOpen, History, Loader2, MoreVertical, Play, Settings2, Sparkles, SlidersHorizontal, Trash2 } from "lucide-react"
+import { ArrowLeft, BookOpen, Eye, History, Loader2, MoreVertical, Play, Settings2, Sparkles, SlidersHorizontal, Trash2 } from "lucide-react"
 import { agents, type SessionDetail } from "@/lib/api"
 import { useAgent } from "@/hooks/useAgents"
 import { useUser } from "@/hooks/useUser"
@@ -79,6 +79,7 @@ export default function AgentDetailPage({ params }: { params: Promise<{ id: stri
   const [busy, setBusy] = useState(false)
   const [preview, setPreview] = useState<SessionDetail | null>(null)
   const [previewing, setPreviewing] = useState(false)
+  const [isSimulated, setIsSimulated] = useState(false)
   const [actionError, setActionError] = useState<string | null>(null)
 
   if (userLoading || loading) return <AgentDetailSkeleton />
@@ -97,13 +98,13 @@ export default function AgentDetailPage({ params }: { params: Promise<{ id: stri
     }
   }
 
-  async function runPreview() {
+  async function runPreview(dry = false) {
     setPreviewing(true)
+    setIsSimulated(dry)
     setPreview(null)
     setActionError(null)
     try {
-      // A real run against the draft: actions are performed, not simulated.
-      const s = await agents.run(id, orgId, { use_draft: true })
+      const s = await agents.run(id, orgId, { use_draft: true, dry_run: dry })
       setPreview(await agents.getSession(id, s.id))
     } catch (e) {
       setActionError(e instanceof Error ? e.message : "The run could not start")
@@ -158,15 +159,30 @@ export default function AgentDetailPage({ params }: { params: Promise<{ id: stri
             size="sm"
             variant="ghost"
             className="text-xs text-muted-foreground"
-            onClick={runPreview}
+            onClick={() => runPreview(false)}
             disabled={previewing}
           >
-            {previewing ? (
+            {previewing && !isSimulated ? (
               <Loader2 className="size-3.5 animate-spin" />
             ) : (
               <Play className="size-3.5" />
             )}
             Test run
+          </Button>
+          <Button
+            size="sm"
+            variant="ghost"
+            className="text-xs text-muted-foreground"
+            onClick={() => runPreview(true)}
+            disabled={previewing}
+            title="Dry run — writes are simulated, nothing is actually sent"
+          >
+            {previewing && isSimulated ? (
+              <Loader2 className="size-3.5 animate-spin" />
+            ) : (
+              <Eye className="size-3.5" />
+            )}
+            Preview
           </Button>
 
           {agent.status === "published" ? (
@@ -264,10 +280,13 @@ export default function AgentDetailPage({ params }: { params: Promise<{ id: stri
       >
         <div className="space-y-4">
           <div>
-            <h3 className="text-base font-semibold">Test run</h3>
+            <h3 className="text-base font-semibold">
+              {isSimulated ? "Preview" : "Test run"}
+            </h3>
             <p className="mt-1 text-xs text-muted-foreground">
-              Running your unpublished draft for real  -  messages are actually sent and your
-              accounts are actually used.
+              {isSimulated
+                ? "Simulated run — every write action is described but not performed. Nothing is sent."
+                : "Running your unpublished draft for real — messages are actually sent and your accounts are actually used."}
             </p>
           </div>
 
