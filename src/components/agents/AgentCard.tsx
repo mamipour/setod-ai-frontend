@@ -42,7 +42,11 @@ export function AgentCard({ agent }: { agent: Agent }) {
               <div
                 className={cn(
                   "flex size-8 shrink-0 items-center justify-center rounded-lg",
-                  agent.status === "published" ? "bg-green-50 text-green-700" : "bg-muted text-muted-foreground",
+                  agent.status === "published"
+                    ? "bg-green-50 text-green-700"
+                    : agent.status === "paused"
+                      ? "bg-amber-50 text-amber-700"
+                      : "bg-muted text-muted-foreground",
                 )}
               >
                 <AgentIcon icon={agent.icon} className="size-4" />

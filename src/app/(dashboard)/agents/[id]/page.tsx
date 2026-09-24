@@ -133,7 +133,9 @@ export default function AgentDetailPage({ params }: { params: Promise<{ id: stri
             className={
               agent.status === "published"
                 ? "bg-green-50 text-green-700"
-                : "bg-muted text-muted-foreground"
+                : agent.status === "paused"
+                  ? "bg-amber-50 text-amber-700"
+                  : "bg-muted text-muted-foreground"
             }
             onPick={async (icon) => {
               const updated = await agents.update(id, { icon })
@@ -183,9 +185,28 @@ export default function AgentDetailPage({ params }: { params: Promise<{ id: stri
                 variant="outline"
                 className="text-xs"
                 disabled={busy}
-                onClick={() => act(() => agents.unpublish(id))}
+                onClick={() => act(() => agents.pause(id))}
               >
                 Pause
+              </Button>
+            </>
+          ) : agent.status === "paused" ? (
+            <>
+              <Button
+                disabled={busy}
+                onClick={() => act(() => agents.resume(id))}
+                className="text-xs"
+              >
+                Resume
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                className="text-xs text-muted-foreground"
+                disabled={busy}
+                onClick={() => act(() => agents.unpublish(id))}
+              >
+                Unpublish
               </Button>
             </>
           ) : (

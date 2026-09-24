@@ -289,7 +289,7 @@ export function AgentStatusBadge({
   const map: Record<AgentStatus, { label: string; className: string }> = {
     published: { label: "Live", className: "bg-green-100 text-green-800 border-green-200" },
     draft: { label: "Draft", className: "bg-gray-100 text-gray-600 border-gray-200" },
-    archived: { label: "Archived", className: "bg-gray-100 text-gray-500 border-gray-200" },
+    paused: { label: "Paused", className: "bg-amber-100 text-amber-800 border-amber-200" },
   }
   const { label, className } = map[status]
   return (

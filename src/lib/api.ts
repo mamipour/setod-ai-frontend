@@ -233,7 +233,7 @@ export const connectors = {
 
 // ── Agents ────────────────────────────────────────────────────────────────────
 
-export type AgentStatus = "draft" | "published" | "archived"
+export type AgentStatus = "draft" | "published" | "paused"
 export type TriggerType = "schedule" | "channel" | "manual" | "agent"
 export type SessionStatus = "running" | "succeeded" | "error" | "waiting_approval"
 export type MessageRole = "user" | "assistant" | "tool" | "system"
@@ -440,6 +440,10 @@ export const agents = {
 
   unpublish: (id: string): Promise<Agent> =>
     apiFetch(`/agents/${id}/unpublish`, { method: "POST" }),
+  pause: (id: string): Promise<Agent> =>
+    apiFetch(`/agents/${id}/pause`, { method: "POST" }),
+  resume: (id: string): Promise<Agent> =>
+    apiFetch(`/agents/${id}/resume`, { method: "POST" }),
 
   /** Runs are real by default  -  actions are performed, not simulated. Pass dry_run: true
       explicitly if a simulated preview is ever wanted. */
