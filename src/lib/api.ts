@@ -726,4 +726,19 @@ export const workspace = {
 
   testWebSearch: (orgId: string): Promise<{ ok: boolean; detail: string }> =>
     apiFetch(`/workspace/${orgId}/web-search/test`, { method: "POST" }),
+
+  getNotify: (orgId: string): Promise<{ telegram_connector_id: string | null }> =>
+    apiFetch(`/workspace/${orgId}/notify`),
+
+  updateNotify: (
+    orgId: string,
+    data: { telegram_connector_id: string | null },
+  ): Promise<{ telegram_connector_id: string | null }> =>
+    apiFetch(`/workspace/${orgId}/notify`, {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    }),
+
+  testNotify: (orgId: string): Promise<{ ok: boolean; detail: string }> =>
+    apiFetch(`/workspace/${orgId}/notify/test`, { method: "POST" }),
 }

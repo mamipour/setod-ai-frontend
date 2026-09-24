@@ -1727,6 +1727,116 @@ function LLMProviderCard({
   )
 }
 
+// ── Notify card ───────────────────────────────────────────────────────────────
+
+function NotifyCard({ orgId, connectors: allConnectors }: { orgId: string; connectors: Connector[] }) {
+  const tgClients = allConnectors.filter((c) => c.type === "telegram_client" && c.status === "active")
+
+  const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const [testing, setTesting] = useState(false)
+  const [testResult, setTestResult] = useState<{ ok: boolean; detail: string } | null>(null)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    workspace.getNotify(orgId)
+      .then((s) => setSelectedId(s.telegram_connector_id))
+      .catch(() => {})
+      .finally(() => setLoading(false))
+  }, [orgId])
+
+  async function handleSave(id: string | null) {
+    setSaving(true); setError(null); setTestResult(null)
+    try {
+      const updated = await workspace.updateNotify(orgId, { telegram_connector_id: id })
+      setSelectedId(updated.telegram_connector_id)
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Failed to save")
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  async function handleTest() {
+    setTesting(true); setTestResult(null)
+    try {
+      const result = await workspace.testNotify(orgId)
+      setTestResult(result)
+    } catch (e: unknown) {
+      setTestResult({ ok: false, detail: e instanceof Error ? e.message : "Test failed" })
+    } finally {
+      setTesting(false)
+    }
+  }
+
+  const selected = tgClients.find((c) => c.id === selectedId)
+
+  return (
+    <Card className="flex flex-col">
+      <CardHeader className="pb-3">
+        <div className="flex items-center gap-3">
+          <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-700 text-base">
+            🔔
+          </div>
+          <div>
+            <CardTitle className="text-sm font-semibold leading-tight">Notifications</CardTitle>
+            <CardDescription className="text-xs">
+              {loading
+                ? "Loading…"
+                : selected
+                  ? `Telegram + email (${selected.name})`
+                  : "Email only (owner's login address)"}
+            </CardDescription>
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent className="flex flex-1 flex-col gap-3 pt-0">
+        {testResult && (
+          <p className={cn("text-xs", testResult.ok ? "text-green-700" : "text-destructive")}>
+            {testResult.ok ? "✓" : "✗"} {testResult.detail}
+          </p>
+        )}
+        {error && <p className="text-xs text-destructive">{error}</p>}
+
+        {tgClients.length > 0 && (
+          <div className="space-y-1.5">
+            <Label className="text-xs">Telegram channel (optional)</Label>
+            <select
+              className="w-full rounded-md border bg-background px-2 py-1.5 text-xs"
+              value={selectedId ?? ""}
+              disabled={loading || saving}
+              onChange={(e) => handleSave(e.target.value || null)}
+            >
+              <option value="">None — email only</option>
+              {tgClients.map((c) => (
+                <option key={c.id} value={c.id}>{c.name}</option>
+              ))}
+            </select>
+          </div>
+        )}
+
+        {tgClients.length === 0 && (
+          <p className="text-xs text-muted-foreground">
+            Add a <strong>Telegram Account</strong> connector to also receive alerts on Telegram.
+          </p>
+        )}
+
+        <p className="text-xs text-muted-foreground">
+          Email always goes to your login address as a fallback.
+        </p>
+
+        <div className="flex items-center gap-2 mt-auto">
+          <Button size="sm" variant="outline" onClick={handleTest} disabled={testing || loading}>
+            {testing ? "Sending…" : "Send test"}
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+
+
 // ── Tavily card ───────────────────────────────────────────────────────────────
 
 function TavilyCard({ orgId }: { orgId: string }) {
@@ -2006,6 +2116,12 @@ function ConnectorsPageInner() {
           <p className="text-xs font-semibold text-muted-foreground/60 uppercase tracking-widest mb-3">Search</p>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             <TavilyCard orgId={orgId} />
+          </div>
+        </div>
+        <div>
+          <p className="text-xs font-semibold text-muted-foreground/60 uppercase tracking-widest mb-3">Notifications</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <NotifyCard orgId={orgId} connectors={list} />
           </div>
         </div>
       </section>
