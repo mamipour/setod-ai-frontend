@@ -456,6 +456,14 @@ export interface DailyRuns {
 
 export type KnowledgeFileStatus = "pending" | "processing" | "ready" | "error"
 
+/** A SQL table derived from a CSV/XLSX upload; the agent queries it with `query_data`. */
+export interface DataTable {
+  name: string
+  sheet: string | null
+  row_count: number
+  column_count: number
+}
+
 export interface KnowledgeFile {
   id: string
   filename: string
@@ -465,6 +473,7 @@ export interface KnowledgeFile {
   chunk_count: number
   source_url: string | null
   created_at: string
+  tables: DataTable[]
 }
 
 export interface Overview {

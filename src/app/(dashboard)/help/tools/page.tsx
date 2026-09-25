@@ -185,6 +185,10 @@ export default function ToolsHelp() {
               <C key="a">search_knowledge</C>,
               "Searches the documents uploaded to this agent and returns the best-matching passages with the file each came from.",
             ],
+            [
+              <C key="b">query_data</C>,
+              "Appears when a CSV or Excel file is uploaded. Runs one read-only SQL statement over those files as tables — filter, count, sort, join, total — and returns up to 200 rows. The agent is shown every table's columns and a sample row, so instructions should say what to find, not how.",
+            ],
           ]}
         />
       </Section>

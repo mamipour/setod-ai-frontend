@@ -1,13 +1,13 @@
 "use client"
 
 import { useCallback, useEffect, useRef, useState } from "react"
-import { FileText, Link, Loader2, Trash2, UploadCloud } from "lucide-react"
+import { FileText, Link, Loader2, Table2, Trash2, UploadCloud } from "lucide-react"
 import { agents, type KnowledgeFile } from "@/lib/api"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { cn } from "@/lib/utils"
 
-const ACCEPT = ".pdf,.txt,.md,.csv"
+const ACCEPT = ".pdf,.txt,.md,.csv,.xlsx"
 const POLL_MS = 4000
 
 /**
@@ -91,6 +91,11 @@ export function KnowledgeTab({ agentId }: { agentId: string }) {
             It gets a <span className="font-mono">search_knowledge</span> tool as soon as
             the first file is indexed. Indexing uses your OpenAI account.
           </p>
+          <p className="mt-1.5 text-xs text-muted-foreground">
+            CSV and Excel files also become tables the agent can filter, count and join with
+            SQL through a <span className="font-mono">query_data</span> tool — far more
+            reliable than reading thousands of rows.
+          </p>
         </div>
 
         {/* Upload zone */}
@@ -118,7 +123,7 @@ export function KnowledgeTab({ agentId }: { agentId: string }) {
           <p className="text-sm font-medium">
             {uploading ? "Uploading…" : "Drop files here or click to browse"}
           </p>
-          <p className="text-xs text-muted-foreground">PDF, TXT, Markdown or CSV, up to 10 MB</p>
+          <p className="text-xs text-muted-foreground">PDF, TXT, Markdown, CSV or Excel (.xlsx), up to 10 MB</p>
           <input
             ref={inputRef}
             type="file"
@@ -185,10 +190,13 @@ export function KnowledgeTab({ agentId }: { agentId: string }) {
 }
 
 function FileRow({ file, onDelete }: { file: KnowledgeFile; onDelete: () => void }) {
+  const tables = file.tables ?? []
   return (
     <li className="flex items-center gap-3 rounded-lg border bg-card px-3 py-2.5">
       <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
-        {file.source_url ? <Link className="size-4" /> : <FileText className="size-4" />}
+        {file.source_url ? <Link className="size-4" />
+          : tables.length > 0 ? <Table2 className="size-4" />
+          : <FileText className="size-4" />}
       </div>
       <div className="min-w-0 flex-1">
         {file.source_url ? (
@@ -206,6 +214,18 @@ function FileRow({ file, onDelete }: { file: KnowledgeFile; onDelete: () => void
             <span className="text-red-600"> · {file.error}</span>
           )}
         </p>
+        {tables.length > 0 && (
+          <p className="mt-0.5 text-xs text-muted-foreground">
+            <span className="font-medium text-foreground/80">Queryable</span>
+            {tables.map((t) => (
+              <span key={t.name}>
+                {" · "}
+                <span className="font-mono">{t.name}</span>
+                {" "}{t.row_count.toLocaleString()} rows, {t.column_count} columns
+              </span>
+            ))}
+          </p>
+        )}
       </div>
       <StatusBadge status={file.status} />
       <button
