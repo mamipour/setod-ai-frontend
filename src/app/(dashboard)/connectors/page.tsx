@@ -111,6 +111,16 @@ const CATALOGUE: CatalogueEntry[] = [
     category: "SMS & Voice",
   },
   {
+    type: "instagram",
+    label: "Instagram",
+    description: "Reply to comments, moderate posts, and answer DMs on your Instagram Business account.",
+    icon: "📷",
+    iconSrc: "/instagram.svg",
+    authMethod: "oauth",
+    available: true,
+    category: "Messaging",
+  },
+  {
     type: "mcp",
     catalogKey: "github",
     label: "GitHub",
@@ -758,6 +768,26 @@ function GoogleSheetsModal({ orgId, onSaved }: { orgId: string; onSaved: () => v
         </div>
       )}
     </>
+  )
+}
+
+// ── Instagram OAuth button ────────────────────────────────────────────────────
+
+function InstagramOAuthButton({ orgId }: { orgId: string }) {
+  const [starting, setStarting] = useState(false)
+  return (
+    <Button
+      size="sm"
+      variant="outline"
+      className="text-xs"
+      disabled={starting}
+      onClick={() => {
+        setStarting(true)
+        connectors.startInstagramOAuth(orgId)
+      }}
+    >
+      {starting ? "Opening…" : "Connect"}
+    </Button>
   )
 }
 
@@ -1783,6 +1813,7 @@ function AvailableCard({ type, catalogKey, label, description, icon, iconSrc, au
     if (type === "slack_webhook") return <SlackWebhookModal orgId={orgId} onSaved={onSaved} />
     if (type === "google_sheets") return <GoogleSheetsModal orgId={orgId} onSaved={onSaved} />
     if (type === "whatsapp") return <WhatsAppModal orgId={orgId} onSaved={onSaved} />
+    if (type === "instagram") return <InstagramOAuthButton orgId={orgId} />
     if (type === "mcp" && authMethod === "mcp_oauth") return (
       <McpOauthAppModal
         orgId={orgId}

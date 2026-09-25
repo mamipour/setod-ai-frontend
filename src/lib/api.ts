@@ -63,7 +63,7 @@ export const auth = {
 
 // ── Connectors ────────────────────────────────────────────────────────────────
 
-export type ConnectorType = "gmail" | "telegram_bot" | "telegram_client" | "twilio" | "webhook" | "slack_webhook" | "google_sheets" | "whatsapp" | "openai" | "anthropic" | "mcp"
+export type ConnectorType = "gmail" | "telegram_bot" | "telegram_client" | "twilio" | "webhook" | "slack_webhook" | "google_sheets" | "whatsapp" | "instagram" | "openai" | "anthropic" | "mcp"
 export type ConnectorStatus = "active" | "error" | "pending_auth" | "revoked"
 
 export interface Connector {
@@ -239,6 +239,12 @@ export const connectors = {
 
   regenWebhookSecret: (id: string, orgId: string): Promise<{ connector: Connector; webhook_url: string; secret: string }> =>
     apiFetch(`/connectors/${id}/regen-secret?org_id=${orgId}`, { method: "POST" }),
+
+  // ── Instagram ──────────────────────────────────────────────────────────────
+  /** Redirect the browser to Instagram's OAuth consent screen. */
+  startInstagramOAuth: (orgId: string) => {
+    window.location.href = `${API_BASE}/connectors/oauth/instagram/start?org_id=${orgId}`
+  },
 
   // ── Slack outgoing webhook ─────────────────────────────────────────────────
   validateSlackWebhook: (orgId: string, webhookUrl: string): Promise<{ ok: boolean; detail: string }> =>

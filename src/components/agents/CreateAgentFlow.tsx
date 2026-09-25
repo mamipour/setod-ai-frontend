@@ -30,6 +30,7 @@ export const CONNECTOR_LABEL: Record<ConnectorType, string> = {
   slack_webhook: "Slack",
   google_sheets: "Google Sheets",
   whatsapp: "WhatsApp",
+  instagram: "Instagram",
   openai: "OpenAI",
   anthropic: "Anthropic",
   mcp: "MCP server",

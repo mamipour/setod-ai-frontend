@@ -41,6 +41,7 @@ export const CONNECTOR_ICON: Partial<Record<string, string>> = {
   slack_webhook: "/slack.svg",
   google_sheets: "/google-sheet.svg",
   whatsapp: "/whatsapp.svg",
+  instagram: "/instagram.svg",
 }
 
 const MCP_ICON_BY_LABEL: Array<[string, string]> = [
@@ -84,6 +85,19 @@ export const CONNECTOR_TOOLS: Partial<Record<string, Array<{ name: string; descr
   ],
   twilio: [
     { name: "send_sms", description: "Send an SMS (costs money per message)" },
+  ],
+  whatsapp: [
+    { name: "send_whatsapp_message",  description: "Send a text reply (within 24-hour window)" },
+    { name: "read_whatsapp_messages", description: "List recent inbound messages" },
+  ],
+  instagram: [
+    { name: "get_instagram_posts",           description: "List recent posts with their IDs" },
+    { name: "get_instagram_comments",        description: "Get comments on a specific post" },
+    { name: "reply_to_instagram_comment",    description: "Reply publicly to a comment" },
+    { name: "hide_instagram_comment",        description: "Hide or unhide a comment" },
+    { name: "delete_instagram_comment",      description: "Permanently delete a comment" },
+    { name: "read_instagram_messages",       description: "List recent inbound DMs" },
+    { name: "reply_to_instagram_dm",         description: "Reply to a DM (within 24-hour window)" },
   ],
 }
 
