@@ -32,7 +32,7 @@ type Snapshot = {
 }
 import { cn } from "@/lib/utils"
 
-const TOOL_TYPES = ["gmail", "telegram_bot", "telegram_client", "twilio", "mcp"]
+const TOOL_TYPES = ["gmail", "telegram_bot", "telegram_client", "twilio", "mcp", "whatsapp", "instagram", "slack_webhook", "google_sheets"]
 
 
 /** Autosaves a field after the user stops typing, rather than on every keystroke. */
