@@ -63,7 +63,7 @@ export const auth = {
 
 // ── Connectors ────────────────────────────────────────────────────────────────
 
-export type ConnectorType = "gmail" | "telegram_bot" | "telegram_client" | "twilio" | "webhook" | "openai" | "anthropic" | "mcp"
+export type ConnectorType = "gmail" | "telegram_bot" | "telegram_client" | "twilio" | "webhook" | "slack_webhook" | "google_sheets" | "whatsapp" | "openai" | "anthropic" | "mcp"
 export type ConnectorStatus = "active" | "error" | "pending_auth" | "revoked"
 
 export interface Connector {
@@ -229,6 +229,66 @@ export const connectors = {
 
   resyncMcp: (id: string, orgId: string): Promise<{ ok: boolean; detail: string }> =>
     apiFetch(`/connectors/${id}/mcp/resync?org_id=${orgId}`, { method: "POST" }),
+
+  // ── Generic inbound webhook ────────────────────────────────────────────────
+  createWebhook: (orgId: string, name?: string): Promise<{ connector: Connector; webhook_url: string; secret: string }> =>
+    apiFetch("/connectors/webhook", {
+      method: "POST",
+      body: JSON.stringify({ org_id: orgId, name: name ?? "Inbound Webhook" }),
+    }),
+
+  regenWebhookSecret: (id: string, orgId: string): Promise<{ connector: Connector; webhook_url: string; secret: string }> =>
+    apiFetch(`/connectors/${id}/regen-secret?org_id=${orgId}`, { method: "POST" }),
+
+  // ── Slack outgoing webhook ─────────────────────────────────────────────────
+  validateSlackWebhook: (orgId: string, webhookUrl: string): Promise<{ ok: boolean; detail: string }> =>
+    apiFetch("/connectors/slack-webhook/validate", {
+      method: "POST",
+      body: JSON.stringify({ org_id: orgId, webhook_url: webhookUrl }),
+    }),
+
+  createSlackWebhook: (orgId: string, webhookUrl: string, name?: string): Promise<Connector> =>
+    apiFetch("/connectors/slack-webhook", {
+      method: "POST",
+      body: JSON.stringify({ org_id: orgId, webhook_url: webhookUrl, name: name ?? "Slack" }),
+    }),
+
+  // ── Google Sheets ──────────────────────────────────────────────────────────
+  validateSheets: (orgId: string, saJson: string): Promise<{ ok: boolean; detail: string }> =>
+    apiFetch("/connectors/sheets/validate", {
+      method: "POST",
+      body: JSON.stringify({ org_id: orgId, sa_json: saJson }),
+    }),
+
+  createSheets: (orgId: string, saJson: string, name?: string, defaultSpreadsheetId?: string): Promise<Connector> =>
+    apiFetch("/connectors/sheets", {
+      method: "POST",
+      body: JSON.stringify({
+        org_id: orgId,
+        sa_json: saJson,
+        name: name ?? "",
+        default_spreadsheet_id: defaultSpreadsheetId ?? "",
+      }),
+    }),
+
+  // ── WhatsApp Business ──────────────────────────────────────────────────────
+  validateWhatsApp: (phoneNumberId: string, accessToken: string): Promise<{ ok: boolean; detail: string }> =>
+    apiFetch("/connectors/whatsapp/validate", {
+      method: "POST",
+      body: JSON.stringify({ org_id: "00000000-0000-0000-0000-000000000000", phone_number_id: phoneNumberId, access_token: accessToken, verify_token: "validate" }),
+    }),
+
+  createWhatsApp: (orgId: string, phoneNumberId: string, accessToken: string, verifyToken: string, name?: string): Promise<Connector> =>
+    apiFetch("/connectors/whatsapp", {
+      method: "POST",
+      body: JSON.stringify({
+        org_id: orgId,
+        phone_number_id: phoneNumberId,
+        access_token: accessToken,
+        verify_token: verifyToken,
+        name: name ?? "",
+      }),
+    }),
 }
 
 // ── Agents ────────────────────────────────────────────────────────────────────

@@ -93,11 +93,39 @@ const CATALOGUE: CatalogueEntry[] = [
   {
     type: "webhook",
     label: "Inbound Webhook",
-    description: "Trigger agents from any external system or form.",
+    description: "Trigger agents from any external system, form, or automation.",
     icon: "🔗",
     authMethod: "generated",
-    available: false,
+    available: true,
     category: "Automation",
+  },
+  {
+    type: "slack_webhook",
+    label: "Slack",
+    description: "Post messages to a Slack channel via an Incoming Webhook URL.",
+    icon: "#",
+    iconSrc: "/slack.svg",
+    authMethod: "api_key",
+    available: true,
+    category: "Automation",
+  },
+  {
+    type: "google_sheets",
+    label: "Google Sheets",
+    description: "Read and write spreadsheet data using a service account.",
+    icon: "📊",
+    authMethod: "api_key",
+    available: true,
+    category: "Automation",
+  },
+  {
+    type: "whatsapp",
+    label: "WhatsApp Business",
+    description: "Send and receive WhatsApp messages via Meta's Cloud API.",
+    icon: "💬",
+    authMethod: "api_key",
+    available: true,
+    category: "SMS & Voice",
   },
   {
     type: "mcp",
@@ -612,6 +640,358 @@ function GmailConnectorModal({ orgId, onSaved }: { orgId: string; onSaved: () =>
 // ── Twilio modal ──────────────────────────────────────────────────────────────
 
 type TwilioStep = "form" | "confirm"
+
+// ── Webhook modal ─────────────────────────────────────────────────────────────
+
+function WebhookModal({ orgId, onSaved }: { orgId: string; onSaved: () => void }) {
+  const [open, setOpen] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const [result, setResult] = useState<{ webhook_url: string; secret: string } | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const [copied, setCopied] = useState<"url" | "secret" | null>(null)
+
+  function copy(val: string, kind: "url" | "secret") {
+    navigator.clipboard.writeText(val).then(() => {
+      setCopied(kind)
+      setTimeout(() => setCopied(null), 1500)
+    })
+  }
+
+  async function handleCreate() {
+    setLoading(true); setError(null)
+    try {
+      const res = await connectors.createWebhook(orgId)
+      setResult({ webhook_url: res.webhook_url, secret: res.secret })
+      onSaved()
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Failed to create")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  function handleClose() { setOpen(false); setResult(null); setError(null) }
+
+  return (
+    <>
+      <Button size="sm" variant="outline" className="text-xs" onClick={() => { setResult(null); setOpen(true) }}>
+        Connect
+      </Button>
+      {open && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/40" onClick={handleClose} />
+          <div className="relative z-10 w-full max-w-md rounded-xl border bg-card shadow-xl p-6 space-y-4">
+            <h2 className="text-base font-semibold">Inbound Webhook</h2>
+            {!result ? (
+              <>
+                <p className="text-sm text-muted-foreground">
+                  Creates a unique URL your services can POST to. Any POST triggers agents
+                  that listen on this webhook. Payloads are delivered as JSON — the agent sees
+                  the full body as its trigger message.
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Optionally send an <code className="font-mono bg-muted px-1 rounded">X-Hub-Signature-256</code> header
+                  (GitHub-style HMAC-SHA256) to authenticate requests.
+                </p>
+                {error && <p className="text-xs text-destructive">{error}</p>}
+                <div className="flex justify-end gap-2 pt-2">
+                  <Button size="sm" variant="ghost" onClick={handleClose}>Cancel</Button>
+                  <Button size="sm" onClick={handleCreate} disabled={loading}>
+                    {loading ? "Creating…" : "Generate URL"}
+                  </Button>
+                </div>
+              </>
+            ) : (
+              <>
+                <p className="text-sm text-muted-foreground">
+                  Copy these now — the secret is shown once and cannot be recovered.
+                </p>
+                <div className="space-y-3">
+                  <div className="space-y-1">
+                    <Label className="text-xs">Webhook URL</Label>
+                    <div className="flex gap-2">
+                      <code className="flex-1 truncate rounded bg-muted px-2 py-1.5 text-xs font-mono">{result.webhook_url}</code>
+                      <Button size="sm" variant="outline" className="shrink-0 text-xs" onClick={() => copy(result.webhook_url, "url")}>
+                        {copied === "url" ? <Check className="size-3" /> : "Copy"}
+                      </Button>
+                    </div>
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs">Signing secret</Label>
+                    <div className="flex gap-2">
+                      <code className="flex-1 truncate rounded bg-muted px-2 py-1.5 text-xs font-mono">{result.secret}</code>
+                      <Button size="sm" variant="outline" className="shrink-0 text-xs" onClick={() => copy(result.secret, "secret")}>
+                        {copied === "secret" ? <Check className="size-3" /> : "Copy"}
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+                <div className="flex justify-end pt-2">
+                  <Button size="sm" onClick={handleClose}>Done</Button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+    </>
+  )
+}
+
+// ── Slack webhook modal ───────────────────────────────────────────────────────
+
+function SlackWebhookModal({ orgId, onSaved }: { orgId: string; onSaved: () => void }) {
+  const [open, setOpen] = useState(false)
+  const [webhookUrl, setWebhookUrl] = useState("")
+  const [name, setName] = useState("Slack")
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  function handleClose() { setOpen(false); setWebhookUrl(""); setName("Slack"); setError(null) }
+
+  async function handleSave() {
+    if (!webhookUrl.trim()) return
+    setLoading(true); setError(null)
+    try {
+      await connectors.createSlackWebhook(orgId, webhookUrl.trim(), name.trim() || "Slack")
+      handleClose(); onSaved()
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Failed to connect")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <>
+      <Button size="sm" variant="outline" className="text-xs" onClick={() => { setError(null); setOpen(true) }}>
+        Connect
+      </Button>
+      {open && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/40" onClick={handleClose} />
+          <div className="relative z-10 w-full max-w-md rounded-xl border bg-card shadow-xl p-6 space-y-4">
+            <h2 className="text-base font-semibold">Connect Slack</h2>
+            <p className="text-sm text-muted-foreground">
+              In Slack, go to <strong>Apps → Incoming Webhooks</strong> and create one for the channel
+              you want. Paste the webhook URL below — a test message is sent immediately to confirm.
+            </p>
+            <div className="space-y-3">
+              <div className="space-y-1">
+                <Label className="text-xs">Incoming Webhook URL</Label>
+                <Input
+                  placeholder="https://hooks.slack.com/services/…"
+                  value={webhookUrl}
+                  onChange={(e) => setWebhookUrl(e.target.value)}
+                  className="h-8 text-xs font-mono"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Name (optional)</Label>
+                <Input
+                  placeholder="Slack"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  className="h-8 text-xs"
+                />
+              </div>
+            </div>
+            {error && <p className="text-xs text-destructive">{error}</p>}
+            <div className="flex justify-end gap-2 pt-2">
+              <Button size="sm" variant="ghost" onClick={handleClose}>Cancel</Button>
+              <Button size="sm" onClick={handleSave} disabled={loading || !webhookUrl.trim()}>
+                {loading ? "Connecting…" : "Connect"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  )
+}
+
+// ── Google Sheets modal ───────────────────────────────────────────────────────
+
+function GoogleSheetsModal({ orgId, onSaved }: { orgId: string; onSaved: () => void }) {
+  const [open, setOpen] = useState(false)
+  const [saJson, setSaJson] = useState("")
+  const [defaultSheet, setDefaultSheet] = useState("")
+  const [name, setName] = useState("")
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  function handleClose() { setOpen(false); setSaJson(""); setDefaultSheet(""); setName(""); setError(null) }
+
+  async function handleSave() {
+    if (!saJson.trim()) return
+    setLoading(true); setError(null)
+    try {
+      await connectors.createSheets(orgId, saJson.trim(), name.trim() || undefined, defaultSheet.trim() || undefined)
+      handleClose(); onSaved()
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Failed to connect")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <>
+      <Button size="sm" variant="outline" className="text-xs" onClick={() => { setError(null); setOpen(true) }}>
+        Connect
+      </Button>
+      {open && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/40" onClick={handleClose} />
+          <div className="relative z-10 w-full max-w-lg rounded-xl border bg-card shadow-xl p-6 space-y-4">
+            <h2 className="text-base font-semibold">Connect Google Sheets</h2>
+            <ol className="text-xs text-muted-foreground space-y-1 list-decimal list-inside">
+              <li>In Google Cloud Console, create a service account and generate a JSON key.</li>
+              <li>After connecting, share your spreadsheets with the service-account email shown.</li>
+            </ol>
+            <div className="space-y-3">
+              <div className="space-y-1">
+                <Label className="text-xs">Service account JSON</Label>
+                <textarea
+                  rows={6}
+                  placeholder={'{\n  "type": "service_account",\n  "client_email": "…",\n  …\n}'}
+                  value={saJson}
+                  onChange={(e) => setSaJson(e.target.value)}
+                  className="w-full rounded-md border bg-background px-3 py-2 font-mono text-xs"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Default spreadsheet URL or ID (optional)</Label>
+                <Input
+                  placeholder="https://docs.google.com/spreadsheets/d/…"
+                  value={defaultSheet}
+                  onChange={(e) => setDefaultSheet(e.target.value)}
+                  className="h-8 text-xs font-mono"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Name (optional)</Label>
+                <Input
+                  placeholder="Google Sheets"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  className="h-8 text-xs"
+                />
+              </div>
+            </div>
+            {error && <p className="text-xs text-destructive">{error}</p>}
+            <div className="flex justify-end gap-2 pt-2">
+              <Button size="sm" variant="ghost" onClick={handleClose}>Cancel</Button>
+              <Button size="sm" onClick={handleSave} disabled={loading || !saJson.trim()}>
+                {loading ? "Connecting…" : "Connect"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  )
+}
+
+// ── WhatsApp Business modal ───────────────────────────────────────────────────
+
+function WhatsAppModal({ orgId, onSaved }: { orgId: string; onSaved: () => void }) {
+  const [open, setOpen] = useState(false)
+  const [phoneNumberId, setPhoneNumberId] = useState("")
+  const [accessToken, setAccessToken] = useState("")
+  const [verifyToken, setVerifyToken] = useState("")
+  const [name, setName] = useState("")
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  function handleClose() {
+    setOpen(false); setPhoneNumberId(""); setAccessToken(""); setVerifyToken(""); setName(""); setError(null)
+  }
+
+  async function handleSave() {
+    if (!phoneNumberId.trim() || !accessToken.trim() || !verifyToken.trim()) return
+    setLoading(true); setError(null)
+    try {
+      await connectors.createWhatsApp(orgId, phoneNumberId.trim(), accessToken.trim(), verifyToken.trim(), name.trim() || undefined)
+      handleClose(); onSaved()
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Failed to connect")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <>
+      <Button size="sm" variant="outline" className="text-xs" onClick={() => { setError(null); setOpen(true) }}>
+        Connect
+      </Button>
+      {open && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/40" onClick={handleClose} />
+          <div className="relative z-10 w-full max-w-md rounded-xl border bg-card shadow-xl p-6 space-y-4">
+            <h2 className="text-base font-semibold">Connect WhatsApp Business</h2>
+            <p className="text-sm text-muted-foreground">
+              From <strong>Meta Business Manager → WhatsApp → API Setup</strong>, copy the
+              Phone Number ID and generate a permanent system-user access token.
+            </p>
+            <div className="space-y-3">
+              <div className="space-y-1">
+                <Label className="text-xs">Phone Number ID</Label>
+                <Input
+                  placeholder="123456789012345"
+                  value={phoneNumberId}
+                  onChange={(e) => setPhoneNumberId(e.target.value)}
+                  className="h-8 text-xs font-mono"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Permanent access token</Label>
+                <Input
+                  type="password"
+                  placeholder="EAAxxxxxxx…"
+                  value={accessToken}
+                  onChange={(e) => setAccessToken(e.target.value)}
+                  className="h-8 text-xs"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Verify token (you choose this)</Label>
+                <Input
+                  placeholder="my-verify-token"
+                  value={verifyToken}
+                  onChange={(e) => setVerifyToken(e.target.value)}
+                  className="h-8 text-xs font-mono"
+                />
+                <p className="text-[10px] text-muted-foreground">
+                  Enter this same string in Meta's webhook config. Setod echoes it back to verify ownership.
+                </p>
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Name (optional)</Label>
+                <Input
+                  placeholder="WhatsApp Business"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  className="h-8 text-xs"
+                />
+              </div>
+            </div>
+            {error && <p className="text-xs text-destructive">{error}</p>}
+            <div className="flex justify-end gap-2 pt-2">
+              <Button size="sm" variant="ghost" onClick={handleClose}>Cancel</Button>
+              <Button size="sm" onClick={handleSave} disabled={loading || !phoneNumberId.trim() || !accessToken.trim() || !verifyToken.trim()}>
+                {loading ? "Connecting…" : "Connect"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  )
+}
+
+// ── Twilio modal ──────────────────────────────────────────────────────────────
 
 function TwilioModal({ orgId, onSaved }: { orgId: string; onSaved: () => void }) {
   const [open, setOpen] = useState(false)
@@ -1533,6 +1913,10 @@ function AvailableCard({ type, catalogKey, label, description, icon, iconSrc, au
     if (type === "telegram_bot") return <TelegramBotModal orgId={orgId} onSaved={onSaved} />
     if (type === "telegram_client") return <TelegramClientModal orgId={orgId} onSaved={onSaved} />
     if (type === "twilio") return <TwilioModal orgId={orgId} onSaved={onSaved} />
+    if (type === "webhook") return <WebhookModal orgId={orgId} onSaved={onSaved} />
+    if (type === "slack_webhook") return <SlackWebhookModal orgId={orgId} onSaved={onSaved} />
+    if (type === "google_sheets") return <GoogleSheetsModal orgId={orgId} onSaved={onSaved} />
+    if (type === "whatsapp") return <WhatsAppModal orgId={orgId} onSaved={onSaved} />
     if (type === "mcp" && authMethod === "mcp_oauth") return (
       <McpOauthAppModal
         orgId={orgId}
