@@ -38,6 +38,9 @@ export const CONNECTOR_ICON: Partial<Record<string, string>> = {
   openai: "/openai.svg",
   anthropic: "/anthropic.svg",
   mcp: "/mcp.svg",
+  slack_webhook: "/slack.svg",
+  google_sheets: "/google-sheet.svg",
+  whatsapp: "/whatsapp.svg",
 }
 
 const MCP_ICON_BY_LABEL: Array<[string, string]> = [
