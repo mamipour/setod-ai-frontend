@@ -3,7 +3,7 @@
 import { Suspense, useEffect, useRef, useState } from "react"
 import Image from "next/image"
 import { useSearchParams } from "next/navigation"
-import { Check, Lock, Shield, X } from "lucide-react"
+import { BellRing, Check, Lock, Shield, X } from "lucide-react"
 import { connectors, workspace, type Connector, type ConnectorType, type WebSearchSettings } from "@/lib/api"
 import { useUser } from "@/hooks/useUser"
 import { Button } from "@/components/ui/button"
@@ -2162,8 +2162,8 @@ function NotifyCard({ orgId, connectors: allConnectors }: { orgId: string; conne
     <Card className="flex flex-col">
       <CardHeader className="pb-3">
         <div className="flex items-center gap-3">
-          <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-700 text-base">
-            🔔
+          <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
+            <BellRing className="size-4" />
           </div>
           <div>
             <CardTitle className="text-sm font-semibold leading-tight">Notifications</CardTitle>
