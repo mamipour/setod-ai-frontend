@@ -79,7 +79,7 @@ export default function SchedulesHelp() {
 
       <Section title="What has to be true for a schedule to fire">
         <List>
-          <li>The agent is published. Drafts never run on their own.</li>
+          <li>The agent is published and not paused.</li>
           <li>The trigger is enabled.</li>
           <li>The agent is not already running.</li>
           <li>The background worker process is up.</li>
@@ -90,13 +90,44 @@ export default function SchedulesHelp() {
         </P>
       </Section>
 
-      <Callout tone="info" title="Message-arrival triggers">
-        <p>
-          Triggering an agent the moment a message arrives is not available yet. Poll on a
-          schedule instead  -  every 15 minutes is close enough to real time for most work, and
-          the platform makes sure nothing gets handled twice.
-        </p>
-      </Callout>
+      <Section title="When a message arrives">
+        <P>
+          Instead of a schedule, you can trigger an agent the moment an inbound message
+          lands. Select <strong>On a message</strong> when creating the agent, or add a
+          channel trigger from the agent&apos;s <em>When it runs</em> section after creation.
+        </P>
+        <List>
+          <li>
+            <strong>Telegram Bot</strong> — the platform registers a webhook with Telegram
+            automatically. Messages arrive within a second of being sent.
+          </li>
+          <li>
+            <strong>Twilio (SMS)</strong> — configure the webhook URL shown on the connector
+            card as the inbound message URL on your Twilio number.
+          </li>
+          <li>
+            <strong>WhatsApp Business</strong> — set the webhook URL in Meta Business
+            Manager. The same URL handles the verification handshake.
+          </li>
+          <li>
+            <strong>Inbound Webhook</strong> — any system can POST a JSON payload to the
+            connector URL. The agent receives the full body as its trigger message.
+          </li>
+        </List>
+        <P>
+          If the same connector is used by more than one agent, every matching agent fires
+          independently on each message. Duplicate deliveries from the provider are
+          collapsed automatically  -  the same message ID is never processed twice.
+        </P>
+      </Section>
+
+      <Section title="What has to be true for a message trigger to fire">
+        <List>
+          <li>The agent is published and not paused.</li>
+          <li>The channel trigger is enabled.</li>
+          <li>The background worker is up.</li>
+        </List>
+      </Section>
 
       <NextUp {...nextPage("/help/schedules")!} />
     </>

@@ -91,6 +91,59 @@ export default function ToolsHelp() {
         />
       </Section>
 
+      <Section title="Slack">
+        <Table
+          head={["Tool", "What it does"]}
+          rows={[
+            [
+              <C key="a">post_to_slack</C>,
+              "Posts a message to the Slack channel linked at setup. Supports plain text and Slack markdown (*bold*, _italic_, `code`, ```block```). Dry-run mode simulates the post without sending.",
+            ],
+          ]}
+        />
+      </Section>
+
+      <Section title="Google Sheets">
+        <Table
+          head={["Tool", "What it does"]}
+          rows={[
+            [
+              <C key="a">read_rows</C>,
+              "Reads a rectangular block of cells from a Google Sheet. Returns tab-separated rows. Accepts A1 notation ranges like Sheet1!A1:D50. Defaults to Sheet1!A1:Z100.",
+            ],
+            [
+              <C key="b">append_row</C>,
+              "Appends a new row at the bottom of a sheet. Pass an array of cell values. Dry-run mode shows what would be written without touching the sheet.",
+            ],
+            [
+              <C key="c">update_cell</C>,
+              "Overwrites a single cell. Useful for marking a row as processed or updating a status column. Dry-run mode simulates the write.",
+            ],
+          ]}
+        />
+      </Section>
+
+      <Section title="WhatsApp Business">
+        <Table
+          head={["Tool", "What it does"]}
+          rows={[
+            [
+              <C key="a">send_whatsapp_message</C>,
+              <>
+                Sends a text message to a WhatsApp number. Use E.164 format without the
+                leading +, e.g. <C>15551234567</C>. Only works within 24 hours of the
+                customer&apos;s last message — after that the tool returns an error
+                explaining the window is closed.
+              </>,
+            ],
+            [
+              <C key="b">read_whatsapp_messages</C>,
+              "Returns recent inbound WhatsApp messages from customers who have written to your number, newest first.",
+            ],
+          ]}
+        />
+      </Section>
+
       <Section title="MCP servers">
         <P>
           Tools come from the frozen list on the connector  -  names and arguments depend on

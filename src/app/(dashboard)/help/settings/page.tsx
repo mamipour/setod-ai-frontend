@@ -108,6 +108,36 @@ export default function SettingsHelp() {
         </P>
       </Section>
 
+      <Section title="Notifications">
+        <P>
+          Setod can alert you when something needs your attention. Go to{" "}
+          <strong>Workspace → Integrations → Notifications</strong> to configure this.
+        </P>
+        <List>
+          <li>
+            <strong>Email</strong> is always on. Alerts go to your login email address as a
+            fallback for every event.
+          </li>
+          <li>
+            <strong>Telegram</strong> — connect a Telegram Account connector and select it
+            in the Notifications card. Alerts arrive in your Saved Messages, so they only
+            you see them.
+          </li>
+        </List>
+        <P>Events that trigger an alert:</P>
+        <List>
+          <li>An agent is waiting for your approval before it can act.</li>
+          <li>A run fails — sent at most once per hour per agent to avoid noise.</li>
+          <li>An agent hits its daily spending limit.</li>
+          <li>A connector is revoked and its tools have stopped working.</li>
+        </List>
+        <P>
+          The <strong>Send test</strong> button on the Notifications card fires a test
+          through every configured channel so you can confirm delivery before anything real
+          happens.
+        </P>
+      </Section>
+
       <Callout tone="tip" title="Cheapest way to keep costs sane">
         <p>
           Run less often. An agent polling every 15 minutes costs four times one polling

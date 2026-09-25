@@ -11,11 +11,25 @@ export default function PublishingHelp() {
         lede="Every agent has two versions: the draft you are editing and the published snapshot that actually runs. Understanding the split is what lets you edit a live agent without fear."
       />
 
-      <Callout tone="warn" title="Test runs are real">
+      <Callout tone="info" title="Preview mode — nothing is sent">
         <p>
-          There is no sandbox and nothing is simulated. When you press Test run, the agent
-          uses your real accounts  -  emails are sent, messages go out, texts cost money. The
-          only thing a test run changes is <em>which version</em> of the agent runs.
+          The <strong>Preview</strong> button (eye icon) runs the draft in dry-run mode.
+          Every tool call that would write something — send an email, post to Slack, send
+          a WhatsApp — is simulated instead. The transcript shows what <em>would</em> have
+          happened, with each simulated action labelled in amber. Read tools (reading mail,
+          reading a spreadsheet) still execute normally so you see realistic data.
+        </p>
+        <p className="mt-2">
+          Use this to check new instructions before publishing. No accounts are touched and
+          nothing costs money.
+        </p>
+      </Callout>
+
+      <Callout tone="warn" title="Live runs are real">
+        <p>
+          The <strong>Run</strong> button is live — emails are sent, messages go out, texts
+          cost money. The only thing it changes compared to a scheduled run is <em>which
+          version</em> runs: the draft rather than the published snapshot.
         </p>
       </Callout>
 
@@ -60,6 +74,34 @@ export default function PublishingHelp() {
           from the next occurrence. Note that connectors are <em>not</em> part of the
           snapshot  -  attaching or detaching an account takes effect on the very next run,
           published or not.
+        </P>
+      </Section>
+
+      <Section title="Pausing and resuming">
+        <P>
+          Pausing is a softer stop than unpublishing. A paused agent keeps its published
+          snapshot intact — it just skips every scheduled and message-triggered run until
+          you resume it. The amber <strong>Paused</strong> badge appears on the card and in
+          the header.
+        </P>
+        <List>
+          <li>
+            <strong>Pause</strong> — available on any live (published) agent. The agent
+            keeps its configuration; nothing is lost.
+          </li>
+          <li>
+            <strong>Resume</strong> — returns the agent to live immediately, using the same
+            published snapshot. No new publish step required.
+          </li>
+          <li>
+            <strong>Unpublish</strong> — clears the published snapshot entirely. You will
+            need to publish again before the agent can run on its own.
+          </li>
+        </List>
+        <P>
+          Use Pause when you need the agent to go quiet for a day or a week and you plan to
+          resume it unchanged. Use Unpublish when you want to rework the agent properly
+          before it runs again.
         </P>
       </Section>
 

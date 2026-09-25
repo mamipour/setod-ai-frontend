@@ -122,6 +122,86 @@ export default function ConnectorsHelp() {
         </P>
       </Section>
 
+      <Section title="Inbound Webhook" id="webhook">
+        <P>
+          Any external system — a form, a Shopify store, a custom script — can trigger an
+          agent by making an HTTP POST request to a unique URL. Click <strong>Connect</strong>
+          on the Inbound Webhook card to generate a URL and a signing secret.
+        </P>
+        <List>
+          <li>The URL and secret are shown once. Copy both before closing the dialog.</li>
+          <li>
+            If you lose the secret, click <strong>Regenerate</strong> on the connector row.
+            The old secret stops working immediately.
+          </li>
+          <li>
+            To verify requests come from the right source, the sender should include an{" "}
+            <C>X-Hub-Signature-256: sha256=&lt;hex&gt;</C> header signed with the secret.
+            Requests without a valid signature are rejected when a secret is set.
+          </li>
+        </List>
+        <P>
+          The agent receives the full JSON body of the POST as its trigger message. The
+          payload is pretty-printed and capped at 4 000 characters.
+        </P>
+      </Section>
+
+      <Section title="Slack" id="slack">
+        <P>
+          Lets an agent post messages to a Slack channel using an Incoming Webhook URL.
+        </P>
+        <Steps>
+          <li>In Slack, go to <strong>Apps → Incoming Webhooks</strong> and install it if you have not already.</li>
+          <li>Create a new webhook for the channel you want and copy the URL.</li>
+          <li>Paste it into the Slack connector form. A test message is sent immediately to confirm.</li>
+        </Steps>
+        <P>
+          The tool is called <C>post_to_slack</C>. It sends plain text and basic Slack
+          markdown (*bold*, _italic_, `code`).
+        </P>
+      </Section>
+
+      <Section title="Google Sheets" id="google-sheets">
+        <P>
+          Lets an agent read and write Google Sheets using a service account — a special
+          Google account that authenticates without OAuth and never expires.
+        </P>
+        <Steps>
+          <li>In Google Cloud Console, create a project and enable the <strong>Google Sheets API</strong>.</li>
+          <li>Create a <strong>Service Account</strong> and generate a JSON key.</li>
+          <li>Copy the service-account email from the key (it ends in <C>@…gserviceaccount.com</C>).</li>
+          <li>Share any spreadsheet you want the agent to access with that email address (View or Editor as needed).</li>
+          <li>Paste the full JSON key into the Google Sheets connector form.</li>
+        </Steps>
+        <P>
+          The connector card shows the service-account email so you can share new
+          spreadsheets with it at any time. Tools: <C>read_rows</C>, <C>append_row</C>,{" "}
+          <C>update_cell</C>.
+        </P>
+      </Section>
+
+      <Section title="WhatsApp Business" id="whatsapp">
+        <P>
+          Connects to Meta&apos;s WhatsApp Cloud API so agents can send and receive messages
+          on your WhatsApp Business number.
+        </P>
+        <Steps>
+          <li>In <a href="https://business.facebook.com" target="_blank" rel="noreferrer" className="underline underline-offset-2">Meta Business Manager</a>, open <strong>WhatsApp → API Setup</strong> and copy the <strong>Phone Number ID</strong>.</li>
+          <li>Generate a permanent system-user access token (not a temporary one).</li>
+          <li>Choose a <strong>Verify Token</strong> — any string you like, e.g. <C>my-setod-token</C>.</li>
+          <li>Fill in the connector form. The platform validates the credentials with Meta.</li>
+          <li>In Meta&apos;s webhook config, set the callback URL to the one shown on the connector card and enter the same Verify Token.</li>
+        </Steps>
+        <Callout tone="warn" title="The 24-hour customer service window">
+          <p>
+            WhatsApp allows free-form replies only within 24 hours of the customer&apos;s
+            last message. After that, only pre-approved template messages may be sent. The
+            platform surfaces a clear error when the window has closed so the agent can
+            inform the human rather than silently fail.
+          </p>
+        </Callout>
+      </Section>
+
       <Section title="Removing a connector">
         <P>
           If an agent is using it, you will be told which agents before anything is deleted.
