@@ -2172,6 +2172,27 @@ function ConnectorsPageInner() {
         </div>
       )}
 
+      {/* ── AI Models ──────────────────────────────────────────────────── */}
+      <section className="space-y-4">
+        <div>
+          <h2 className="text-base font-semibold">AI Models</h2>
+          <p className="text-sm text-muted-foreground mt-0.5">
+            LLM keys are shared across all agents in this workspace.
+          </p>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {(["openai", "anthropic"] as const).map((p) => (
+            <LLMProviderCard
+              key={p}
+              provider={p}
+              orgId={orgId}
+              existing={list.find((c) => c.type === p)}
+              onSaved={fetchList}
+            />
+          ))}
+        </div>
+      </section>
+
       {/* ── Connected ─────────────────────────────────────────────────────── */}
       {(() => {
         // LLM providers live in "Workspace integrations" — exclude them here.
