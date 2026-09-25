@@ -564,6 +564,9 @@ export function AgentTab({
           agentId={agent.id}
           triggers={triggers}
           presets={presets}
+          channelConnectors={connectors.filter(
+            (c) => (c.type === "telegram_bot" || c.type === "twilio") && c.status === "active",
+          )}
           onChange={reload}
         />
       </SectionCard>
@@ -784,11 +787,13 @@ function TriggerEditor({
   agentId,
   triggers,
   presets,
+  channelConnectors,
   onChange,
 }: {
   agentId: string
   triggers: Trigger[]
   presets: SchedulePreset[]
+  channelConnectors: Connector[]
   onChange: () => void
 }) {
   const [busy, setBusy] = useState(false)
@@ -878,8 +883,26 @@ function TriggerEditor({
           ))}
         </select>
 
-        {/* Channel triggers ("run when a message arrives") are disabled for now  -  see
-            CHANNEL_TRIGGERS_ENABLED in the agents router. Cron schedules only. */}
+        {channelConnectors.length > 0 && (
+          <select
+            defaultValue=""
+            disabled={busy}
+            onChange={(e) => {
+              if (!e.target.value) return
+              const connectorId = e.target.value
+              e.target.value = ""
+              act(() => agents.createTrigger(agentId, { type: "channel", config: { connector_id: connectorId } }))
+            }}
+            className="h-8 rounded-lg border border-input bg-transparent px-2.5 text-xs outline-none"
+          >
+            <option value="">Listen for messages from…</option>
+            {channelConnectors.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+          </select>
+        )}
       </div>
 
       {error && <p className="text-xs text-red-600">{error}</p>}

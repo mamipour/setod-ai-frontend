@@ -209,10 +209,8 @@ function SetupAgent({
 }) {
   const [name, setName] = useState(template.name === "Start from scratch" ? "" : template.name)
   const [instructions, setInstructions] = useState(template.instructions)
-  // Channel triggers are disabled for now, so a template that wants one falls back to manual.
-  const [trigger, setTrigger] = useState<TriggerType>(
-    template.trigger_type === "channel" ? "manual" : template.trigger_type,
-  )
+  const [trigger, setTrigger] = useState<TriggerType>(template.trigger_type)
+  const [channelConnectorId, setChannelConnectorId] = useState("")
   const [preset, setPreset] = useState(template.schedule_preset ?? "daily_9am")
   const [budget, setBudget] = useState(2)
   const [saving, setSaving] = useState(false)
@@ -288,7 +286,15 @@ function SetupAgent({
   ) as Record<string, string>
 
   const missingRequired = template.required_connectors.filter((t) => !picked[t])
-  const canCreate = name.trim() && brainId && missingRequired.length === 0 && !saving
+  const channelConnectors = connectors.filter(
+    (c) => (c.type === "telegram_bot" || c.type === "twilio") && c.status === "active",
+  )
+  const canCreate =
+    name.trim() &&
+    brainId &&
+    missingRequired.length === 0 &&
+    !saving &&
+    (trigger !== "channel" || !!channelConnectorId)
 
   async function handleCreate() {
     setSaving(true)
@@ -318,6 +324,8 @@ function SetupAgent({
 
       if (trigger === "schedule") {
         await agents.createTrigger(agent.id, { type: "schedule", config: { preset } })
+      } else if (trigger === "channel" && channelConnectorId) {
+        await agents.createTrigger(agent.id, { type: "channel", config: { connector_id: channelConnectorId } })
       }
 
       onCreated(agent.id)
@@ -405,8 +413,8 @@ function SetupAgent({
 
       <div className="space-y-1.5">
         <Label className="text-xs">When should it run?</Label>
-        <div className="grid grid-cols-2 gap-2">
-          {(["schedule", "manual"] as TriggerType[]).map((t) => (
+        <div className="grid grid-cols-3 gap-2">
+          {(["schedule", "channel", "manual"] as TriggerType[]).map((t) => (
             <button
               key={t}
               onClick={() => setTrigger(t)}
@@ -417,7 +425,7 @@ function SetupAgent({
                   : "text-muted-foreground hover:bg-muted",
               )}
             >
-              {t === "schedule" ? "On a schedule" : "Only when I ask"}
+              {t === "schedule" ? "On a schedule" : t === "channel" ? "On a message" : "Only when I ask"}
             </button>
           ))}
         </div>
@@ -433,6 +441,25 @@ function SetupAgent({
               </option>
             ))}
           </select>
+        )}
+        {trigger === "channel" && (
+          <select
+            value={channelConnectorId}
+            onChange={(e) => setChannelConnectorId(e.target.value)}
+            className="mt-2 h-8 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none"
+          >
+            <option value="">Pick an account to listen on…</option>
+            {channelConnectors.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+          </select>
+        )}
+        {trigger === "channel" && channelConnectors.length === 0 && (
+          <p className="text-xs text-amber-700">
+            Connect a Telegram Bot or Twilio account first to use message triggers.
+          </p>
         )}
       </div>
 
