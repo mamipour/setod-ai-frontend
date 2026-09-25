@@ -124,7 +124,7 @@ function LLMRow({
     >
       <div className="flex flex-col gap-3">
         <div className="flex items-center gap-3">
-          <Image src={meta.iconSrc} alt={meta.label} width={28} height={28} className="shrink-0 rounded" />
+          <Image src={meta.iconSrc} alt={meta.label} width={28} height={28} className="shrink-0 rounded dark:invert" />
           {isConnected
             ? <StatusBadge status={existing!.status} />
             : <span className="text-xs text-muted-foreground">Not connected</span>}
@@ -302,7 +302,9 @@ function WebSearchRow({ orgId }: { orgId: string }) {
     <SettingRow label="Tavily" description="AI-optimised search. Falls back to DuckDuckGo (rate-limited) when no key is set.">
       <div className="flex flex-col gap-3">
         <div className="flex items-center gap-3">
-          <Image src="/tavily.svg" alt="Tavily" width={28} height={28} className="shrink-0 rounded" />
+          <span className="shrink-0 inline-flex items-center justify-center rounded-lg bg-white p-1 dark:ring-1 dark:ring-white/10">
+            <Image src="/tavily.svg" alt="Tavily" width={24} height={24} />
+          </span>
           {loading ? <span className="text-xs text-muted-foreground">Loading…</span>
             : settings?.provider === "tavily"
               ? <StatusBadge status="active" />

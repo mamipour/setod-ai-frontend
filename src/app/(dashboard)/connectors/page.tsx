@@ -228,7 +228,11 @@ function catalogueFor(connector: Connector): CatalogueEntry | undefined {
 }
 
 function ConnectorIcon({ iconSrc, icon, size = 32 }: { iconSrc?: string; icon: string; size?: number }) {
-  if (iconSrc) return <Image src={iconSrc} alt="" width={size} height={size} className="shrink-0" />
+  if (iconSrc) return (
+    <span className="shrink-0 inline-flex items-center justify-center rounded-lg bg-white p-1 dark:ring-1 dark:ring-white/10" style={{ width: size + 8, height: size + 8 }}>
+      <Image src={iconSrc} alt="" width={size} height={size} />
+    </span>
+  )
   return <span className="text-2xl">{icon}</span>
 }
 
