@@ -12,8 +12,6 @@ import { cn } from "@/lib/utils"
 
 type Member = { user_id: string; email: string; name: string; role: string }
 
-export const metadata = { title: "Members" }
-
 export default function MembersPage() {
   const { user } = useUser()
   const orgId = user?.organizations[0]?.id ?? ""
