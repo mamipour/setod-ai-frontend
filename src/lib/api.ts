@@ -325,6 +325,8 @@ export interface Agent {
   published_at: string | null
   created_at: string
   updated_at: string
+  /** 0.0–1.0 fraction of last 20 runs that succeeded. null = no runs yet. */
+  health_score: number | null
 }
 
 export interface AgentTemplate {

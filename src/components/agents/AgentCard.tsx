@@ -6,6 +6,22 @@ import type { Agent } from "@/lib/api"
 import { AgentIcon, AgentStatusBadge, timeAgo } from "@/components/agents/shared"
 import { cn } from "@/lib/utils"
 
+function HealthDot({ score }: { score: number | null }) {
+  if (score === null) return null
+  const pct = Math.round(score * 100)
+  const { dot, label } =
+    score >= 0.8
+      ? { dot: "bg-green-500", label: `${pct}% success` }
+      : score >= 0.5
+        ? { dot: "bg-yellow-400", label: `${pct}% success` }
+        : { dot: "bg-red-500", label: `${pct}% success` }
+  return (
+    <span title={label} className="shrink-0 flex items-center gap-1">
+      <span className={cn("size-2 rounded-full", dot)} />
+    </span>
+  )
+}
+
 /**
  * Pull the first sentence/phrase that actually describes the job  -  not a "You are…" preamble
  * that the user never wrote themselves and doesn't need to read on every card.
@@ -58,7 +74,10 @@ export function AgentCard({ agent }: { agent: Agent }) {
         </CardHeader>
         <CardContent className="pt-0">
           <p className="line-clamp-2 text-xs text-muted-foreground leading-relaxed">{summary}</p>
-          <p className="mt-3 text-xs text-muted-foreground/60">Updated {timeAgo(agent.updated_at)}</p>
+          <div className="mt-3 flex items-center justify-between gap-2">
+            <p className="text-xs text-muted-foreground/60">Updated {timeAgo(agent.updated_at)}</p>
+            <HealthDot score={agent.health_score} />
+          </div>
         </CardContent>
       </Card>
     </Link>
