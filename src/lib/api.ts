@@ -340,6 +340,10 @@ export interface Agent {
   health_score: number | null
   /** ISO timestamp of the most recent non-dry run. null = never run. */
   last_run_at: string | null
+  /** TriggerType of the first enabled trigger, or null if none configured yet. */
+  primary_trigger_type: TriggerType | null
+  /** Connector types wired to this agent (LLM providers excluded). */
+  connector_types: ConnectorType[]
 }
 
 export interface AgentTemplate {

@@ -1,9 +1,11 @@
 "use client"
 
+import Image from "next/image"
 import Link from "next/link"
+import { CalendarClock, Hand, MessageSquare, Zap } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import type { Agent } from "@/lib/api"
-import { AgentIcon, AgentStatusBadge, timeAgo } from "@/components/agents/shared"
+import type { Agent, TriggerType } from "@/lib/api"
+import { AgentIcon, AgentStatusBadge, connectorIconSrc, timeAgo } from "@/components/agents/shared"
 import { cn } from "@/lib/utils"
 
 function HealthPill({ score }: { score: number | null }) {
@@ -45,6 +47,51 @@ function extractSummary(instructions: string): string {
   return lines[0] ?? "No instructions yet."
 }
 
+const TRIGGER_ICON: Record<TriggerType, React.ElementType> = {
+  schedule: CalendarClock,
+  channel:  MessageSquare,
+  manual:   Hand,
+  agent:    Zap,
+}
+
+const TRIGGER_LABEL: Record<TriggerType, string> = {
+  schedule: "Scheduled",
+  channel:  "On message",
+  manual:   "Manual",
+  agent:    "By another agent",
+}
+
+function TriggerChip({ type }: { type: TriggerType }) {
+  const Icon = TRIGGER_ICON[type]
+  return (
+    <span className="inline-flex items-center gap-1 rounded-md border px-1.5 py-0.5 text-[10px] text-muted-foreground">
+      <Icon className="size-2.5 shrink-0" />
+      {TRIGGER_LABEL[type]}
+    </span>
+  )
+}
+
+function MiniConnectors({ types }: { types: string[] }) {
+  if (types.length === 0) return null
+  return (
+    <span className="inline-flex items-center gap-0.5">
+      {types.map((type) => {
+        const src = connectorIconSrc(type as Parameters<typeof connectorIconSrc>[0])
+        if (!src) return null
+        return (
+          <span
+            key={type}
+            title={type}
+            className="flex size-5 items-center justify-center rounded border bg-white dark:ring-1 dark:ring-white/10"
+          >
+            <Image src={src} alt="" width={12} height={12} />
+          </span>
+        )
+      })}
+    </span>
+  )
+}
+
 export function AgentCard({ agent }: { agent: Agent }) {
   const summary = extractSummary(agent.instructions)
   const runLabel = agent.last_run_at ? `Last run ${timeAgo(agent.last_run_at)}` : null
@@ -74,6 +121,15 @@ export function AgentCard({ agent }: { agent: Agent }) {
         </CardHeader>
         <CardContent className="pt-0">
           <p className="line-clamp-2 text-xs text-muted-foreground leading-relaxed">{summary}</p>
+
+          {/* Identity strip: trigger chip + connector icons */}
+          {(agent.primary_trigger_type || agent.connector_types.length > 0) && (
+            <div className="mt-2.5 flex items-center gap-1.5 flex-wrap">
+              {agent.primary_trigger_type && <TriggerChip type={agent.primary_trigger_type} />}
+              <MiniConnectors types={agent.connector_types} />
+            </div>
+          )}
+
           <div className="mt-3 flex items-center justify-between gap-2">
             <p className="text-xs text-muted-foreground/50 truncate">
               {runLabel ?? "Never run"}

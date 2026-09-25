@@ -1,10 +1,11 @@
 "use client"
 
+import Image from "next/image"
 import { use, useEffect, useRef, useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { ArrowLeft, BookOpen, Database, Eye, History, Loader2, MoreVertical, Play, Settings2, Sparkles, SlidersHorizontal, Trash2 } from "lucide-react"
-import { agents, type SessionDetail } from "@/lib/api"
+import { ArrowLeft, BookOpen, CalendarClock, Database, Eye, Hand, History, Loader2, MessageSquare, MoreVertical, Play, Settings2, Sparkles, SlidersHorizontal, Trash2, Zap } from "lucide-react"
+import { agents, type ConnectorType, type SessionDetail, type TriggerType } from "@/lib/api"
 import { useAgent } from "@/hooks/useAgents"
 import { useUser } from "@/hooks/useUser"
 import { useActiveOrg } from "@/hooks/useActiveOrg"
@@ -21,9 +22,86 @@ import {
   IconPicker,
   Modal,
   SessionStatusBadge,
+  connectorIconSrc,
   duration,
 } from "@/components/agents/shared"
 import { cn } from "@/lib/utils"
+
+// ── Inline identity helpers (reused from AgentCard design language) ────────────
+
+const TRIGGER_ICON: Record<TriggerType, React.ElementType> = {
+  schedule: CalendarClock,
+  channel:  MessageSquare,
+  manual:   Hand,
+  agent:    Zap,
+}
+const TRIGGER_LABEL: Record<TriggerType, string> = {
+  schedule: "Scheduled",
+  channel:  "On message",
+  manual:   "Manual only",
+  agent:    "By another agent",
+}
+
+function HeaderIdentityStrip({ triggerType, connectorTypes, summary }: {
+  triggerType: TriggerType | null
+  connectorTypes: ConnectorType[]
+  summary: string
+}) {
+  const hasAny = triggerType !== null || connectorTypes.length > 0
+  return (
+    <div className="mt-1 space-y-1">
+      {/* One-liner summary from instructions */}
+      <p className="text-sm text-muted-foreground truncate max-w-prose">{summary}</p>
+
+      {/* Trigger chip + connector icons — only when data is ready */}
+      {hasAny && (
+        <div className="flex items-center gap-2 flex-wrap">
+          {triggerType && (() => {
+            const Icon = TRIGGER_ICON[triggerType]
+            return (
+              <span className="inline-flex items-center gap-1 rounded-md border px-1.5 py-0.5 text-[10px] text-muted-foreground">
+                <Icon className="size-2.5 shrink-0" />
+                {TRIGGER_LABEL[triggerType]}
+              </span>
+            )
+          })()}
+          {connectorTypes.length > 0 && (
+            <span className="inline-flex items-center gap-0.5">
+              {connectorTypes.map((type) => {
+                const src = connectorIconSrc(type)
+                if (!src) return null
+                return (
+                  <span
+                    key={type}
+                    title={type}
+                    className="flex size-5 items-center justify-center rounded border bg-white dark:ring-1 dark:ring-white/10"
+                  >
+                    <Image src={src} alt="" width={12} height={12} />
+                  </span>
+                )
+              })}
+            </span>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+/** Pull the first sentence from instructions that actually describes the job. */
+function extractSummary(instructions: string): string {
+  const lines = instructions
+    .split("\n")
+    .map((l) => l.trim())
+    .filter(Boolean)
+  for (const line of lines) {
+    if (/^You are\b/i.test(line)) continue
+    if (line.startsWith("#")) continue
+    if (line.length < 20) continue
+    return line.replace(/^[-–—*]\s*/, "")
+  }
+  return lines[0] ?? ""
+}
 
 const TABS = [
   { id: "Agent",     label: "Agent",     Icon: SlidersHorizontal },
@@ -148,13 +226,18 @@ export default function AgentDetailPage({ params }: { params: Promise<{ id: stri
             }}
           />
           <div className="min-w-0">
-            <h1 className="truncate text-2xl font-bold">{agent.name}</h1>
-            <div className="mt-1.5">
+            <div className="flex items-center gap-2 flex-wrap">
+              <h1 className="truncate text-2xl font-bold">{agent.name}</h1>
               <AgentStatusBadge
                 status={agent.status}
                 hasChanges={agent.has_unpublished_changes}
               />
             </div>
+            <HeaderIdentityStrip
+              triggerType={agent.primary_trigger_type}
+              connectorTypes={agent.connector_types}
+              summary={extractSummary(agent.instructions)}
+            />
           </div>
         </div>
 
