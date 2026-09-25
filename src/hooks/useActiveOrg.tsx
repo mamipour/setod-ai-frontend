@@ -22,16 +22,19 @@ interface ActiveOrgContextValue {
   setActiveOrgId: (id: string) => void
   /** All organisations the signed-in user belongs to. */
   orgs: OrgMembership[]
+  /** Re-fetch user data (e.g. after creating a workspace). */
+  reload: () => void
 }
 
 const ActiveOrgContext = createContext<ActiveOrgContextValue>({
   activeOrg: null,
   setActiveOrgId: () => {},
   orgs: [],
+  reload: () => {},
 })
 
 export function ActiveOrgProvider({ children }: { children: React.ReactNode }) {
-  const { user } = useUser()
+  const { user, refetch } = useUser()
   const orgs: OrgMembership[] = user?.organizations ?? []
 
   const [activeId, setActiveId] = useState<string | null>(null)
@@ -55,7 +58,7 @@ export function ActiveOrgProvider({ children }: { children: React.ReactNode }) {
   )
 
   return (
-    <ActiveOrgContext.Provider value={{ activeOrg, setActiveOrgId, orgs }}>
+    <ActiveOrgContext.Provider value={{ activeOrg, setActiveOrgId, orgs, reload: refetch }}>
       {children}
     </ActiveOrgContext.Provider>
   )

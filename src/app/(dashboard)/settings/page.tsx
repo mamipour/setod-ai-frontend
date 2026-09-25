@@ -1,43 +1,75 @@
 "use client"
 
-import { Suspense, useEffect, useState } from "react"
+import { Suspense, useEffect, useRef, useState } from "react"
 import Image from "next/image"
-import { BellRing, Shield } from "lucide-react"
+import { BellRing, Check as CheckIcon, Pencil, Shield, X as XIcon } from "lucide-react"
 import { connectors as connectorsApi, workspace, type Connector, type ConnectorType, type WebSearchSettings } from "@/lib/api"
 import { useUser } from "@/hooks/useUser"
 import { useActiveOrg } from "@/hooks/useActiveOrg"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { cn } from "@/lib/utils"
 
-// ── Status dot ────────────────────────────────────────────────────────────────
+// ── Helpers ───────────────────────────────────────────────────────────────────
 
-function StatusDot({ status }: { status: Connector["status"] }) {
-  const map: Record<Connector["status"], { label: string; dot: string; text: string }> = {
-    active:       { label: "Active",  dot: "bg-green-500", text: "text-green-700" },
-    error:        { label: "Error",   dot: "bg-red-500",   text: "text-red-700" },
-    pending_auth: { label: "Pending", dot: "bg-yellow-500", text: "text-yellow-700" },
-    revoked:      { label: "Revoked", dot: "bg-gray-400",  text: "text-gray-500" },
+function StatusBadge({ status }: { status: Connector["status"] }) {
+  const map: Record<Connector["status"], { label: string; cls: string }> = {
+    active:       { label: "Active",  cls: "bg-green-50 text-green-700 ring-green-600/20" },
+    error:        { label: "Error",   cls: "bg-red-50 text-red-700 ring-red-600/20" },
+    pending_auth: { label: "Pending", cls: "bg-yellow-50 text-yellow-700 ring-yellow-600/20" },
+    revoked:      { label: "Revoked", cls: "bg-gray-50 text-gray-600 ring-gray-500/20" },
   }
-  const { label, dot, text } = map[status]
+  const { label, cls } = map[status]
   return (
-    <span className={cn("inline-flex shrink-0 items-center gap-1.5 text-xs font-medium", text)}>
-      <span className={cn("size-1.5 rounded-full", dot)} />
+    <span className={cn("inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium ring-1 ring-inset", cls)}>
       {label}
     </span>
   )
 }
 
-// ── LLM provider card ─────────────────────────────────────────────────────────
+// ── Row wrapper: label on left, control on right ──────────────────────────────
 
-const LLM_META: Record<"openai" | "anthropic", { label: string; iconSrc: string; keyPlaceholder: string }> = {
-  openai:    { label: "OpenAI",    iconSrc: "/openai.svg",    keyPlaceholder: "sk-…" },
-  anthropic: { label: "Anthropic", iconSrc: "/anthropic.svg", keyPlaceholder: "sk-ant-…" },
+function SettingRow({
+  label,
+  description,
+  children,
+}: {
+  label: string
+  description?: string
+  children: React.ReactNode
+}) {
+  return (
+    <div className="flex flex-col gap-4 py-6 sm:flex-row sm:items-start sm:gap-8">
+      <div className="sm:w-64 shrink-0">
+        <p className="text-sm font-medium leading-tight">{label}</p>
+        {description && <p className="mt-1 text-xs text-muted-foreground leading-relaxed">{description}</p>}
+      </div>
+      <div className="flex-1 min-w-0">{children}</div>
+    </div>
+  )
 }
 
-function LLMProviderCard({
+// ── Section wrapper ───────────────────────────────────────────────────────────
+
+function Section({ id, title, children }: { id: string; title: string; children: React.ReactNode }) {
+  return (
+    <section id={id} className="scroll-mt-6">
+      <h2 className="text-base font-semibold mb-0">{title}</h2>
+      {/* divide-y puts a separator between rows but never before the first */}
+      <div className="divide-y">{children}</div>
+    </section>
+  )
+}
+
+// ── LLM Provider row ──────────────────────────────────────────────────────────
+
+const LLM_META: Record<"openai" | "anthropic", { label: string; iconSrc: string; keyPlaceholder: string; desc: string }> = {
+  openai:    { label: "OpenAI",    iconSrc: "/openai.svg",    keyPlaceholder: "sk-…",     desc: "GPT-4o, o3, and other OpenAI models" },
+  anthropic: { label: "Anthropic", iconSrc: "/anthropic.svg", keyPlaceholder: "sk-ant-…", desc: "Claude Sonnet, Opus, and Haiku" },
+}
+
+function LLMRow({
   provider,
   orgId,
   existing,
@@ -56,81 +88,78 @@ function LLMProviderCard({
   const [testing, setTesting] = useState(false)
   const [testResult, setTestResult] = useState<{ ok: boolean; detail: string } | null>(null)
   const [deleting, setDeleting] = useState(false)
-
   const isConnected = !!existing && existing.status !== "revoked"
 
   async function handleSave() {
     setSaving(true); setError(null)
     try {
-      if (existing) {
-        await connectorsApi.updateLLMKey(existing.id, orgId, key.trim())
-      } else {
-        await connectorsApi.createLLM(orgId, meta.label, provider, key.trim())
-      }
-      setEditing(false); setKey(""); setTestResult(null)
-      onSaved()
-    } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Failed to save")
-    } finally {
-      setSaving(false)
-    }
+      if (existing) await connectorsApi.updateLLMKey(existing.id, orgId, key.trim())
+      else await connectorsApi.createLLM(orgId, meta.label, provider, key.trim())
+      setEditing(false); setKey(""); setTestResult(null); onSaved()
+    } catch (e: unknown) { setError(e instanceof Error ? e.message : "Failed to save") }
+    finally { setSaving(false) }
   }
 
   async function handleTest() {
     if (!existing) return
     setTesting(true); setTestResult(null)
-    try {
-      setTestResult(await connectorsApi.test(existing.id, orgId))
-    } catch (e: unknown) {
-      setTestResult({ ok: false, detail: e instanceof Error ? e.message : "Test failed" })
-    } finally {
-      setTesting(false)
-    }
+    try { setTestResult(await connectorsApi.test(existing.id, orgId)) }
+    catch (e: unknown) { setTestResult({ ok: false, detail: e instanceof Error ? e.message : "Test failed" }) }
+    finally { setTesting(false) }
   }
 
   async function handleRemove() {
     if (!existing) return
     setDeleting(true); setError(null)
-    try {
-      await connectorsApi.delete(existing.id, orgId)
-      setTestResult(null)
-      onSaved()
-    } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Failed to remove")
-    } finally {
-      setDeleting(false)
-    }
+    try { await connectorsApi.delete(existing.id, orgId); setTestResult(null); onSaved() }
+    catch (e: unknown) { setError(e instanceof Error ? e.message : "Failed to remove") }
+    finally { setDeleting(false) }
   }
 
   return (
-    <Card className="flex flex-col">
-      <CardHeader className="pb-3">
+    <SettingRow
+      label={meta.label}
+      description={meta.desc}
+    >
+      <div className="flex flex-col gap-3">
         <div className="flex items-center gap-3">
-          <Image src={meta.iconSrc} alt={meta.label} width={32} height={32} className="shrink-0" />
-          <div>
-            <CardTitle className="text-sm font-semibold leading-tight">{meta.label}</CardTitle>
-            <CardDescription className="text-xs">
-              {isConnected
-                ? existing!.status === "active" ? "Active" : "Connected"
-                : "Not connected"}
-            </CardDescription>
-          </div>
-          {isConnected && (
-            <span className="ml-auto">
-              <StatusDot status={existing!.status} />
-            </span>
-          )}
+          <Image src={meta.iconSrc} alt={meta.label} width={28} height={28} className="shrink-0 rounded" />
+          {isConnected
+            ? <StatusBadge status={existing!.status} />
+            : <span className="text-xs text-muted-foreground">Not connected</span>}
         </div>
-      </CardHeader>
-      <CardContent className="flex flex-1 flex-col gap-3 pt-0">
+
         {testResult && (
           <p className={cn("text-xs", testResult.ok ? "text-green-700" : "text-destructive")}>
             {testResult.ok ? "✓" : "✗"} {testResult.detail}
           </p>
         )}
-        {error && !editing && <p className="text-xs text-destructive">{error}</p>}
-        {!editing ? (
-          <div className="flex items-center gap-2 mt-auto flex-wrap">
+
+        {editing ? (
+          <div className="space-y-2 max-w-sm">
+            <Label htmlFor={`llm-key-${provider}`} className="text-xs">API key</Label>
+            <Input
+              id={`llm-key-${provider}`}
+              type="password"
+              placeholder={meta.keyPlaceholder}
+              value={key}
+              onChange={(e) => setKey(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleSave()}
+              className="font-mono text-xs h-8"
+              autoFocus
+            />
+            {error && <p className="text-xs text-destructive">{error}</p>}
+            <div className="flex gap-2">
+              <Button size="sm" onClick={handleSave} disabled={saving || !key.trim()}>
+                {saving ? "Saving…" : "Save"}
+              </Button>
+              <Button size="sm" variant="ghost" onClick={() => { setEditing(false); setKey(""); setError(null) }}>
+                Cancel
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <div className="flex items-center gap-2 flex-wrap">
             {isConnected ? (
               <>
                 <Button size="sm" variant="outline" onClick={handleTest} disabled={testing || deleting}>
@@ -148,40 +177,18 @@ function LLMProviderCard({
                 Add API key
               </Button>
             )}
-          </div>
-        ) : (
-          <div className="space-y-2">
-            <Label htmlFor={`llm-key-${provider}`} className="text-xs">API key</Label>
-            <Input
-              id={`llm-key-${provider}`}
-              type="password"
-              placeholder={meta.keyPlaceholder}
-              value={key}
-              onChange={(e) => setKey(e.target.value)}
-              className="font-mono text-xs h-8"
-              autoFocus
-            />
             {error && <p className="text-xs text-destructive">{error}</p>}
-            <div className="flex gap-2">
-              <Button size="sm" onClick={handleSave} disabled={saving || !key.trim()}>
-                {saving ? "Saving…" : "Save"}
-              </Button>
-              <Button size="sm" variant="ghost" onClick={() => { setEditing(false); setKey(""); setError(null) }}>
-                Cancel
-              </Button>
-            </div>
           </div>
         )}
-      </CardContent>
-    </Card>
+      </div>
+    </SettingRow>
   )
 }
 
-// ── Notify card ───────────────────────────────────────────────────────────────
+// ── Notifications row ─────────────────────────────────────────────────────────
 
-function NotifyCard({ orgId, connectors: allConnectors }: { orgId: string; connectors: Connector[] }) {
+function NotificationsRow({ orgId, connectors: allConnectors }: { orgId: string; connectors: Connector[] }) {
   const tgClients = allConnectors.filter((c) => c.type === "telegram_client" && c.status === "active")
-
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -190,67 +197,35 @@ function NotifyCard({ orgId, connectors: allConnectors }: { orgId: string; conne
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    workspace.getNotify(orgId)
-      .then((s) => setSelectedId(s.telegram_connector_id))
-      .catch(() => {})
-      .finally(() => setLoading(false))
+    workspace.getNotify(orgId).then((s) => setSelectedId(s.telegram_connector_id)).catch(() => {}).finally(() => setLoading(false))
   }, [orgId])
 
   async function handleSave(id: string | null) {
     setSaving(true); setError(null); setTestResult(null)
-    try {
-      const updated = await workspace.updateNotify(orgId, { telegram_connector_id: id })
-      setSelectedId(updated.telegram_connector_id)
-    } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Failed to save")
-    } finally {
-      setSaving(false)
-    }
+    try { const u = await workspace.updateNotify(orgId, { telegram_connector_id: id }); setSelectedId(u.telegram_connector_id) }
+    catch (e: unknown) { setError(e instanceof Error ? e.message : "Failed to save") }
+    finally { setSaving(false) }
   }
 
   async function handleTest() {
     setTesting(true); setTestResult(null)
-    try {
-      const result = await workspace.testNotify(orgId)
-      setTestResult(result)
-    } catch (e: unknown) {
-      setTestResult({ ok: false, detail: e instanceof Error ? e.message : "Test failed" })
-    } finally {
-      setTesting(false)
-    }
+    try { setTestResult(await workspace.testNotify(orgId)) }
+    catch (e: unknown) { setTestResult({ ok: false, detail: e instanceof Error ? e.message : "Test failed" }) }
+    finally { setTesting(false) }
   }
 
   const selected = tgClients.find((c) => c.id === selectedId)
 
   return (
-    <Card className="flex flex-col">
-      <CardHeader className="pb-3">
-        <div className="flex items-center gap-3">
-          <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
-            <BellRing className="size-4" />
-          </div>
-          <div>
-            <CardTitle className="text-sm font-semibold leading-tight">Notifications</CardTitle>
-            <CardDescription className="text-xs">
-              {loading
-                ? "Loading…"
-                : selected
-                  ? `Telegram + email (${selected.name})`
-                  : "Email only (owner's login address)"}
-            </CardDescription>
-          </div>
+    <SettingRow label="Alerts channel" description="Where to send agent failure, budget, and approval alerts. Email is always the fallback.">
+      <div className="space-y-3 max-w-sm">
+        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          <BellRing className="size-3.5 shrink-0" />
+          {loading ? "Loading…" : selected ? `Email + Telegram (${selected.name})` : "Email only (owner's login address)"}
         </div>
-      </CardHeader>
-      <CardContent className="flex flex-1 flex-col gap-3 pt-0">
-        {testResult && (
-          <p className={cn("text-xs", testResult.ok ? "text-green-700" : "text-destructive")}>
-            {testResult.ok ? "✓" : "✗"} {testResult.detail}
-          </p>
-        )}
-        {error && <p className="text-xs text-destructive">{error}</p>}
 
-        {tgClients.length > 0 && (
-          <div className="space-y-1.5">
+        {tgClients.length > 0 ? (
+          <div className="space-y-1">
             <Label className="text-xs">Telegram channel (optional)</Label>
             <select
               className="w-full rounded-md border bg-background px-2 py-1.5 text-xs"
@@ -259,34 +234,121 @@ function NotifyCard({ orgId, connectors: allConnectors }: { orgId: string; conne
               onChange={(e) => handleSave(e.target.value || null)}
             >
               <option value="">None — email only</option>
-              {tgClients.map((c) => (
-                <option key={c.id} value={c.id}>{c.name}</option>
-              ))}
+              {tgClients.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
           </div>
-        )}
-
-        {tgClients.length === 0 && (
+        ) : (
           <p className="text-xs text-muted-foreground">
             Add a <strong>Telegram Account</strong> connector to also receive alerts on Telegram.
           </p>
         )}
 
-        <p className="text-xs text-muted-foreground">
-          Email always goes to your login address as a fallback.
-        </p>
+        {testResult && (
+          <p className={cn("text-xs", testResult.ok ? "text-green-700" : "text-destructive")}>
+            {testResult.ok ? "✓" : "✗"} {testResult.detail}
+          </p>
+        )}
+        {error && <p className="text-xs text-destructive">{error}</p>}
 
-        <div className="flex items-center gap-2 mt-auto">
-          <Button size="sm" variant="outline" onClick={handleTest} disabled={testing || loading}>
-            {testing ? "Sending…" : "Send test"}
-          </Button>
-        </div>
-      </CardContent>
-    </Card>
+        <Button size="sm" variant="outline" onClick={handleTest} disabled={testing || loading}>
+          {testing ? "Sending…" : "Send test alert"}
+        </Button>
+      </div>
+    </SettingRow>
   )
 }
 
-// ── Retention card ────────────────────────────────────────────────────────────
+// ── Web Search row ────────────────────────────────────────────────────────────
+
+function WebSearchRow({ orgId }: { orgId: string }) {
+  const [settings, setSettings] = useState<WebSearchSettings | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [editing, setEditing] = useState(false)
+  const [key, setKey] = useState("")
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [testResult, setTestResult] = useState<{ ok: boolean; detail: string } | null>(null)
+  const [testing, setTesting] = useState(false)
+
+  useEffect(() => {
+    workspace.getWebSearch(orgId).then(setSettings).catch(() => setSettings({ provider: "duckduckgo", tavily_key_set: false })).finally(() => setLoading(false))
+  }, [orgId])
+
+  async function handleSave() {
+    setSaving(true); setError(null)
+    try {
+      const u = await workspace.updateWebSearch(orgId, { provider: key.trim() ? "tavily" : "duckduckgo", tavily_api_key: key.trim() || "" })
+      setSettings(u); setEditing(false); setKey(""); setTestResult(null)
+    } catch (e: unknown) { setError(e instanceof Error ? e.message : "Failed to save") }
+    finally { setSaving(false) }
+  }
+
+  async function handleRemove() {
+    setSaving(true); setError(null)
+    try { const u = await workspace.updateWebSearch(orgId, { provider: "duckduckgo", tavily_api_key: "" }); setSettings(u); setEditing(false); setTestResult(null) }
+    catch (e: unknown) { setError(e instanceof Error ? e.message : "Failed to save") }
+    finally { setSaving(false) }
+  }
+
+  async function handleTest() {
+    setTesting(true); setTestResult(null)
+    try { setTestResult(await workspace.testWebSearch(orgId)) }
+    catch (e: unknown) { setTestResult({ ok: false, detail: e instanceof Error ? e.message : "Test failed" }) }
+    finally { setTesting(false) }
+  }
+
+  return (
+    <SettingRow label="Tavily" description="AI-optimised search. Falls back to DuckDuckGo (rate-limited) when no key is set.">
+      <div className="flex flex-col gap-3">
+        <div className="flex items-center gap-3">
+          <Image src="/tavily.svg" alt="Tavily" width={28} height={28} className="shrink-0 rounded" />
+          {loading ? <span className="text-xs text-muted-foreground">Loading…</span>
+            : settings?.provider === "tavily"
+              ? <StatusBadge status="active" />
+              : <span className="text-xs text-muted-foreground">Not configured — using DuckDuckGo</span>}
+        </div>
+
+        {testResult && (
+          <p className={cn("text-xs", testResult.ok ? "text-green-700" : "text-destructive")}>
+            {testResult.ok ? "✓" : "✗"} {testResult.detail}
+          </p>
+        )}
+
+        {editing ? (
+          <div className="space-y-2 max-w-sm">
+            <Label htmlFor="tavily-key" className="text-xs">Tavily API key</Label>
+            <Input id="tavily-key" type="password" placeholder="tvly-…" value={key}
+              onChange={(e) => setKey(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleSave()}
+              className="font-mono text-xs h-8" autoFocus />
+            {error && <p className="text-xs text-destructive">{error}</p>}
+            <p className="text-xs text-muted-foreground">
+              Key is encrypted at rest.{" "}
+              <a href="https://app.tavily.com/home" target="_blank" rel="noopener noreferrer" className="underline">Get a key ↗</a>
+            </p>
+            <div className="flex gap-2">
+              <Button size="sm" onClick={handleSave} disabled={saving || !key.trim()}>{saving ? "Saving…" : "Save"}</Button>
+              <Button size="sm" variant="ghost" onClick={() => { setEditing(false); setKey("") }}>Cancel</Button>
+            </div>
+          </div>
+        ) : (
+          <div className="flex items-center gap-2 flex-wrap">
+            {settings?.tavily_key_set ? (
+              <>
+                <Button size="sm" variant="outline" onClick={handleTest} disabled={testing || loading}>{testing ? "Testing…" : "Test"}</Button>
+                <Button size="sm" variant="outline" onClick={() => setEditing(true)} disabled={loading}>Replace key</Button>
+                <Button size="sm" variant="ghost" className="text-destructive hover:text-destructive" onClick={handleRemove} disabled={saving}>Remove</Button>
+              </>
+            ) : (
+              <Button size="sm" variant="outline" onClick={() => setEditing(true)} disabled={loading}>Add Tavily key</Button>
+            )}
+          </div>
+        )}
+      </div>
+    </SettingRow>
+  )
+}
+
+// ── Data retention row ────────────────────────────────────────────────────────
 
 const RETENTION_OPTIONS: { label: string; value: number | null }[] = [
   { label: "Keep forever", value: null },
@@ -297,7 +359,7 @@ const RETENTION_OPTIONS: { label: string; value: number | null }[] = [
   { label: "7 days",   value: 7 },
 ]
 
-function RetentionCard({ orgId }: { orgId: string }) {
+function DataRetentionRow({ orgId }: { orgId: string }) {
   const [retentionDays, setRetentionDays] = useState<number | null>(null)
   const [scrubOnly, setScrubOnly] = useState(false)
   const [loading, setLoading] = useState(true)
@@ -315,224 +377,135 @@ function RetentionCard({ orgId }: { orgId: string }) {
   async function save() {
     setSaving(true); setError(null)
     try {
-      const r = await workspace.updateRetention(orgId, {
-        data_retention_days: retentionDays,
-        scrub_content_only: scrubOnly,
-      })
-      setRetentionDays(r.data_retention_days)
-      setScrubOnly(r.scrub_content_only)
-      setSaved(true)
-      setTimeout(() => setSaved(false), 2500)
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Could not save")
-    } finally {
-      setSaving(false)
-    }
+      const r = await workspace.updateRetention(orgId, { data_retention_days: retentionDays, scrub_content_only: scrubOnly })
+      setRetentionDays(r.data_retention_days); setScrubOnly(r.scrub_content_only)
+      setSaved(true); setTimeout(() => setSaved(false), 2500)
+    } catch (e) { setError(e instanceof Error ? e.message : "Could not save") }
+    finally { setSaving(false) }
   }
 
   return (
-    <Card className="flex flex-col">
-      <CardHeader className="pb-3">
-        <div className="flex items-center gap-3">
-          <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
-            <Shield className="size-4" />
+    <SettingRow label="Run history" description="Automatically delete or scrub session logs older than the set period. Useful for GDPR compliance.">
+      {loading ? <div className="h-8 w-48 animate-pulse rounded bg-muted" /> : (
+        <div className="space-y-3 max-w-xs">
+          <div className="space-y-1">
+            <Label className="text-xs">Keep run history for</Label>
+            <select
+              className="w-full rounded-md border bg-background px-2 py-1.5 text-xs"
+              value={retentionDays ?? "forever"}
+              onChange={(e) => setRetentionDays(e.target.value === "forever" ? null : Number(e.target.value))}
+            >
+              {RETENTION_OPTIONS.map((o) => <option key={String(o.value)} value={o.value ?? "forever"}>{o.label}</option>)}
+            </select>
           </div>
-          <div>
-            <CardTitle className="text-sm font-semibold leading-tight">Data Retention</CardTitle>
-            <CardDescription className="text-xs">
-              Automatically delete or scrub run history older than a set period.
-            </CardDescription>
-          </div>
+
+          {retentionDays !== null && (
+            <label className="flex items-start gap-2 cursor-pointer">
+              <input type="checkbox" className="mt-0.5 rounded" checked={scrubOnly} onChange={(e) => setScrubOnly(e.target.checked)} />
+              <span className="text-xs text-muted-foreground">
+                <span className="font-medium text-foreground">Scrub content only</span>{" "}
+                — keep metadata (costs, status) but delete message text.
+              </span>
+            </label>
+          )}
+
+          {error && <p className="text-xs text-destructive">{error}</p>}
+          <Button size="sm" variant="outline" onClick={save} disabled={saving}>
+            {saving ? "Saving…" : saved ? "Saved ✓" : "Save policy"}
+          </Button>
         </div>
-      </CardHeader>
-      <CardContent className="flex flex-1 flex-col gap-3 pt-0">
-        {loading ? (
-          <div className="h-8 animate-pulse rounded bg-muted" />
-        ) : (
-          <div className="space-y-3">
-            <div className="space-y-1">
-              <label className="text-xs font-medium text-muted-foreground">Keep run history for</label>
-              <select
-                className="w-full rounded-md border bg-transparent px-3 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-ring"
-                value={retentionDays ?? "forever"}
-                onChange={(e) => setRetentionDays(e.target.value === "forever" ? null : Number(e.target.value))}
-              >
-                {RETENTION_OPTIONS.map((o) => (
-                  <option key={String(o.value)} value={o.value ?? "forever"}>{o.label}</option>
-                ))}
-              </select>
-            </div>
-
-            {retentionDays !== null && (
-              <label className="flex items-start gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  className="mt-0.5 rounded"
-                  checked={scrubOnly}
-                  onChange={(e) => setScrubOnly(e.target.checked)}
-                />
-                <span className="text-xs text-muted-foreground">
-                  <span className="font-medium text-foreground">Scrub message content only</span>{" "}
-                  — keep session metadata (token counts, cost, status) but delete the message text.
-                  Good for GDPR compliance while preserving usage data.
-                </span>
-              </label>
-            )}
-
-            {error && <p className="text-xs text-red-600">{error}</p>}
-
-            <Button size="sm" variant="outline" onClick={save} disabled={saving}>
-              {saving ? "Saving…" : saved ? "Saved ✓" : "Save policy"}
-            </Button>
-          </div>
-        )}
-      </CardContent>
-    </Card>
+      )}
+    </SettingRow>
   )
 }
 
-// ── Tavily card ───────────────────────────────────────────────────────────────
+// ── Workspace name row ────────────────────────────────────────────────────────
 
-function TavilyCard({ orgId }: { orgId: string }) {
-  const [settings, setSettings] = useState<WebSearchSettings | null>(null)
-  const [loading, setLoading] = useState(true)
+function WorkspaceNameRow({ orgId }: { orgId: string }) {
+  const { activeOrg, reload } = useActiveOrg()
   const [editing, setEditing] = useState(false)
-  const [key, setKey] = useState("")
+  const [name, setName] = useState(activeOrg?.name ?? "")
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [testResult, setTestResult] = useState<{ ok: boolean; detail: string } | null>(null)
-  const [testing, setTesting] = useState(false)
 
-  useEffect(() => {
-    workspace.getWebSearch(orgId)
-      .then(setSettings)
-      .catch(() => setSettings({ provider: "duckduckgo", tavily_key_set: false }))
-      .finally(() => setLoading(false))
-  }, [orgId])
+  useEffect(() => { if (!editing) setName(activeOrg?.name ?? "") }, [activeOrg?.name, editing])
 
-  async function handleSave() {
+  async function save() {
+    const trimmed = name.trim()
+    if (!trimmed || trimmed === activeOrg?.name) { setEditing(false); return }
     setSaving(true); setError(null)
-    try {
-      const updated = await workspace.updateWebSearch(orgId, {
-        provider: key.trim() ? "tavily" : "duckduckgo",
-        tavily_api_key: key.trim() || "",
-      })
-      setSettings(updated); setEditing(false); setKey(""); setTestResult(null)
-    } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Failed to save")
-    } finally {
-      setSaving(false)
-    }
-  }
-
-  async function handleRemove() {
-    setSaving(true); setError(null)
-    try {
-      const updated = await workspace.updateWebSearch(orgId, { provider: "duckduckgo", tavily_api_key: "" })
-      setSettings(updated); setEditing(false); setTestResult(null)
-    } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Failed to save")
-    } finally {
-      setSaving(false)
-    }
-  }
-
-  async function handleTest() {
-    setTesting(true); setTestResult(null)
-    try {
-      const result = await workspace.testWebSearch(orgId)
-      setTestResult(result)
-    } catch (e: unknown) {
-      setTestResult({ ok: false, detail: e instanceof Error ? e.message : "Test failed" })
-    } finally {
-      setTesting(false)
-    }
+    try { await workspace.renameWorkspace(orgId, trimmed); await reload(); setEditing(false) }
+    catch (e: unknown) { setError(e instanceof Error ? e.message : "Failed to rename") }
+    finally { setSaving(false) }
   }
 
   return (
-    <Card className="flex flex-col">
-      <CardHeader className="pb-3">
-        <div className="flex items-center gap-3">
-          <Image src="/tavily.svg" alt="Tavily" width={32} height={32} className="shrink-0" />
-          <div>
-            <CardTitle className="text-sm font-semibold leading-tight">Tavily</CardTitle>
-            <CardDescription className="text-xs">
-              {loading
-                ? "Loading…"
-                : settings?.provider === "tavily"
-                ? "Active — reliable search built for AI agents"
-                : "Not configured — using DuckDuckGo (rate-limited)"}
-            </CardDescription>
-          </div>
+    <SettingRow label="Workspace name" description="Only owners can rename the workspace.">
+      {editing ? (
+        <div className="flex items-center gap-2 max-w-xs">
+          <Input autoFocus value={name} onChange={(e) => setName(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter") save(); if (e.key === "Escape") { setEditing(false); setName(activeOrg?.name ?? "") } }}
+            className="h-8 text-sm" />
+          <Button size="icon" variant="ghost" className="size-8 shrink-0" onClick={save} disabled={saving}>
+            <CheckIcon className="size-4 text-green-600" />
+          </Button>
+          <Button size="icon" variant="ghost" className="size-8 shrink-0" onClick={() => { setEditing(false); setName(activeOrg?.name ?? "") }}>
+            <XIcon className="size-4" />
+          </Button>
         </div>
-      </CardHeader>
-      <CardContent className="flex flex-1 flex-col gap-3 pt-0">
-        {testResult && (
-          <p className={cn("text-xs", testResult.ok ? "text-green-700" : "text-destructive")}>
-            {testResult.ok ? "✓" : "✗"} {testResult.detail}
-          </p>
-        )}
-        {!editing ? (
-          <div className="flex items-center gap-2 mt-auto">
-            {settings?.tavily_key_set ? (
-              <>
-                <Button size="sm" variant="outline" onClick={handleTest} disabled={testing || loading}>
-                  {testing ? "Testing…" : "Test"}
-                </Button>
-                <Button size="sm" variant="outline" onClick={() => setEditing(true)} disabled={loading}>
-                  Replace key
-                </Button>
-                <Button size="sm" variant="ghost" className="text-destructive hover:text-destructive" onClick={handleRemove} disabled={saving}>
-                  Remove
-                </Button>
-              </>
-            ) : (
-              <Button size="sm" variant="outline" onClick={() => setEditing(true)} disabled={loading}>
-                Add Tavily key
-              </Button>
-            )}
-          </div>
-        ) : (
-          <div className="space-y-2">
-            <Label htmlFor="tavily-key" className="text-xs">Tavily API key</Label>
-            <Input
-              id="tavily-key"
-              type="password"
-              placeholder="tvly-…"
-              value={key}
-              onChange={(e) => setKey(e.target.value)}
-              className="font-mono text-xs h-8"
-              autoFocus
-            />
-            {error && <p className="text-xs text-destructive">{error}</p>}
-            <div className="flex gap-2">
-              <Button size="sm" onClick={handleSave} disabled={saving || !key.trim()}>
-                {saving ? "Saving…" : "Save"}
-              </Button>
-              <Button size="sm" variant="ghost" onClick={() => { setEditing(false); setKey("") }}>
-                Cancel
-              </Button>
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Key is encrypted at rest and never returned to the browser.{" "}
-              <a href="https://app.tavily.com/home" target="_blank" rel="noopener noreferrer" className="underline">
-                Get a key ↗
-              </a>
-            </p>
-          </div>
-        )}
-      </CardContent>
-    </Card>
+      ) : (
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-medium">{activeOrg?.name}</span>
+          <Button size="icon" variant="ghost" className="size-7" onClick={() => setEditing(true)}>
+            <Pencil className="size-3.5 text-muted-foreground" />
+          </Button>
+        </div>
+      )}
+      {error && <p className="mt-1 text-xs text-destructive">{error}</p>}
+    </SettingRow>
+  )
+}
+
+// ── Side nav ──────────────────────────────────────────────────────────────────
+
+const NAV_ITEMS = [
+  { id: "ai-models",    label: "AI Models" },
+  { id: "notifications", label: "Notifications" },
+  { id: "web-search",   label: "Web Search" },
+  { id: "data-privacy", label: "Data & Privacy" },
+  { id: "workspace",    label: "Workspace" },
+]
+
+function SideNav({ active, onSelect }: { active: string; onSelect: (id: string) => void }) {
+  return (
+    <nav className="hidden lg:flex flex-col gap-0.5 w-44 shrink-0 sticky top-6 self-start">
+      {NAV_ITEMS.map((item) => (
+        <a
+          key={item.id}
+          href={`#${item.id}`}
+          onClick={() => onSelect(item.id)}
+          className={cn(
+            "rounded-md px-3 py-1.5 text-sm transition-colors",
+            active === item.id
+              ? "bg-muted font-medium text-foreground"
+              : "text-muted-foreground hover:text-foreground hover:bg-muted/60"
+          )}
+        >
+          {item.label}
+        </a>
+      ))}
+    </nav>
   )
 }
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 function SettingsPageInner() {
-  const { user, loading: userLoading } = useUser()
+  const { loading: userLoading } = useUser()
   const { activeOrg } = useActiveOrg()
   const [connectors, setConnectors] = useState<Connector[]>([])
-
+  const [activeSection, setActiveSection] = useState("ai-models")
+  const suppressObserver = useRef(false)
   const orgId = activeOrg?.id ?? ""
 
   function fetchConnectors() {
@@ -540,87 +513,74 @@ function SettingsPageInner() {
     connectorsApi.list(orgId).then(setConnectors).catch(() => {})
   }
 
+  useEffect(() => { fetchConnectors() }, [orgId]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Track which section is in view for the side nav highlight.
+  // Suppressed briefly after a click so the click wins over the scroll event.
   useEffect(() => {
-    fetchConnectors()
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [orgId])
+    const obs = new IntersectionObserver(
+      (entries) => {
+        if (suppressObserver.current) return
+        const visible = entries.filter((e) => e.isIntersecting).sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)
+        if (visible.length > 0) setActiveSection(visible[0].target.id)
+      },
+      { rootMargin: "-20% 0px -60% 0px", threshold: 0 }
+    )
+    NAV_ITEMS.forEach(({ id }) => {
+      const el = document.getElementById(id)
+      if (el) obs.observe(el)
+    })
+    return () => obs.disconnect()
+  }, [])
+
+  function handleNavSelect(id: string) {
+    setActiveSection(id)
+    suppressObserver.current = true
+    setTimeout(() => { suppressObserver.current = false }, 800)
+  }
 
   if (userLoading) {
-    return (
-      <div className="flex h-40 items-center justify-center text-sm text-muted-foreground">
-        Loading…
-      </div>
-    )
+    return <div className="flex h-40 items-center justify-center text-sm text-muted-foreground">Loading…</div>
   }
 
   return (
-    <div className="mx-auto max-w-5xl space-y-10 px-4 py-8 sm:px-6">
-      <div>
+    <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6">
+      {/* Page header */}
+      <div className="mb-8">
         <h1 className="text-xl font-semibold">Settings</h1>
-        <p className="text-sm text-muted-foreground mt-0.5">
-          Workspace-wide preferences shared across all agents.
-        </p>
+        <p className="text-sm text-muted-foreground mt-0.5">Workspace-wide configuration shared across all agents.</p>
       </div>
 
-      {/* AI Models */}
-      <section className="space-y-4">
-        <div>
-          <h2 className="text-base font-semibold">AI Models</h2>
-          <p className="text-sm text-muted-foreground mt-0.5">
-            LLM API keys — shared across all agents in this workspace.
-          </p>
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {(["openai", "anthropic"] as const).map((p) => (
-            <LLMProviderCard
-              key={p}
-              provider={p}
-              orgId={orgId}
-              existing={connectors.find((c) => c.type === (p as ConnectorType))}
-              onSaved={fetchConnectors}
-            />
-          ))}
-        </div>
-      </section>
+      <div className="flex gap-10">
+        {/* Sticky side nav */}
+        <SideNav active={activeSection} onSelect={handleNavSelect} />
 
-      {/* Notifications */}
-      <section className="space-y-4 border-t pt-8">
-        <div>
-          <h2 className="text-base font-semibold">Notifications</h2>
-          <p className="text-sm text-muted-foreground mt-0.5">
-            Where to send alerts for agent failures, budget limits, and approval requests.
-          </p>
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          <NotifyCard orgId={orgId} connectors={connectors} />
-        </div>
-      </section>
+        {/* Content */}
+        <div className="flex-1 min-w-0 space-y-12">
 
-      {/* Search */}
-      <section className="space-y-4 border-t pt-8">
-        <div>
-          <h2 className="text-base font-semibold">Web Search</h2>
-          <p className="text-sm text-muted-foreground mt-0.5">
-            Search provider used when an agent has web search enabled.
-          </p>
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          <TavilyCard orgId={orgId} />
-        </div>
-      </section>
+          <Section id="ai-models" title="AI Models">
+            <LLMRow provider="openai" orgId={orgId} existing={connectors.find((c) => c.type === "openai" as ConnectorType)} onSaved={fetchConnectors} />
+            <LLMRow provider="anthropic" orgId={orgId} existing={connectors.find((c) => c.type === "anthropic" as ConnectorType)} onSaved={fetchConnectors} />
+          </Section>
 
-      {/* Data & Privacy */}
-      <section className="space-y-4 border-t pt-8">
-        <div>
-          <h2 className="text-base font-semibold">Data & Privacy</h2>
-          <p className="text-sm text-muted-foreground mt-0.5">
-            Control how long run history is kept and whether message content is retained.
-          </p>
+          <Section id="notifications" title="Notifications">
+            <NotificationsRow orgId={orgId} connectors={connectors} />
+          </Section>
+
+          <Section id="web-search" title="Web Search">
+            <WebSearchRow orgId={orgId} />
+          </Section>
+
+          <Section id="data-privacy" title="Data & Privacy">
+            <DataRetentionRow orgId={orgId} />
+          </Section>
+
+          <Section id="workspace" title="Workspace">
+            <WorkspaceNameRow orgId={orgId} />
+          </Section>
+
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          <RetentionCard orgId={orgId} />
-        </div>
-      </section>
+      </div>
     </div>
   )
 }

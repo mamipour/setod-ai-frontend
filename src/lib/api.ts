@@ -880,4 +880,36 @@ export const workspace = {
       method: "PATCH",
       body: JSON.stringify(data),
     }),
+
+  // ── Workspace CRUD ────────────────────────────────────────────────────────
+  createWorkspace: (name: string): Promise<{ id: string; name: string; slug: string }> =>
+    apiFetch("/workspace/", { method: "POST", body: JSON.stringify({ name }) }),
+
+  renameWorkspace: (orgId: string, name: string): Promise<{ id: string; name: string; slug: string }> =>
+    apiFetch(`/workspace/${orgId}`, { method: "PATCH", body: JSON.stringify({ name }) }),
+
+  // ── Invitation management ─────────────────────────────────────────────────
+  listInvitations: (orgId: string): Promise<{
+    id: string; email: string; role: string;
+    created_at: string; expires_at: string; accepted: boolean
+  }[]> =>
+    apiFetch(`/workspace/${orgId}/invitations`),
+
+  withdrawInvitation: (orgId: string, invitationId: string): Promise<void> =>
+    apiFetch(`/workspace/${orgId}/invitations/${invitationId}`, { method: "DELETE" }),
+
+  // ── Leave workspace ───────────────────────────────────────────────────────
+  leaveWorkspace: (orgId: string): Promise<void> =>
+    apiFetch(`/workspace/${orgId}/members/me`, { method: "DELETE" }),
+}
+
+// ── Token-based invitation flow ────────────────────────────────────────────────
+export const tokenInvitations = {
+  /** Accept an invitation by its token. User must be signed in. */
+  accept: (token: string): Promise<{ ok: boolean; org_id: string }> =>
+    apiFetch("/auth/invitations/accept", { method: "POST", body: JSON.stringify({ token }) }),
+
+  /** Preview an invitation (name, inviter) without accepting — used by /accept-invite page. */
+  preview: (token: string): Promise<{ org_name: string; role: string; invited_by: string; email: string }> =>
+    apiFetch(`/auth/invitations/preview?token=${encodeURIComponent(token)}`),
 }

@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { Crown, Loader2, Mail, Trash2, UserPlus } from "lucide-react"
+import { Clock, Crown, Loader2, LogOut, Mail, Trash2, UserPlus, X } from "lucide-react"
 import { workspace } from "@/lib/api"
 import { useUser } from "@/hooks/useUser"
 import { useActiveOrg } from "@/hooks/useActiveOrg"
@@ -10,16 +10,20 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { cn } from "@/lib/utils"
+import { useRouter } from "next/navigation"
 
 type Member = { user_id: string; email: string; name: string; role: string }
+type Invitation = { id: string; email: string; role: string; created_at: string; expires_at: string; accepted: boolean }
 
 export default function MembersPage() {
-  const { user } = useUser()
-  const { activeOrg } = useActiveOrg()
+  const { user, refetch: refetchUser } = useUser()
+  const { activeOrg, setActiveOrgId, orgs, reload } = useActiveOrg()
+  const router = useRouter()
   const orgId = activeOrg?.id ?? ""
   const myUserId = user?.id ?? ""
 
   const [members, setMembers] = useState<Member[]>([])
+  const [invitations, setInvitations] = useState<Invitation[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -30,11 +34,18 @@ export default function MembersPage() {
   const [inviteResult, setInviteResult] = useState<{ ok: boolean; detail: string } | null>(null)
 
   const isOwner = members.find((m) => m.user_id === myUserId)?.role === "owner"
+  const myRole = members.find((m) => m.user_id === myUserId)?.role
+  const pendingInvites = invitations.filter((i) => !i.accepted)
 
   async function load() {
     if (!orgId) return
     try {
-      setMembers(await workspace.listMembers(orgId))
+      const [membersData, invitesData] = await Promise.all([
+        workspace.listMembers(orgId),
+        workspace.listInvitations(orgId).catch(() => [] as Invitation[]), // graceful: non-owners can't list
+      ])
+      setMembers(membersData)
+      setInvitations(invitesData)
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Failed to load members")
     } finally {
@@ -51,6 +62,7 @@ export default function MembersPage() {
       const res = await workspace.inviteMember(orgId, inviteEmail.trim(), inviteRole)
       setInviteResult(res)
       setInviteEmail("")
+      await load() // refresh pending list
     } catch (e: unknown) {
       setInviteResult({ ok: false, detail: e instanceof Error ? e.message : "Failed to invite" })
     } finally {
@@ -74,6 +86,34 @@ export default function MembersPage() {
       await load()
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Failed to remove member")
+    }
+  }
+
+  async function handleWithdraw(invId: string) {
+    if (!confirm("Withdraw this invitation?")) return
+    try {
+      await workspace.withdrawInvitation(orgId, invId)
+      await load()
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Failed to withdraw invitation")
+    }
+  }
+
+  async function handleLeave() {
+    if (!confirm("Leave this workspace? You will lose access to all its agents and data.")) return
+    try {
+      await workspace.leaveWorkspace(orgId)
+      // Reload user so the org list is refreshed, then switch to first remaining org
+      await reload()
+      const remaining = orgs.filter((o) => o.id !== orgId)
+      if (remaining.length > 0) {
+        setActiveOrgId(remaining[0].id)
+        router.push("/dashboard")
+      } else {
+        router.push("/")
+      }
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Failed to leave workspace")
     }
   }
 
@@ -165,6 +205,52 @@ export default function MembersPage() {
         </CardContent>
       </Card>
 
+      {/* Pending invitations — owners only */}
+      {isOwner && pendingInvites.length > 0 && (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-semibold flex items-center gap-2">
+              <Clock className="size-4 text-muted-foreground" />
+              Pending invitations
+            </CardTitle>
+            <CardDescription className="text-xs">
+              These people have been invited but haven't accepted yet.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-1 pt-0">
+            {pendingInvites.map((inv) => (
+              <div
+                key={inv.id}
+                className="flex items-center justify-between gap-3 rounded-lg px-2 py-2 hover:bg-muted/50"
+              >
+                <div className="flex min-w-0 items-center gap-2.5">
+                  <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-muted/50 text-xs font-medium uppercase text-muted-foreground border border-dashed border-muted-foreground/30">
+                    {inv.email[0].toUpperCase()}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium leading-tight truncate">{inv.email}</p>
+                    <p className="text-xs text-muted-foreground">
+                      <span className="capitalize">{inv.role}</span>
+                      {" · "}
+                      Expires {new Date(inv.expires_at).toLocaleDateString()}
+                    </p>
+                  </div>
+                </div>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="size-7 text-muted-foreground hover:text-destructive shrink-0"
+                  title="Withdraw invitation"
+                  onClick={() => handleWithdraw(inv.id)}
+                >
+                  <X className="size-3.5" />
+                </Button>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
+
       {/* Invite form — owners only */}
       {isOwner && (
         <Card>
@@ -173,7 +259,7 @@ export default function MembersPage() {
               <UserPlus className="size-4" /> Invite someone
             </CardTitle>
             <CardDescription className="text-xs">
-              They will receive an email. Accepting automatically joins the workspace.
+              They will receive an email with a link to accept. No account needed to receive the invite.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-3 pt-0">
@@ -223,9 +309,32 @@ export default function MembersPage() {
         </Card>
       )}
 
-      {!isOwner && !loading && (
+      {/* Leave workspace — non-owners only */}
+      {myRole && myRole !== "owner" && !loading && (
+        <Card className="border-destructive/20">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-semibold text-destructive flex items-center gap-2">
+              <LogOut className="size-4" /> Leave workspace
+            </CardTitle>
+            <CardDescription className="text-xs">
+              You will lose access to all agents, skills, and data in this workspace.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="pt-0">
+            <Button
+              size="sm"
+              variant="destructive"
+              onClick={handleLeave}
+            >
+              Leave {activeOrg?.name}
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
+      {!isOwner && !loading && !myRole && (
         <p className="text-xs text-muted-foreground">
-          Only owners can invite or manage members. Contact an owner to make changes.
+          Only owners can invite or manage members.
         </p>
       )}
     </div>
