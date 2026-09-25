@@ -241,26 +241,28 @@ const THEMES = [
 function ThemeSegment() {
   const { theme, setTheme } = useTheme()
   return (
-    <div className="px-3 py-2 border-b">
-      <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide mb-1.5">Theme</p>
-      <div className="flex gap-1 rounded-lg bg-muted p-0.5">
-        {THEMES.map(({ value, icon: Icon, label }) => (
-          <button
-            key={value}
-            onClick={() => setTheme(value)}
-            title={label}
-            aria-label={`Switch to ${label} theme`}
-            className={cn(
-              "flex flex-1 items-center justify-center gap-1.5 rounded-md py-1 text-xs transition-all",
-              theme === value
-                ? "bg-background text-foreground shadow-xs font-medium"
-                : "text-muted-foreground hover:text-foreground",
-            )}
-          >
-            <Icon className="size-3.5" />
-            <span>{label}</span>
-          </button>
-        ))}
+    <div className="px-3 py-1.5 border-b">
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Theme</p>
+        <div className="flex rounded-md bg-muted p-0.5">
+          {THEMES.map(({ value, icon: Icon, label }) => (
+            <button
+              key={value}
+              onClick={() => setTheme(value)}
+              title={label}
+              aria-label={`Switch to ${label} theme`}
+              className={cn(
+                "flex items-center justify-center gap-1 rounded px-1.5 py-0.5 text-[11px] transition-all",
+                theme === value
+                  ? "bg-background text-foreground shadow-xs font-medium"
+                  : "text-muted-foreground hover:text-foreground",
+              )}
+            >
+              <Icon className="size-3" />
+              <span>{label}</span>
+            </button>
+          ))}
+        </div>
       </div>
     </div>
   )
