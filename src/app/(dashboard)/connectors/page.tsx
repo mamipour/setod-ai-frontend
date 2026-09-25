@@ -3,7 +3,7 @@
 import { Suspense, useEffect, useRef, useState } from "react"
 import Image from "next/image"
 import { useSearchParams } from "next/navigation"
-import { Check, Lock, X } from "lucide-react"
+import { Check, Lock, Shield, X } from "lucide-react"
 import { connectors, workspace, type Connector, type ConnectorType, type WebSearchSettings } from "@/lib/api"
 import { useUser } from "@/hooks/useUser"
 import { Button } from "@/components/ui/button"
@@ -2223,6 +2223,113 @@ function NotifyCard({ orgId, connectors: allConnectors }: { orgId: string; conne
 
 // ── Tavily card ───────────────────────────────────────────────────────────────
 
+// ── Retention Card ────────────────────────────────────────────────────────────
+
+const RETENTION_OPTIONS: { label: string; value: number | null }[] = [
+  { label: "Keep forever", value: null },
+  { label: "1 year", value: 365 },
+  { label: "6 months", value: 180 },
+  { label: "90 days", value: 90 },
+  { label: "30 days", value: 30 },
+  { label: "7 days", value: 7 },
+]
+
+function RetentionCard({ orgId }: { orgId: string }) {
+  const [retentionDays, setRetentionDays] = useState<number | null>(null)
+  const [scrubOnly, setScrubOnly] = useState(false)
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const [saved, setSaved] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    workspace.getRetention(orgId)
+      .then((r) => { setRetentionDays(r.data_retention_days); setScrubOnly(r.scrub_content_only) })
+      .catch(() => {})
+      .finally(() => setLoading(false))
+  }, [orgId])
+
+  async function save() {
+    setSaving(true)
+    setError(null)
+    try {
+      const r = await workspace.updateRetention(orgId, {
+        data_retention_days: retentionDays,
+        scrub_content_only: scrubOnly,
+      })
+      setRetentionDays(r.data_retention_days)
+      setScrubOnly(r.scrub_content_only)
+      setSaved(true)
+      setTimeout(() => setSaved(false), 2500)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Could not save")
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div className="rounded-xl border bg-card p-4 space-y-4">
+      <div className="flex items-start gap-3">
+        <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
+          <Shield className="size-4" />
+        </div>
+        <div>
+          <p className="text-sm font-medium">Data Retention</p>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Automatically delete or scrub run history older than a set period.
+          </p>
+        </div>
+      </div>
+
+      {loading ? (
+        <div className="h-8 animate-pulse rounded bg-muted" />
+      ) : (
+        <div className="space-y-3">
+          <div className="space-y-1">
+            <label className="text-xs font-medium text-muted-foreground">Keep run history for</label>
+            <select
+              className="w-full rounded-md border bg-transparent px-3 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-ring"
+              value={retentionDays ?? "forever"}
+              onChange={(e) => setRetentionDays(e.target.value === "forever" ? null : Number(e.target.value))}
+            >
+              {RETENTION_OPTIONS.map((o) => (
+                <option key={String(o.value)} value={o.value ?? "forever"}>{o.label}</option>
+              ))}
+            </select>
+          </div>
+
+          {retentionDays !== null && (
+            <label className="flex items-start gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                className="mt-0.5 rounded"
+                checked={scrubOnly}
+                onChange={(e) => setScrubOnly(e.target.checked)}
+              />
+              <span className="text-xs text-muted-foreground">
+                <span className="font-medium text-foreground">Scrub message content only</span>{" "}
+                — keep session metadata (token counts, cost, status) but delete the message text.
+                Good for GDPR compliance while preserving usage data.
+              </span>
+            </label>
+          )}
+
+          {error && <p className="text-xs text-red-600">{error}</p>}
+
+          <button
+            onClick={save}
+            disabled={saving}
+            className="rounded-lg border bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-50"
+          >
+            {saving ? "Saving…" : saved ? "Saved ✓" : "Save policy"}
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}
+
 function TavilyCard({ orgId }: { orgId: string }) {
   const [settings, setSettings] = useState<WebSearchSettings | null>(null)
   const [loading, setLoading] = useState(true)
@@ -2506,6 +2613,12 @@ function ConnectorsPageInner() {
           <p className="text-xs font-semibold text-muted-foreground/60 uppercase tracking-widest mb-3">Notifications</p>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             <NotifyCard orgId={orgId} connectors={list} />
+          </div>
+        </div>
+        <div>
+          <p className="text-xs font-semibold text-muted-foreground/60 uppercase tracking-widest mb-3">Data & Privacy</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <RetentionCard orgId={orgId} />
           </div>
         </div>
       </section>

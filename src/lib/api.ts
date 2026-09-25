@@ -865,4 +865,17 @@ export const workspace = {
 
   removeMember: (orgId: string, userId: string): Promise<void> =>
     apiFetch(`/workspace/${orgId}/members/${userId}`, { method: "DELETE" }),
+
+  // ── Data retention ────────────────────────────────────────────────────────
+  getRetention: (orgId: string): Promise<{ data_retention_days: number | null; scrub_content_only: boolean }> =>
+    apiFetch(`/workspace/${orgId}/retention`),
+
+  updateRetention: (
+    orgId: string,
+    data: { data_retention_days: number | null; scrub_content_only: boolean },
+  ): Promise<{ data_retention_days: number | null; scrub_content_only: boolean }> =>
+    apiFetch(`/workspace/${orgId}/retention`, {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    }),
 }
