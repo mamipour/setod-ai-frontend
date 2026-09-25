@@ -26,30 +26,10 @@ interface CatalogueEntry {
   defaultUrl?: string
   urlRequired?: boolean
   available: boolean
-  category: "AI Models" | "Email" | "Messaging" | "SMS & Voice" | "Automation" | "MCP servers"
+  category: "Email" | "Messaging" | "SMS & Voice" | "Automation" | "MCP servers"
 }
 
 const CATALOGUE: CatalogueEntry[] = [
-  {
-    type: "openai",
-    label: "OpenAI",
-    description: "Power agents with OpenAI models.",
-    icon: "⬛",
-    iconSrc: "/openai.svg",
-    authMethod: "api_key",
-    available: true,
-    category: "AI Models",
-  },
-  {
-    type: "anthropic",
-    label: "Anthropic",
-    description: "Power agents with Anthropic models.",
-    icon: "🔶",
-    iconSrc: "/anthropic.svg",
-    authMethod: "api_key",
-    available: true,
-    category: "AI Models",
-  },
   {
     type: "gmail",
     label: "Gmail",
@@ -215,10 +195,9 @@ const CATALOGUE: CatalogueEntry[] = [
   },
 ]
 
-const CATEGORIES: CatalogueEntry["category"][] = ["AI Models", "Email", "Messaging", "SMS & Voice", "Automation", "MCP servers"]
+const CATEGORIES: CatalogueEntry["category"][] = ["Email", "Messaging", "SMS & Voice", "Automation", "MCP servers"]
 
 const CATEGORY_LABEL: Record<CatalogueEntry["category"], string> = {
-  "AI Models":    "LLM providers",
   "Email":        "Email",
   "Messaging":    "Messaging",
   "SMS & Voice":  "SMS & Voice",
@@ -433,122 +412,6 @@ function ConnectedCard({ connector, orgId, onDelete }: {
 }
 
 // ── LLM connector modal ───────────────────────────────────────────────────────
-
-function LLMConnectorModal({ orgId, provider, label, onSaved }: {
-  orgId: string
-  provider: "openai" | "anthropic"
-  label: string
-  onSaved: () => void
-}) {
-  const [open, setOpen] = useState(false)
-  const [apiKey, setApiKey] = useState("")
-  const [name, setName] = useState(label)
-  const [testing, setTesting] = useState(false)
-  const [testResult, setTestResult] = useState<{ ok: boolean; detail: string } | null>(null)
-  const [saving, setSaving] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-
-  function reset() { setApiKey(""); setTestResult(null); setError(null); setName(label) }
-
-  async function handleTest() {
-    if (!apiKey.trim()) return
-    setTesting(true); setTestResult(null)
-    try {
-      setTestResult(await connectors.validateLLM(provider, apiKey.trim()))
-    } catch (e: unknown) {
-      setTestResult({ ok: false, detail: e instanceof Error ? e.message : "Could not reach API" })
-    } finally {
-      setTesting(false)
-    }
-  }
-
-  async function handleSave() {
-    if (!apiKey.trim()) { setError("API key is required"); return }
-    setSaving(true); setError(null)
-    try {
-      await connectors.createLLM(orgId, name.trim() || label, provider, apiKey.trim())
-      setOpen(false); reset(); onSaved()
-    } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Failed to save")
-    } finally {
-      setSaving(false)
-    }
-  }
-
-  return (
-    <>
-      <Button size="sm" variant="outline" className="text-xs" onClick={() => { reset(); setOpen(true) }}>
-        Connect
-      </Button>
-
-      {open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
-          <div className="absolute inset-0 bg-black/40" onClick={() => setOpen(false)} />
-          <div className="relative z-10 w-full max-w-md rounded-xl border bg-card shadow-xl p-6 space-y-5">
-            <div className="flex items-center justify-between">
-              <h2 className="font-semibold text-base">Connect {label}</h2>
-              <button onClick={() => setOpen(false)} className="text-muted-foreground hover:text-foreground"><X className="size-4" /></button>
-            </div>
-
-            <p className="text-xs text-muted-foreground">
-              {provider === "openai" && (
-                <>Get your API key from{" "}
-                  <a href="https://platform.openai.com/api-keys" target="_blank" rel="noreferrer" className="underline">
-                    platform.openai.com/api-keys
-                  </a>.</>
-              )}
-              {provider === "anthropic" && (
-                <>Get your API key from{" "}
-                  <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noreferrer" className="underline">
-                    console.anthropic.com
-                  </a>.</>
-              )}
-            </p>
-
-            <div className="space-y-3">
-              <div className="space-y-1.5">
-                <Label className="text-xs">API Key</Label>
-                <div className="flex gap-2">
-                  <Input
-                    type="password"
-                    placeholder={provider === "openai" ? "sk-..." : "sk-ant-..."}
-                    value={apiKey}
-                    onChange={(e) => { setApiKey(e.target.value); setTestResult(null) }}
-                    className="text-xs font-mono"
-                    onKeyDown={(e) => e.key === "Enter" && apiKey.trim() && handleTest()}
-                  />
-                  <Button size="sm" variant="outline" onClick={handleTest} disabled={testing || !apiKey.trim()} className="text-xs shrink-0">
-                    {testing ? "…" : "Test"}
-                  </Button>
-                </div>
-                {testResult && (
-                  <p className={cn("flex items-center gap-1 text-xs", testResult.ok ? "text-green-600" : "text-red-600")}>
-                    {testResult.ok ? <Check className="size-3" /> : <X className="size-3" />} {testResult.detail}
-                  </p>
-                )}
-              </div>
-
-              <div className="space-y-1.5">
-                <Label className="text-xs">Label <span className="text-muted-foreground">(optional)</span></Label>
-                <Input value={name} onChange={(e) => setName(e.target.value)} className="text-xs" />
-              </div>
-            </div>
-
-            {error && <p className="text-xs text-red-600">{error}</p>}
-
-            <div className="flex justify-end gap-2">
-              <Button size="sm" variant="ghost" onClick={() => setOpen(false)} className="text-xs">Cancel</Button>
-              <Button size="sm" onClick={handleSave} disabled={saving || !apiKey.trim()} className="text-xs">
-                {saving ? "Saving…" : "Save connector"}
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
-    </>
-  )
-}
-
 // ── Gmail connector modal ─────────────────────────────────────────────────────
 
 function GmailConnectorModal({ orgId, onSaved }: { orgId: string; onSaved: () => void }) {
@@ -1909,8 +1772,6 @@ function AvailableCard({ type, catalogKey, label, description, icon, iconSrc, au
 
   function renderAction() {
     if (!available) return null
-    if (type === "openai") return <LLMConnectorModal orgId={orgId} provider="openai" label="OpenAI" onSaved={onSaved} />
-    if (type === "anthropic") return <LLMConnectorModal orgId={orgId} provider="anthropic" label="Anthropic" onSaved={onSaved} />
     if (type === "gmail") return <GmailConnectorModal orgId={orgId} onSaved={onSaved} />
     if (type === "telegram_bot") return <TelegramBotModal orgId={orgId} onSaved={onSaved} />
     if (type === "telegram_client") return <TelegramClientModal orgId={orgId} onSaved={onSaved} />
@@ -1966,153 +1827,6 @@ function AvailableCard({ type, catalogKey, label, description, icon, iconSrc, au
 }
 
 // ── LLM provider card ─────────────────────────────────────────────────────────
-
-const LLM_META: Record<"openai" | "anthropic", { label: string; iconSrc: string; keyPlaceholder: string }> = {
-  openai:    { label: "OpenAI",    iconSrc: "/openai.svg",    keyPlaceholder: "sk-…" },
-  anthropic: { label: "Anthropic", iconSrc: "/anthropic.svg", keyPlaceholder: "sk-ant-…" },
-}
-
-function LLMProviderCard({
-  provider,
-  orgId,
-  existing,
-  onSaved,
-}: {
-  provider: "openai" | "anthropic"
-  orgId: string
-  existing: Connector | undefined
-  onSaved: () => void
-}) {
-  const meta = LLM_META[provider]
-  const [editing, setEditing] = useState(false)
-  const [key, setKey] = useState("")
-  const [saving, setSaving] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [testing, setTesting] = useState(false)
-  const [testResult, setTestResult] = useState<{ ok: boolean; detail: string } | null>(null)
-  const [deleting, setDeleting] = useState(false)
-
-  const isConnected = !!existing && existing.status !== "revoked"
-
-  async function handleSave() {
-    setSaving(true); setError(null)
-    try {
-      if (existing) {
-        // Replace in place — deleting would unbind agents that use this connector as their model.
-        await connectors.updateLLMKey(existing.id, orgId, key.trim())
-      } else {
-        await connectors.createLLM(orgId, meta.label, provider, key.trim())
-      }
-      setEditing(false); setKey(""); setTestResult(null)
-      onSaved()
-    } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Failed to save")
-    } finally {
-      setSaving(false)
-    }
-  }
-
-  async function handleTest() {
-    if (!existing) return
-    setTesting(true); setTestResult(null)
-    try {
-      setTestResult(await connectors.test(existing.id, orgId))
-    } catch (e: unknown) {
-      setTestResult({ ok: false, detail: e instanceof Error ? e.message : "Test failed" })
-    } finally {
-      setTesting(false)
-    }
-  }
-
-  async function handleRemove() {
-    if (!existing) return
-    setDeleting(true); setError(null)
-    try {
-      await connectors.delete(existing.id, orgId)
-      setTestResult(null)
-      onSaved()
-    } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Failed to remove")
-    } finally {
-      setDeleting(false)
-    }
-  }
-
-  return (
-    <Card className="flex flex-col">
-      <CardHeader className="pb-3">
-        <div className="flex items-center gap-3">
-          <Image src={meta.iconSrc} alt={meta.label} width={32} height={32} className="shrink-0" />
-          <div>
-            <CardTitle className="text-sm font-semibold leading-tight">{meta.label}</CardTitle>
-            <CardDescription className="text-xs">
-              {isConnected
-                ? existing!.status === "active" ? "Active" : "Connected"
-                : "Not connected"}
-            </CardDescription>
-          </div>
-          {isConnected && (
-            <span className="ml-auto">
-              <StatusDot status={existing!.status} />
-            </span>
-          )}
-        </div>
-      </CardHeader>
-      <CardContent className="flex flex-1 flex-col gap-3 pt-0">
-        {testResult && (
-          <p className={cn("text-xs", testResult.ok ? "text-green-700" : "text-destructive")}>
-            {testResult.ok ? "✓" : "✗"} {testResult.detail}
-          </p>
-        )}
-        {error && !editing && <p className="text-xs text-destructive">{error}</p>}
-        {!editing ? (
-          <div className="flex items-center gap-2 mt-auto flex-wrap">
-            {isConnected ? (
-              <>
-                <Button size="sm" variant="outline" onClick={handleTest} disabled={testing || deleting}>
-                  {testing ? "Testing…" : "Test"}
-                </Button>
-                <Button size="sm" variant="outline" onClick={() => { setEditing(true); setTestResult(null) }} disabled={deleting}>
-                  Replace key
-                </Button>
-                <Button size="sm" variant="ghost" className="text-destructive hover:text-destructive" onClick={handleRemove} disabled={deleting}>
-                  {deleting ? "Removing…" : "Remove"}
-                </Button>
-              </>
-            ) : (
-              <Button size="sm" variant="outline" onClick={() => setEditing(true)}>
-                Add API key
-              </Button>
-            )}
-          </div>
-        ) : (
-          <div className="space-y-2">
-            <Label htmlFor={`llm-key-${provider}`} className="text-xs">API key</Label>
-            <Input
-              id={`llm-key-${provider}`}
-              type="password"
-              placeholder={meta.keyPlaceholder}
-              value={key}
-              onChange={(e) => setKey(e.target.value)}
-              className="font-mono text-xs h-8"
-              autoFocus
-            />
-            {error && <p className="text-xs text-destructive">{error}</p>}
-            <div className="flex gap-2">
-              <Button size="sm" onClick={handleSave} disabled={saving || !key.trim()}>
-                {saving ? "Saving…" : "Save"}
-              </Button>
-              <Button size="sm" variant="ghost" onClick={() => { setEditing(false); setKey(""); setError(null) }}>
-                Cancel
-              </Button>
-            </div>
-          </div>
-        )}
-      </CardContent>
-    </Card>
-  )
-}
-
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 function ConnectorsPageInner() {
@@ -2173,26 +1887,6 @@ function ConnectorsPageInner() {
       )}
 
       {/* ── AI Models ──────────────────────────────────────────────────── */}
-      <section className="space-y-4">
-        <div>
-          <h2 className="text-base font-semibold">AI Models</h2>
-          <p className="text-sm text-muted-foreground mt-0.5">
-            LLM keys are shared across all agents in this workspace.
-          </p>
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {(["openai", "anthropic"] as const).map((p) => (
-            <LLMProviderCard
-              key={p}
-              provider={p}
-              orgId={orgId}
-              existing={list.find((c) => c.type === p)}
-              onSaved={fetchList}
-            />
-          ))}
-        </div>
-      </section>
-
       {/* ── Connected ─────────────────────────────────────────────────────── */}
       {(() => {
         // LLM providers live in "Workspace integrations" — exclude them here.
@@ -2252,7 +1946,7 @@ function ConnectorsPageInner() {
             Connect services your agents can send messages, read data, or trigger actions through.
           </p>
         </div>
-        {CATEGORIES.filter((c) => c !== "AI Models").map((cat) => {
+        {CATEGORIES.map((cat) => {
           const items = CATALOGUE.filter((c) => c.category === cat)
           return (
             <div key={cat}>
