@@ -8,13 +8,15 @@ import { AgentIcon, timeAgo } from "@/components/agents/shared"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { useUser } from "@/hooks/useUser"
+import { useActiveOrg } from "@/hooks/useActiveOrg"
 import { cn } from "@/lib/utils"
 
 const POLL_MS = 15_000
 
 export default function ApprovalsPage() {
   const { user } = useUser()
-  const orgId = user?.organizations[0]?.id ?? ""
+  const { activeOrg } = useActiveOrg()
+  const orgId = activeOrg?.id ?? ""
 
   const [pending, setPending] = useState<ApprovalRequest[] | null>(null)
   const [resolved, setResolved] = useState<ApprovalRequest[] | null>(null)

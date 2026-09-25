@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react"
 import { CheckCircle2, Clock, RotateCcw, StickyNote, Trash2, X } from "lucide-react"
 import { agents as agentsApi, notes as notesApi, type Agent, type OwnerNote } from "@/lib/api"
 import { useUser } from "@/hooks/useUser"
+import { useActiveOrg } from "@/hooks/useActiveOrg"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 
@@ -353,7 +354,8 @@ function SectionLabel({ title, count, icon }: { title: string; count: number; ic
 
 export default function NotesPage() {
   const { user, loading: userLoading } = useUser()
-  const orgId = user?.organizations[0]?.id ?? ""
+  const { activeOrg } = useActiveOrg()
+  const orgId = activeOrg?.id ?? ""
 
   const [allNotes, setAllNotes] = useState<OwnerNote[]>([])
   const [agentList, setAgentList] = useState<Agent[]>([])

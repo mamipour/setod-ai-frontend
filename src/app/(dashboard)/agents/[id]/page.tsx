@@ -7,6 +7,7 @@ import { ArrowLeft, BookOpen, Eye, History, Loader2, MoreVertical, Play, Setting
 import { agents, type SessionDetail } from "@/lib/api"
 import { useAgent } from "@/hooks/useAgents"
 import { useUser } from "@/hooks/useUser"
+import { useActiveOrg } from "@/hooks/useActiveOrg"
 import { Button } from "@/components/ui/button"
 import { AgentTab } from "@/components/agents/AgentTab"
 import { AssistantTab } from "@/components/agents/AssistantTab"
@@ -72,7 +73,8 @@ export default function AgentDetailPage({ params }: { params: Promise<{ id: stri
   const { id } = use(params)
   const router = useRouter()
   const { user, loading: userLoading } = useUser()
-  const orgId = user?.organizations[0]?.id ?? ""
+  const { activeOrg } = useActiveOrg()
+  const orgId = activeOrg?.id ?? ""
   const { agent, loading, error, patch, refetch } = useAgent(id)
 
   const [tab, setTab] = useState<Tab>("Agent")

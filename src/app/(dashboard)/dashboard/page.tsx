@@ -5,6 +5,7 @@ import Link from "next/link"
 import { ArrowRight, Bot, Plug, TrendingDown, TrendingUp } from "lucide-react"
 import { agents, type DailyRuns, type Overview } from "@/lib/api"
 import { useUser } from "@/hooks/useUser"
+import { useActiveOrg } from "@/hooks/useActiveOrg"
 import { Card, CardContent } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Button } from "@/components/ui/button"
@@ -19,7 +20,8 @@ import { cn } from "@/lib/utils"
 
 export default function DashboardPage() {
   const { user, loading: userLoading } = useUser()
-  const orgId = user?.organizations[0]?.id ?? ""
+  const { activeOrg } = useActiveOrg()
+  const orgId = activeOrg?.id ?? ""
   const [overview, setOverview] = useState<Overview | null>(null)
   const [error, setError] = useState<string | null>(null)
 

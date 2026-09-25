@@ -4,6 +4,7 @@ import { useEffect, useState } from "react"
 import { Crown, Loader2, Mail, Trash2, UserPlus } from "lucide-react"
 import { workspace } from "@/lib/api"
 import { useUser } from "@/hooks/useUser"
+import { useActiveOrg } from "@/hooks/useActiveOrg"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -14,7 +15,8 @@ type Member = { user_id: string; email: string; name: string; role: string }
 
 export default function MembersPage() {
   const { user } = useUser()
-  const orgId = user?.organizations[0]?.id ?? ""
+  const { activeOrg } = useActiveOrg()
+  const orgId = activeOrg?.id ?? ""
   const myUserId = user?.id ?? ""
 
   const [members, setMembers] = useState<Member[]>([])

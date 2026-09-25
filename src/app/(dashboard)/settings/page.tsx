@@ -5,6 +5,7 @@ import Image from "next/image"
 import { BellRing, Shield } from "lucide-react"
 import { connectors as connectorsApi, workspace, type Connector, type ConnectorType, type WebSearchSettings } from "@/lib/api"
 import { useUser } from "@/hooks/useUser"
+import { useActiveOrg } from "@/hooks/useActiveOrg"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -529,9 +530,10 @@ function TavilyCard({ orgId }: { orgId: string }) {
 
 function SettingsPageInner() {
   const { user, loading: userLoading } = useUser()
+  const { activeOrg } = useActiveOrg()
   const [connectors, setConnectors] = useState<Connector[]>([])
 
-  const orgId = user?.organizations[0]?.id ?? ""
+  const orgId = activeOrg?.id ?? ""
 
   function fetchConnectors() {
     if (!orgId) return

@@ -5,6 +5,8 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import {
   Bot,
+  Check,
+  ChevronDown,
   HelpCircle,
   LayoutDashboard,
   LogOut,
@@ -12,6 +14,7 @@ import {
   PanelLeft,
   PanelLeftClose,
   Plug,
+  Plus,
   Settings,
   ShieldCheck,
   StickyNote,
@@ -22,6 +25,7 @@ import {
 } from "lucide-react"
 import { approvals, auth } from "@/lib/api"
 import { useUser } from "@/hooks/useUser"
+import { useActiveOrg } from "@/hooks/useActiveOrg"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { cn } from "@/lib/utils"
 
@@ -38,16 +42,115 @@ const NAV: { href: string; label: string; Icon: LucideIcon }[] = [
 
 const BADGE_POLL_MS = 30_000
 
-/** Collapse is a preference, not session state  -  it is restored on the next sign-in too. */
+/** Collapse is a preference, not session state — it is restored on the next sign-in too. */
 const COLLAPSE_KEY = "sidebar:collapsed"
+
+// ── Workspace picker ──────────────────────────────────────────────────────────
+
+function WorkspacePicker({ mini }: { mini: boolean }) {
+  const { activeOrg, setActiveOrgId, orgs } = useActiveOrg()
+  const [open, setOpen] = useState(false)
+
+  if (!activeOrg) return null
+
+  const initials = activeOrg.name.slice(0, 2).toUpperCase()
+
+  if (mini) {
+    return (
+      <div className="relative mb-4">
+        <button
+          onClick={() => setOpen((v) => !v)}
+          title={activeOrg.name}
+          className="flex size-8 items-center justify-center rounded-lg bg-primary/10 text-primary text-xs font-bold transition-colors hover:bg-primary/20"
+        >
+          {initials}
+        </button>
+        {open && (
+          <>
+            <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
+            <div className="absolute left-10 top-0 z-50 w-52 rounded-xl border bg-popover shadow-lg py-1">
+              <OrgList orgs={orgs} activeId={activeOrg.id} onSelect={(id) => { setActiveOrgId(id); setOpen(false) }} />
+            </div>
+          </>
+        )}
+      </div>
+    )
+  }
+
+  return (
+    <div className="relative mb-4">
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-sm transition-colors hover:bg-muted"
+      >
+        <span className="flex size-6 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary text-[10px] font-bold">
+          {initials}
+        </span>
+        <span className="min-w-0 flex-1 truncate text-left font-medium">{activeOrg.name}</span>
+        <ChevronDown className={cn("size-3.5 shrink-0 text-muted-foreground transition-transform", open && "rotate-180")} />
+      </button>
+
+      {open && (
+        <>
+          <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
+          <div className="absolute left-0 right-0 z-50 mt-1 rounded-xl border bg-popover shadow-lg py-1">
+            <OrgList orgs={orgs} activeId={activeOrg.id} onSelect={(id) => { setActiveOrgId(id); setOpen(false) }} />
+          </div>
+        </>
+      )}
+    </div>
+  )
+}
+
+import type { OrgMembership } from "@/lib/api"
+
+function OrgList({
+  orgs,
+  activeId,
+  onSelect,
+}: {
+  orgs: OrgMembership[]
+  activeId: string
+  onSelect: (id: string) => void
+}) {
+  return (
+    <>
+      <p className="px-3 py-1.5 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/60">
+        Workspaces
+      </p>
+      {orgs.map((org) => (
+        <button
+          key={org.id}
+          onClick={() => onSelect(org.id)}
+          className="flex w-full items-center gap-2.5 px-3 py-2 text-sm transition-colors hover:bg-muted"
+        >
+          <span className="flex size-6 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary text-[10px] font-bold">
+            {org.name.slice(0, 2).toUpperCase()}
+          </span>
+          <span className="min-w-0 flex-1 truncate text-left">{org.name}</span>
+          <span className="text-[10px] text-muted-foreground/60 capitalize shrink-0">{org.role}</span>
+          {org.id === activeId && <Check className="size-3.5 shrink-0 text-primary" />}
+        </button>
+      ))}
+      {orgs.length === 0 && (
+        <p className="px-3 py-2 text-xs text-muted-foreground">No workspaces found.</p>
+      )}
+    </>
+  )
+}
+
+// ── Sidebar ───────────────────────────────────────────────────────────────────
 
 export function AppSidebar() {
   const pathname = usePathname()
   const { user } = useUser()
+  const { activeOrg } = useActiveOrg()
 
   const [collapsed, setCollapsed] = useState(false)
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [pendingApprovals, setPendingApprovals] = useState(0)
+
+  const orgId = activeOrg?.id ?? ""
 
   // Read in an effect rather than a useState initialiser so the server render and the
   // first client render agree; localStorage does not exist during SSR.
@@ -74,9 +177,6 @@ export function AppSidebar() {
     })
   }
 
-  const orgId = user?.organizations[0]?.id ?? ""
-  const orgName = user?.organizations[0]?.name ?? "Platform"
-
   const fetchBadge = useCallback(async () => {
     if (!orgId) return
     try {
@@ -100,17 +200,15 @@ export function AppSidebar() {
   function content({ mini, drawer }: { mini: boolean; drawer?: boolean }) {
     return (
       <>
+        {/* Logo + collapse toggle */}
         <div
           className={cn(
-            "mb-6 flex items-center gap-2",
+            "mb-2 flex items-center gap-2",
             mini ? "justify-center" : "px-2",
-            // Leave room for the drawer's close button, which sits in this row.
             drawer && "pr-8",
           )}
         >
           {mini ? (
-            // Collapsed, the logo doubles as the expand control: a 64px rail has no room
-            // for a separate button, and swapping the glyph on hover keeps it discoverable.
             <button
               onClick={toggleCollapsed}
               aria-label="Expand sidebar"
@@ -123,7 +221,7 @@ export function AppSidebar() {
           ) : (
             <>
               <img src="/logo.svg" alt="setod" className="w-8 h-8 shrink-0 rounded-lg" />
-              <span className="min-w-0 flex-1 truncate text-sm font-semibold">{orgName}</span>
+              <span className="min-w-0 flex-1 truncate text-sm font-semibold text-muted-foreground">Setod</span>
               {!drawer && (
                 <button
                   onClick={toggleCollapsed}
@@ -137,6 +235,9 @@ export function AppSidebar() {
             </>
           )}
         </div>
+
+        {/* Workspace picker */}
+        <WorkspacePicker mini={mini} />
 
         <nav className="flex-1">
           <ul className="space-y-1">
@@ -224,7 +325,7 @@ export function AppSidebar() {
           <Menu className="size-5" />
         </button>
         <img src="/logo.svg" alt="setod" className="w-6 h-6 rounded-md" />
-        <span className="truncate text-sm font-semibold">{orgName}</span>
+        <span className="truncate text-sm font-semibold">{activeOrg?.name ?? "Platform"}</span>
       </header>
 
       {/* ── Mobile drawer ── */}
@@ -268,8 +369,6 @@ function NavLink({
   return (
     <Link
       href={href}
-      // Without this the active state is purely visual and a screen reader hears four
-      // identical links.
       aria-current={active ? "page" : undefined}
       title={mini ? label : undefined}
       className={cn(
@@ -280,8 +379,6 @@ function NavLink({
           : "text-muted-foreground hover:bg-muted hover:text-foreground",
       )}
     >
-      {/* A second, non-colour signal for the current page. A sidebar is read in
-          peripheral vision, where a tint alone is easy to miss. */}
       {active && (
         <span className="absolute left-0 top-1/2 h-5 w-0.5 -translate-y-1/2 rounded-r-full bg-primary" />
       )}

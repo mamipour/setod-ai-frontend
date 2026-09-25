@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react"
 import { BookOpen, ChevronDown, ChevronUp, Edit2, Plus, Trash2, Wand2, X } from "lucide-react"
 import { skills, type Skill, type SkillCategory } from "@/lib/api"
 import { useUser } from "@/hooks/useUser"
+import { useActiveOrg } from "@/hooks/useActiveOrg"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { cn } from "@/lib/utils"
@@ -177,7 +178,8 @@ function SkillCard({
 
 export default function SkillsPage() {
   const { user } = useUser()
-  const orgId = user?.organizations[0]?.id ?? ""
+  const { activeOrg } = useActiveOrg()
+  const orgId = activeOrg?.id ?? ""
   const [allSkills, setAllSkills] = useState<Skill[]>([])
   const [loading, setLoading] = useState(true)
   const [creating, setCreating] = useState(false)

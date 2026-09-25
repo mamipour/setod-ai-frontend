@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { Bot, Plus } from "lucide-react"
 import { useUser } from "@/hooks/useUser"
+import { useActiveOrg } from "@/hooks/useActiveOrg"
 import { useAgents } from "@/hooks/useAgents"
 import { Button } from "@/components/ui/button"
 import { AgentCard } from "@/components/agents/AgentCard"
@@ -10,7 +11,8 @@ import { CreateAgentFlow } from "@/components/agents/CreateAgentFlow"
 
 export default function AgentsPage() {
   const { user, loading: userLoading } = useUser()
-  const orgId = user?.organizations[0]?.id ?? ""
+  const { activeOrg } = useActiveOrg()
+  const orgId = activeOrg?.id ?? ""
   const { list, loading, error, refetch } = useAgents(orgId)
   const [creating, setCreating] = useState(false)
 

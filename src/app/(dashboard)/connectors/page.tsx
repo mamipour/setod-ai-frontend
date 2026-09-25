@@ -6,6 +6,7 @@ import { useSearchParams } from "next/navigation"
 import { Check, Lock, X } from "lucide-react"
 import { connectors, type Connector, type ConnectorType } from "@/lib/api"
 import { useUser } from "@/hooks/useUser"
+import { useActiveOrg } from "@/hooks/useActiveOrg"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -1831,12 +1832,13 @@ function AvailableCard({ type, catalogKey, label, description, icon, iconSrc, au
 
 function ConnectorsPageInner() {
   const { user, loading: userLoading } = useUser()
+  const { activeOrg } = useActiveOrg()
   const searchParams = useSearchParams()
   const [list, setList] = useState<Connector[]>([])
   const [fetching, setFetching] = useState(true)
   const [justConnected, setJustConnected] = useState<string | null>(null)
 
-  const orgId = user?.organizations[0]?.id ?? ""
+  const orgId = activeOrg?.id ?? ""
 
   useEffect(() => {
     const connected = searchParams.get("connected")
