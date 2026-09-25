@@ -6,24 +6,27 @@ import type { Agent } from "@/lib/api"
 import { AgentIcon, AgentStatusBadge, timeAgo } from "@/components/agents/shared"
 import { cn } from "@/lib/utils"
 
-function HealthDot({ score }: { score: number | null }) {
-  if (score === null) return null
+function HealthPill({ score }: { score: number | null }) {
+  if (score === null) {
+    return <span className="text-xs text-muted-foreground/50">No runs yet</span>
+  }
   const pct = Math.round(score * 100)
-  const { dot, label } =
+  const { dot, text } =
     score >= 0.8
-      ? { dot: "bg-green-500", label: `${pct}% success` }
+      ? { dot: "bg-green-500", text: "text-green-700" }
       : score >= 0.5
-        ? { dot: "bg-yellow-400", label: `${pct}% success` }
-        : { dot: "bg-red-500", label: `${pct}% success` }
+        ? { dot: "bg-yellow-400", text: "text-yellow-700" }
+        : { dot: "bg-red-500",   text: "text-red-700" }
   return (
-    <span title={label} className="shrink-0 flex items-center gap-1">
-      <span className={cn("size-2 rounded-full", dot)} />
+    <span className={cn("inline-flex items-center gap-1 text-xs font-medium tabular-nums", text)}>
+      <span className={cn("size-1.5 rounded-full shrink-0", dot)} />
+      {pct}% success
     </span>
   )
 }
 
 /**
- * Pull the first sentence/phrase that actually describes the job  -  not a "You are…" preamble
+ * Pull the first sentence/phrase that actually describes the job — not a "You are…" preamble
  * that the user never wrote themselves and doesn't need to read on every card.
  */
 function extractSummary(instructions: string): string {
@@ -33,21 +36,18 @@ function extractSummary(instructions: string): string {
     .filter(Boolean)
 
   for (const line of lines) {
-    // Skip meta-preamble lines that start with "You are", "You are an", etc.
     if (/^You are\b/i.test(line)) continue
-    // Skip markdown headers
     if (line.startsWith("#")) continue
-    // Skip very short lines (labels, category headings)
     if (line.length < 20) continue
     return line.replace(/^[-–—*]\s*/, "")
   }
 
-  // Nothing useful  -  fall back gracefully
   return lines[0] ?? "No instructions yet."
 }
 
 export function AgentCard({ agent }: { agent: Agent }) {
   const summary = extractSummary(agent.instructions)
+  const runLabel = agent.last_run_at ? `Last run ${timeAgo(agent.last_run_at)}` : null
 
   return (
     <Link href={`/agents/${agent.id}`} className="block group">
@@ -75,8 +75,10 @@ export function AgentCard({ agent }: { agent: Agent }) {
         <CardContent className="pt-0">
           <p className="line-clamp-2 text-xs text-muted-foreground leading-relaxed">{summary}</p>
           <div className="mt-3 flex items-center justify-between gap-2">
-            <p className="text-xs text-muted-foreground/60">Updated {timeAgo(agent.updated_at)}</p>
-            <HealthDot score={agent.health_score} />
+            <p className="text-xs text-muted-foreground/50 truncate">
+              {runLabel ?? "Never run"}
+            </p>
+            <HealthPill score={agent.health_score} />
           </div>
         </CardContent>
       </Card>

@@ -327,6 +327,8 @@ export interface Agent {
   updated_at: string
   /** 0.0–1.0 fraction of last 20 runs that succeeded. null = no runs yet. */
   health_score: number | null
+  /** ISO timestamp of the most recent non-dry run. null = never run. */
+  last_run_at: string | null
 }
 
 export interface AgentTemplate {
