@@ -1,8 +1,10 @@
 "use client"
 
 import { useCallback, useEffect, useRef, useState } from "react"
-import { FileText, Loader2, Trash2, UploadCloud } from "lucide-react"
+import { FileText, Link, Loader2, Trash2, UploadCloud } from "lucide-react"
 import { agents, type KnowledgeFile } from "@/lib/api"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 import { cn } from "@/lib/utils"
 
 const ACCEPT = ".pdf,.txt,.md,.csv"
@@ -17,6 +19,8 @@ export function KnowledgeTab({ agentId }: { agentId: string }) {
   const [uploading, setUploading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [dragging, setDragging] = useState(false)
+  const [urlInput, setUrlInput] = useState("")
+  const [addingUrl, setAddingUrl] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
 
   const reload = useCallback(async () => {
@@ -52,6 +56,20 @@ export function KnowledgeTab({ agentId }: { agentId: string }) {
     } finally {
       setUploading(false)
       if (inputRef.current) inputRef.current.value = ""
+    }
+  }
+
+  async function addUrl() {
+    setError(null)
+    setAddingUrl(true)
+    try {
+      await agents.addKnowledgeUrl(agentId, urlInput.trim())
+      setUrlInput("")
+      await reload()
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Could not fetch URL")
+    } finally {
+      setAddingUrl(false)
     }
   }
 
@@ -112,6 +130,30 @@ export function KnowledgeTab({ agentId }: { agentId: string }) {
           />
         </label>
 
+        {/* URL input */}
+        <div className="flex gap-2">
+          <div className="relative flex-1">
+            <Link className="absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              className="h-8 pl-8 text-xs"
+              placeholder="https://example.com/docs/pricing"
+              value={urlInput}
+              onChange={(e) => setUrlInput(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && urlInput.trim() && addUrl()}
+              disabled={addingUrl}
+            />
+          </div>
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-8 text-xs"
+            disabled={!urlInput.trim() || addingUrl}
+            onClick={addUrl}
+          >
+            {addingUrl ? <Loader2 className="size-3 animate-spin" /> : "Add URL"}
+          </Button>
+        </div>
+
         {error && (
           <p className="rounded-lg border border-red-200 bg-red-50 p-3 text-xs text-red-800">
             {error}
@@ -146,10 +188,17 @@ function FileRow({ file, onDelete }: { file: KnowledgeFile; onDelete: () => void
   return (
     <li className="flex items-center gap-3 rounded-lg border bg-card px-3 py-2.5">
       <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
-        <FileText className="size-4" />
+        {file.source_url ? <Link className="size-4" /> : <FileText className="size-4" />}
       </div>
       <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-medium">{file.filename}</p>
+        {file.source_url ? (
+          <a href={file.source_url} target="_blank" rel="noopener noreferrer"
+             className="block truncate text-sm font-medium hover:underline">
+            {file.filename}
+          </a>
+        ) : (
+          <p className="truncate text-sm font-medium">{file.filename}</p>
+        )}
         <p className="text-xs text-muted-foreground">
           {formatSize(file.size_bytes)}
           {file.status === "ready" && ` · ${file.chunk_count} passages`}

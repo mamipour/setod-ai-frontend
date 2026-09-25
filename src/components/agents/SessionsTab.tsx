@@ -1,13 +1,14 @@
 "use client"
 
 import { useCallback, useEffect, useRef, useState } from "react"
-import { ChevronDown, ChevronRight, History, RefreshCw } from "lucide-react"
+import { ChevronDown, ChevronRight, History, Loader2, RefreshCw, Sparkles } from "lucide-react"
 import { agents, type Session, type SessionDetail, type SessionStatus, type TriggerType } from "@/lib/api"
 import { MessageRow } from "@/components/agents/CreateAgentFlow"
 import {
   SessionStatusBadge,
   TRIGGER_LABEL,
   approxCost,
+  costBreakdown,
   duration,
   timeAgo,
 } from "@/components/agents/shared"
@@ -186,12 +187,24 @@ function SessionRow({
   onToggle: () => void
 }) {
   const [detail, setDetail] = useState<SessionDetail | null>(null)
+  const [explaining, setExplaining] = useState(false)
+  const [explanation, setExplanation] = useState<string | null>(null)
 
   useEffect(() => {
     if (open && !detail) {
       agents.getSession(agentId, session.id).then(setDetail)
     }
   }, [open, detail, agentId, session.id])
+
+  async function explain() {
+    setExplaining(true)
+    try {
+      const res = await agents.explainSession(agentId, session.id)
+      setExplanation(res.summary)
+    } finally {
+      setExplaining(false)
+    }
+  }
 
   return (
     <div className="rounded-xl border">
@@ -209,7 +222,7 @@ function SessionRow({
           <p className="mt-0.5 text-xs text-muted-foreground">
             {TRIGGER_LABEL[session.trigger_type]}
             {session.triggered_by_agent_name && ` · called by ${session.triggered_by_agent_name}`} · {timeAgo(session.started_at)} ·{" "}
-            {duration(session.started_at, session.finished_at)} · {approxCost(session.total_tokens)}
+            {duration(session.started_at, session.finished_at)} · {approxCost(session.total_tokens, session.model_slug)}
           </p>
         </div>
         <SessionStatusBadge status={session.status} dryRun={session.dry_run} />
@@ -226,12 +239,35 @@ function SessionRow({
             <p className="text-xs text-muted-foreground">Loading…</p>
           ) : (
             <div className="space-y-2">
+              {/* Explain this run */}
+              {explanation ? (
+                <div className="rounded-lg border border-primary/20 bg-primary/5 px-3 py-2.5">
+                  <p className="text-xs font-medium text-primary mb-1 flex items-center gap-1">
+                    <Sparkles className="size-3" /> Summary
+                  </p>
+                  <p className="text-xs text-foreground/80">{explanation}</p>
+                </div>
+              ) : (
+                <button
+                  onClick={explain}
+                  disabled={explaining}
+                  className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  {explaining
+                    ? <Loader2 className="size-3 animate-spin" />
+                    : <Sparkles className="size-3" />}
+                  {explaining ? "Generating summary…" : "Explain this run"}
+                </button>
+              )}
+
               {detail.messages.map((m) => (
                 <MessageRow key={m.id} role={m.role} toolName={m.tool_name} content={m.content} />
               ))}
               <p className={cn("pt-2 text-xs text-muted-foreground/60")}>
                 {detail.iterations} step{detail.iterations === 1 ? "" : "s"} ·{" "}
-                {detail.total_tokens.toLocaleString()} tokens
+                {detail.prompt_tokens.toLocaleString()} in · {detail.completion_tokens.toLocaleString()} out ·{" "}
+                {costBreakdown(detail.prompt_tokens, detail.completion_tokens, detail.model_slug)}
+                {detail.model_slug && <span className="ml-1 opacity-60">({detail.model_slug})</span>}
               </p>
             </div>
           )}

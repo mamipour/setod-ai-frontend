@@ -391,6 +391,7 @@ export interface Session {
   trigger_type: TriggerType
   status: SessionStatus
   name: string
+  model_slug: string
   dry_run: boolean
   prompt_tokens: number
   completion_tokens: number
@@ -458,6 +459,7 @@ export interface KnowledgeFile {
   status: KnowledgeFileStatus
   error: string | null
   chunk_count: number
+  source_url: string | null
   created_at: string
 }
 
@@ -617,6 +619,12 @@ export const agents = {
 
   deleteKnowledge: (id: string, fileId: string): Promise<void> =>
     apiFetch(`/agents/${id}/knowledge/${fileId}`, { method: "DELETE" }),
+
+  addKnowledgeUrl: (id: string, url: string): Promise<KnowledgeFile> =>
+    apiFetch(`/agents/${id}/knowledge/url`, { method: "POST", body: JSON.stringify({ url }) }),
+
+  explainSession: (id: string, sessionId: string): Promise<{ session_id: string; summary: string }> =>
+    apiFetch(`/agents/${id}/sessions/${sessionId}/explain`, { method: "POST" }),
 
   // ── Publish history ──
   publishHistory: (id: string): Promise<{

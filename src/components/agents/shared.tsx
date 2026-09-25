@@ -268,15 +268,57 @@ export function duration(startedAt: string, finishedAt: string | null): string {
   return secs < 60 ? `${secs.toFixed(1)}s` : `${Math.floor(secs / 60)}m ${Math.round(secs % 60)}s`
 }
 
+/** Per-model pricing (USD per million tokens): [input_price, output_price]. */
+const MODEL_PRICING: Record<string, [number, number]> = {
+  // OpenAI
+  "gpt-4o":              [2.50,  10.00],
+  "gpt-4o-mini":         [0.15,   0.60],
+  "gpt-4-turbo":         [10.00, 30.00],
+  "gpt-4":               [30.00, 60.00],
+  "gpt-3.5-turbo":       [0.50,   1.50],
+  "o1":                  [15.00, 60.00],
+  "o1-mini":             [3.00,  12.00],
+  "o3-mini":             [1.10,   4.40],
+  // Anthropic
+  "claude-opus-4-5":     [15.00, 75.00],
+  "claude-sonnet-4-5":   [3.00,  15.00],
+  "claude-haiku-3-5":    [0.80,   4.00],
+  "claude-opus-4":       [15.00, 75.00],
+  "claude-sonnet-4":     [3.00,  15.00],
+  "claude-haiku-3":      [0.25,   1.25],
+}
+
+const DEFAULT_PRICE: [number, number] = [3.00, 15.00]  // safe mid-range default
+
+function priceFor(modelSlug: string): [number, number] {
+  if (!modelSlug) return DEFAULT_PRICE
+  // Try exact match first, then prefix match.
+  for (const [key, price] of Object.entries(MODEL_PRICING)) {
+    if (modelSlug === key || modelSlug.startsWith(key)) return price
+  }
+  return DEFAULT_PRICE
+}
+
 /** Tokens are meaningless to an SMB owner; roughly what it cost them is not. */
-export function approxCost(tokens: number): string {
-  const dollars = (tokens / 1_000_000) * 3
+export function approxCost(tokens: number, modelSlug = ""): string {
+  const [inputPrice, outputPrice] = priceFor(modelSlug)
+  // Without prompt/completion split fall back to average of in+out price.
+  const avgPrice = (inputPrice + outputPrice) / 2
+  const dollars = (tokens / 1_000_000) * avgPrice
   if (dollars < 0.01) return "<$0.01"
-  return `$${dollars.toFixed(2)}`
+  return `~$${dollars.toFixed(3)}`
+}
+
+/** Calculate cost with prompt/completion split for the detail view. */
+export function costBreakdown(promptTokens: number, completionTokens: number, modelSlug = ""): string {
+  const [inputPrice, outputPrice] = priceFor(modelSlug)
+  const dollars = (promptTokens / 1_000_000) * inputPrice + (completionTokens / 1_000_000) * outputPrice
+  if (dollars < 0.001) return "<$0.001"
+  return `~$${dollars.toFixed(4)}`
 }
 
 export function tokensForBudget(dollars: number): number {
-  return Math.round((dollars / 3) * 1_000_000)
+  return Math.round((dollars / DEFAULT_PRICE[1]) * 1_000_000)
 }
 
 export function AgentStatusBadge({
