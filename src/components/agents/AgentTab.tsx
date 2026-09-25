@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react"
 import Image from "next/image"
-import { CalendarClock, ChevronDown, Clock, MessageSquare, Play, Plus, RotateCcw, Shield, StickyNote, Trash2 } from "lucide-react"
+import { CalendarClock, ChevronDown, Clock, FlaskConical, Loader2, MessageSquare, Play, Plus, RotateCcw, Shield, StickyNote, Trash2 } from "lucide-react"
 import {
   agents,
   connectors as connectorsApi,
@@ -14,6 +14,7 @@ import {
   type Connector,
   type ModelList,
   type SchedulePreset,
+  type Scenario,
   type Skill,
   type Trigger,
 } from "@/lib/api"
@@ -213,6 +214,11 @@ export function AgentTab({
   const [liveNoteCount, setLiveNoteCount] = useState<number | null>(null)
   const [agentCalls, setAgentCalls] = useState<AgentLink[]>([])
   const [addingCall, setAddingCall] = useState(false)
+  const [scenarios, setScenarios] = useState<Scenario[]>([])
+  const [addingScenario, setAddingScenario] = useState(false)
+  const [newScenarioName, setNewScenarioName] = useState("")
+  const [newScenarioInput, setNewScenarioInput] = useState("")
+  const [scenarioRunning, setScenarioRunning] = useState<string | null>(null)
 
   const nameStatus = useAutosave(name, async (v) => {
     const updated = await agents.update(agent.id, { name: v })
@@ -237,6 +243,7 @@ export function AgentTab({
       .then(([all, attached]) => { setOrgSkills(all); setAttachedSkills(attached) })
       .finally(() => setSkillsLoading(false))
     agents.listCalls(agent.id).then(setAgentCalls).catch(() => {})
+    agents.listScenarios(agent.id).then(setScenarios).catch(() => {})
     // Count notes visible to this agent (scope: all-agents or includes this agent id)
     notesApi.list(orgId).then((all) => {
       const now = new Date()
@@ -569,6 +576,131 @@ export function AgentTab({
           )}
           onChange={reload}
         />
+      </SectionCard>
+
+      {/* ── Test cases ── */}
+      <SectionCard title="Test cases">
+        <p className="text-xs text-muted-foreground">
+          Save sample inputs and run them in dry-run mode to verify behaviour without sending real messages.
+        </p>
+
+        {scenarios.length > 0 && (
+          <div className="space-y-2">
+            {scenarios.map((sc) => (
+              <div key={sc.id} className="flex items-start gap-2 rounded-lg border bg-muted/30 p-3">
+                <FlaskConical className="mt-0.5 size-3.5 shrink-0 text-muted-foreground" />
+                <div className="min-w-0 flex-1 space-y-0.5">
+                  <p className="truncate text-xs font-medium">{sc.name}</p>
+                  <p className="truncate text-xs text-muted-foreground">{sc.input_text}</p>
+                  {sc.last_ran_at && (
+                    <p className="text-[10px] text-muted-foreground/60">
+                      Last run {untilNow(sc.last_ran_at)}
+                    </p>
+                  )}
+                </div>
+                <div className="flex shrink-0 gap-1">
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-6 px-2 text-[10px]"
+                    disabled={scenarioRunning === sc.id}
+                    onClick={async () => {
+                      setScenarioRunning(sc.id)
+                      try {
+                        await agents.runScenario(agent.id, sc.id)
+                        agents.listScenarios(agent.id).then(setScenarios)
+                      } finally {
+                        setScenarioRunning(null)
+                      }
+                    }}
+                  >
+                    {scenarioRunning === sc.id
+                      ? <Loader2 className="size-3 animate-spin" />
+                      : <><Play className="mr-1 size-3" />Run</>}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-6 px-2 text-[10px] text-destructive hover:text-destructive"
+                    onClick={async () => {
+                      await agents.deleteScenario(agent.id, sc.id)
+                      setScenarios((prev) => prev.filter((s) => s.id !== sc.id))
+                    }}
+                  >
+                    <Trash2 className="size-3" />
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Re-run all */}
+        {scenarios.length > 1 && (
+          <Button
+            size="sm"
+            variant="outline"
+            className="text-xs"
+            disabled={scenarioRunning !== null}
+            onClick={async () => {
+              for (const sc of scenarios) {
+                setScenarioRunning(sc.id)
+                try { await agents.runScenario(agent.id, sc.id) } catch { /* continue */ }
+              }
+              setScenarioRunning(null)
+              agents.listScenarios(agent.id).then(setScenarios)
+            }}
+          >
+            <RotateCcw className="mr-1.5 size-3" />
+            Re-run all
+          </Button>
+        )}
+
+        {/* Add form */}
+        {addingScenario ? (
+          <div className="space-y-2 rounded-lg border p-3">
+            <Input
+              placeholder="Scenario name, e.g. Happy path: new lead"
+              value={newScenarioName}
+              onChange={(e) => setNewScenarioName(e.target.value)}
+              className="h-7 text-xs"
+            />
+            <textarea
+              className="w-full rounded-md border bg-transparent px-3 py-2 text-xs placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+              rows={3}
+              placeholder="Sample trigger message…"
+              value={newScenarioInput}
+              onChange={(e) => setNewScenarioInput(e.target.value)}
+            />
+            <div className="flex justify-end gap-2">
+              <Button size="sm" variant="ghost" className="text-xs" onClick={() => { setAddingScenario(false); setNewScenarioName(""); setNewScenarioInput("") }}>
+                Cancel
+              </Button>
+              <Button
+                size="sm"
+                className="text-xs"
+                disabled={!newScenarioName.trim() || !newScenarioInput.trim()}
+                onClick={async () => {
+                  const sc = await agents.createScenario(agent.id, {
+                    name: newScenarioName.trim(),
+                    input_text: newScenarioInput.trim(),
+                  })
+                  setScenarios((prev) => [...prev, sc])
+                  setAddingScenario(false)
+                  setNewScenarioName("")
+                  setNewScenarioInput("")
+                }}
+              >
+                Save
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <Button size="sm" variant="outline" className="text-xs" onClick={() => setAddingScenario(true)}>
+            <Plus className="mr-1.5 size-3" />
+            Add test case
+          </Button>
+        )}
       </SectionCard>
 
       <Modal open={adding} onClose={() => setAdding(false)}>

@@ -413,6 +413,17 @@ export interface AgentLink {
   created_at: string
 }
 
+export interface Scenario {
+  id: string
+  agent_id: string
+  name: string
+  input_text: string
+  expected_tools: string[]
+  last_session_id: string | null
+  last_ran_at: string | null
+  created_at: string
+}
+
 export interface SessionMessage {
   id: string
   sequence: number
@@ -625,6 +636,32 @@ export const agents = {
 
   clearAssistThread: (id: string): Promise<void> =>
     apiFetch(`/agents/${id}/assist/messages`, { method: "DELETE" }),
+
+  // ── Scenarios ──
+  listScenarios: (id: string): Promise<Scenario[]> =>
+    apiFetch(`/agents/${id}/scenarios`),
+
+  createScenario: (
+    id: string,
+    body: { name: string; input_text: string; expected_tools?: string[] },
+  ): Promise<Scenario> =>
+    apiFetch(`/agents/${id}/scenarios`, { method: "POST", body: JSON.stringify(body) }),
+
+  updateScenario: (
+    id: string,
+    scenarioId: string,
+    body: { name: string; input_text: string; expected_tools?: string[] },
+  ): Promise<Scenario> =>
+    apiFetch(`/agents/${id}/scenarios/${scenarioId}`, {
+      method: "PATCH",
+      body: JSON.stringify(body),
+    }),
+
+  deleteScenario: (id: string, scenarioId: string): Promise<void> =>
+    apiFetch(`/agents/${id}/scenarios/${scenarioId}`, { method: "DELETE" }),
+
+  runScenario: (id: string, scenarioId: string): Promise<{ scenario_id: string; session: Session }> =>
+    apiFetch(`/agents/${id}/scenarios/${scenarioId}/run`, { method: "POST" }),
 }
 
 // ── Approvals ─────────────────────────────────────────────────────────────────
