@@ -2,7 +2,8 @@
 
 import { Suspense, useEffect, useRef, useState } from "react"
 import Image from "next/image"
-import { BellRing, Check as CheckIcon, Pencil, Shield, X as XIcon } from "lucide-react"
+import { BellRing, Check as CheckIcon, Monitor, Moon, Pencil, Shield, Sun, X as XIcon } from "lucide-react"
+import { useTheme } from "next-themes"
 import { connectors as connectorsApi, workspace, type Connector, type ConnectorType, type WebSearchSettings } from "@/lib/api"
 import { useUser } from "@/hooks/useUser"
 import { useActiveOrg } from "@/hooks/useActiveOrg"

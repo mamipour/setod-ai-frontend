@@ -12,6 +12,8 @@ import {
   LayoutDashboard,
   LogOut,
   Menu,
+  Monitor,
+  Moon,
   PanelLeft,
   PanelLeftClose,
   Plug,
@@ -19,11 +21,13 @@ import {
   Settings,
   ShieldCheck,
   StickyNote,
+  Sun,
   Users,
   Wand2,
   type LucideIcon,
   X,
 } from "lucide-react"
+import { useTheme } from "next-themes"
 import { approvals, auth } from "@/lib/api"
 import { useUser } from "@/hooks/useUser"
 import { useActiveOrg } from "@/hooks/useActiveOrg"
@@ -228,6 +232,40 @@ function CreateWorkspaceRow({ newName, setNewName, creating, createError, onSubm
 
 // ── User menu (avatar → popover with sign-out) ─────────────────────────────────
 
+const THEMES = [
+  { value: "light",  icon: Sun,     label: "Light" },
+  { value: "system", icon: Monitor, label: "System" },
+  { value: "dark",   icon: Moon,    label: "Dark" },
+] as const
+
+function ThemeSegment() {
+  const { theme, setTheme } = useTheme()
+  return (
+    <div className="px-3 py-2 border-b">
+      <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide mb-1.5">Theme</p>
+      <div className="flex gap-1 rounded-lg bg-muted p-0.5">
+        {THEMES.map(({ value, icon: Icon, label }) => (
+          <button
+            key={value}
+            onClick={() => setTheme(value)}
+            title={label}
+            aria-label={`Switch to ${label} theme`}
+            className={cn(
+              "flex flex-1 items-center justify-center gap-1.5 rounded-md py-1 text-xs transition-all",
+              theme === value
+                ? "bg-background text-foreground shadow-xs font-medium"
+                : "text-muted-foreground hover:text-foreground",
+            )}
+          >
+            <Icon className="size-3.5" />
+            <span>{label}</span>
+          </button>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 function UserMenu({ user, mini }: { user: { name: string; email: string; avatar_url?: string | null }; mini: boolean }) {
   const [open, setOpen] = useState(false)
 
@@ -272,6 +310,7 @@ function UserMenu({ user, mini }: { user: { name: string; email: string; avatar_
               <p className="text-xs font-medium truncate">{user.name}</p>
               <p className="text-[11px] text-muted-foreground truncate">{user.email}</p>
             </div>
+            <ThemeSegment />
             <Link
               href="/help"
               onClick={() => setOpen(false)}
