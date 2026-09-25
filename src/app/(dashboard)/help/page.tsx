@@ -60,8 +60,11 @@ export default function HelpIndex() {
             cannot do anything.
           </li>
           <li>
-            <strong>Create an agent.</strong> Start from the Emergency Email Triage template
-            or from scratch, and write what you want it to do in plain English.
+            <strong>Create an agent.</strong> The <strong>Templates</strong> page has
+            ready-made agents for common jobs, grouped by what they are for - pick one, read
+            its instructions, and press <em>Use template</em>. Everything is editable before
+            it is created. Or start from scratch on the Agents page and write what you want
+            it to do in plain English.
           </li>
           <li>
             <strong>Test it.</strong> Press Test run and read the transcript line by line.

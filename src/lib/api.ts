@@ -338,6 +338,8 @@ export interface AgentTemplate {
   tagline: string
   description: string
   instructions: string
+  /** Section heading on the Templates page. The API returns templates already grouped by it. */
+  category: string
   required_connectors: ConnectorType[]
   optional_connectors: ConnectorType[]
   trigger_type: TriggerType

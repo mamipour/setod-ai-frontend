@@ -21,7 +21,7 @@ import { cn } from "@/lib/utils"
 
 // Deliberately not the raw connector type names. The user is choosing "an email account",
 // not "a gmail connector".
-const CONNECTOR_LABEL: Record<ConnectorType, string> = {
+export const CONNECTOR_LABEL: Record<ConnectorType, string> = {
   gmail: "Google account",
   telegram_bot: "Telegram bot",
   telegram_client: "Telegram account",
@@ -42,9 +42,11 @@ type Step = "pick" | "setup"
 interface Props {
   orgId: string
   onClose: () => void
+  /** Skip the picker and open straight on this template's setup step (Templates page). */
+  initialTemplateKey?: string
 }
 
-export function CreateAgentFlow({ orgId, onClose }: Props) {
+export function CreateAgentFlow({ orgId, onClose, initialTemplateKey }: Props) {
   const router = useRouter()
   const [step, setStep] = useState<Step>("pick")
   const [templates, setTemplates] = useState<AgentTemplate[]>([])
@@ -60,9 +62,16 @@ export function CreateAgentFlow({ orgId, onClose }: Props) {
         setTemplates(t)
         setConnectors(c)
         setPresets(p)
+        // Preselected template: land on setup directly. An unknown key (template removed
+        // since the page loaded) falls back to the picker rather than a blank form.
+        const preset = initialTemplateKey ? t.find((x) => x.key === initialTemplateKey) : undefined
+        if (preset) {
+          setChosen(preset)
+          setStep("setup")
+        }
       })
       .finally(() => setLoading(false))
-  }, [orgId])
+  }, [orgId, initialTemplateKey])
 
   function refreshConnectors() {
     connectorsApi.list(orgId).then(setConnectors)
@@ -120,6 +129,7 @@ function PickTemplate({
     tagline: "Write your own instructions and pick your own tools.",
     description: "",
     instructions: "",
+    category: "",
     required_connectors: [],
     optional_connectors: [],
     trigger_type: "manual",

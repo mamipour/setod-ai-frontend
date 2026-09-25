@@ -10,6 +10,7 @@ import {
   ChevronUp,
   HelpCircle,
   LayoutDashboard,
+  LayoutTemplate,
   LogOut,
   Menu,
   Monitor,
@@ -40,6 +41,7 @@ import type { OrgMembership } from "@/lib/api"
 const NAV_MAIN: { href: string; label: string; Icon: LucideIcon }[] = [
   { href: "/dashboard",  label: "Dashboard",  Icon: LayoutDashboard },
   { href: "/agents",     label: "Agents",     Icon: Bot },
+  { href: "/templates",  label: "Templates",  Icon: LayoutTemplate },
   { href: "/connectors", label: "Connectors", Icon: Plug },
   { href: "/skills",     label: "Skills",     Icon: Wand2 },
   { href: "/notes",      label: "Notes",      Icon: StickyNote },
