@@ -301,7 +301,7 @@ function SetupAgent({
 
   const missingRequired = template.required_connectors.filter((t) => !picked[t])
   const channelConnectors = connectors.filter(
-    (c) => (c.type === "telegram_bot" || c.type === "twilio") && c.status === "active",
+    (c) => (c.type === "telegram_bot" || c.type === "twilio" || c.type === "whatsapp" || c.type === "instagram") && c.status === "active",
   )
   const canCreate =
     name.trim() &&
@@ -472,7 +472,7 @@ function SetupAgent({
         )}
         {trigger === "channel" && channelConnectors.length === 0 && (
           <p className="text-xs text-amber-700">
-            Connect a Telegram Bot or Twilio account first to use message triggers.
+            Connect a Telegram Bot, Twilio, WhatsApp, or Instagram account first to use message triggers.
           </p>
         )}
       </div>

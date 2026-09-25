@@ -572,7 +572,7 @@ export function AgentTab({
           triggers={triggers}
           presets={presets}
           channelConnectors={connectors.filter(
-            (c) => (c.type === "telegram_bot" || c.type === "twilio") && c.status === "active",
+            (c) => (c.type === "telegram_bot" || c.type === "twilio" || c.type === "whatsapp" || c.type === "instagram") && c.status === "active",
           )}
           onChange={reload}
         />
