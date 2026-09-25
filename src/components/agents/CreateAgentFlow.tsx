@@ -238,7 +238,7 @@ function SetupAgent({
   const isScratch = template.key === ""
   const wanted = isScratch
     ? // Scratch: every tool connector type that has at least one active connection becomes optional.
-      (["gmail", "telegram_bot", "telegram_client", "twilio"] as ConnectorType[]).filter((t) =>
+      (["gmail", "telegram_bot", "telegram_client", "twilio", "whatsapp", "instagram", "slack_webhook", "google_sheets"] as ConnectorType[]).filter((t) =>
         connectors.some((c) => c.type === t && c.status === "active"),
       )
     : [...template.required_connectors, ...template.optional_connectors]
