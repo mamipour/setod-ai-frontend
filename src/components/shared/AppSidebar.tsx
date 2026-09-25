@@ -242,8 +242,7 @@ function ThemeSegment() {
   const { theme, setTheme } = useTheme()
   return (
     <div className="px-3 py-1.5 border-b">
-      <div className="flex items-center justify-between gap-2">
-        <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Theme</p>
+      <div className="flex items-center justify-center">
         <div className="flex rounded-md bg-muted p-0.5">
           {THEMES.map(({ value, icon: Icon, label }) => (
             <button
