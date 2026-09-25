@@ -12,6 +12,7 @@ import {
   PanelLeft,
   PanelLeftClose,
   Plug,
+  Settings,
   ShieldCheck,
   StickyNote,
   Users,
@@ -32,6 +33,7 @@ const NAV: { href: string; label: string; Icon: LucideIcon }[] = [
   { href: "/notes",      label: "Notes",      Icon: StickyNote },
   { href: "/approvals",  label: "Approvals",  Icon: ShieldCheck },
   { href: "/members",    label: "Members",    Icon: Users },
+  { href: "/settings",   label: "Settings",   Icon: Settings },
 ]
 
 const BADGE_POLL_MS = 30_000
