@@ -307,7 +307,18 @@ export interface AgentSettings {
   search_context: "low" | "medium" | "high"
   reasoning: boolean
   episodic_memory: boolean
+  /** Key-value memory tools (memory_get/set/delete/list). Default on. */
+  kv_memory: boolean
   daily_token_budget: number
+}
+
+/** One key-value memory entry. `key` carries the `shared:` prefix for workspace-wide rows. */
+export interface MemoryEntry {
+  key: string
+  shared: boolean
+  value: unknown
+  updated_at: string
+  updated_by_session_id: string | null
 }
 
 export interface Agent {
@@ -634,6 +645,19 @@ export const agents = {
 
   deleteKnowledge: (id: string, fileId: string): Promise<void> =>
     apiFetch(`/agents/${id}/knowledge/${fileId}`, { method: "DELETE" }),
+
+  // Key-value memory. Keys go in the path verbatim (including `shared:`), URL-encoded.
+  listMemory: (id: string): Promise<MemoryEntry[]> =>
+    apiFetch(`/agents/${id}/memory`),
+  putMemory: (id: string, key: string, value: unknown): Promise<MemoryEntry> =>
+    apiFetch(`/agents/${id}/memory/${encodeURIComponent(key)}`, {
+      method: "PUT",
+      body: JSON.stringify({ value }),
+    }),
+  deleteMemory: (id: string, key: string): Promise<void> =>
+    apiFetch(`/agents/${id}/memory/${encodeURIComponent(key)}`, { method: "DELETE" }),
+  clearMemory: (id: string): Promise<{ deleted: number }> =>
+    apiFetch(`/agents/${id}/memory`, { method: "DELETE" }),
 
   addKnowledgeUrl: (id: string, url: string): Promise<KnowledgeFile> =>
     apiFetch(`/agents/${id}/knowledge/url`, { method: "POST", body: JSON.stringify({ url }) }),

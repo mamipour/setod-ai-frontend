@@ -193,6 +193,36 @@ export default function ToolsHelp() {
         />
       </Section>
 
+      <Section title="Memory">
+        <P>
+          On by default (<em>Keep exact state</em> in the agent&rsquo;s Settings). Everything
+          stored is visible and editable on the agent&rsquo;s Memory tab. See the{" "}
+          <a href="/help/memory" className="underline underline-offset-2">memory page</a> for
+          when to use this versus <em>Remember past runs</em>.
+        </P>
+        <Table
+          head={["Tool", "What it does"]}
+          rows={[
+            [
+              <C key="a">memory_get</C>,
+              "Reads one stored value by key. The tool's description already lists every key with a short preview, so the agent rarely needs to look before it reads.",
+            ],
+            [
+              <C key="b">memory_set</C>,
+              "Stores or overwrites one value (a number, text, list or object up to 16 KB). Saved immediately — a run that fails later keeps what it stored. Keys starting with shared: are visible to every agent in the workspace.",
+            ],
+            [
+              <C key="c">memory_delete</C>,
+              "Removes one key.",
+            ],
+            [
+              <C key="d">memory_list</C>,
+              "Lists stored keys with previews, optionally filtered by prefix.",
+            ],
+          ]}
+        />
+      </Section>
+
       <Callout tone="info" title="Two accounts of the same kind">
         <p>
           If an agent has two Gmail accounts attached, the tool names get a suffix so the

@@ -75,18 +75,60 @@ export default function MemoryHelp() {
         </P>
       </Section>
 
-      <Section title="Remembering past runs is a different thing">
+      <Section title="Two other kinds of memory">
         <P>
           The handled list is always on, is maintained for you, and is about specific
-          messages. The <strong>Remember past runs</strong> setting is optional and is
-          written by the agent itself: it ends each run with a short note to its future self
-          and reads those notes back on the next run. Because the agent decides what the
-          note contains, it works for things the handled list does not cover — the tender
-          identifiers it already sent, a decision it made and should stick to. Useful when
-          you want continuity of judgement, unnecessary for most agents, and it adds a
-          little to the cost of every run.
+          messages. For everything else the agent has two memories of its own, and they
+          are good at different things.
+        </P>
+        <List>
+          <li>
+            <strong>Exact state (the Memory tab).</strong> Values the agent stores on
+            purpose and gets back verbatim next run: the last order id it confirmed, the
+            reference numbers it already reported, how many reminders it has sent a client.
+            It does this through <C>memory_get</C> and <C>memory_set</C> tools that are on by
+            default (<em>Keep exact state</em> in Settings). Everything it stores appears on
+            the agent&rsquo;s <strong>Memory</strong> tab, where you can read it, change it or
+            delete it - reset the &ldquo;last processed id&rdquo; after a bad run, or seed a
+            value before the first one. The agent sees your edit on its next run.
+          </li>
+          <li>
+            <strong>Remember past runs (Settings).</strong> Optional, and fuzzier: the agent
+            ends each run with a short note to its future self and reads the most relevant
+            notes back next time. Right for continuity of judgement - &ldquo;I decided this
+            supplier is not a fit&rdquo; - and for &ldquo;don&rsquo;t report the same thing
+            twice&rdquo; when the things have no stable reference to compare. It adds a little
+            to the cost of every run.
+          </li>
+        </List>
+        <P>
+          A rule of thumb: if you could write the value in a spreadsheet cell, it belongs in
+          exact state. If it is a sentence, it belongs in past-run notes. You do not choose
+          the mechanics - describe what to remember in plain English (&ldquo;keep the id of
+          the last order you confirmed&rdquo;) and the agent picks the right one.
         </P>
       </Section>
+
+      <Section title="Sharing state between agents">
+        <P>
+          A key that starts with <C>shared:</C> is visible to every agent in the workspace,
+          so one agent can hand something to another: a finder agent records the tenders it
+          has seen under <C>shared:tenders_seen</C>, and a summariser agent reads the same
+          list. Shared keys show up on every agent&rsquo;s Memory tab with a{" "}
+          <em>shared</em> badge. Deleting one affects all of them, which is why{" "}
+          <em>Clear all</em> only removes the agent&rsquo;s private keys.
+        </P>
+      </Section>
+
+      <Callout tone="info" title="Limits, and what happens when they are hit">
+        <p>
+          Keys are up to 128 characters, values up to 16 KB of JSON, and each agent holds at
+          most 200 keys (the workspace&rsquo;s shared keys have their own 200). When the agent
+          tries to go past a limit, the tool tells it in plain language and it adapts - stores
+          a summary, or deletes something old. Test runs simulate writes: the transcript shows{" "}
+          <C>[simulated]</C> and nothing is stored.
+        </p>
+      </Callout>
 
       <NextUp {...nextPage("/help/memory")!} />
     </>

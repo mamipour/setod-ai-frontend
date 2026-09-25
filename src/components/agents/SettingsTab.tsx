@@ -19,6 +19,7 @@ const SETTINGS_DEFAULTS: AgentSettings = {
   search_context: "medium",
   reasoning: false,
   episodic_memory: false,
+  kv_memory: true,
   daily_token_budget: 500_000,
 }
 
@@ -165,6 +166,16 @@ export function SettingsTab({
         <Switch
           checked={s.episodic_memory}
           onCheckedChange={(v) => set({ episodic_memory: v })}
+        />
+      </Row>
+
+      <Row
+        title="Keep exact state"
+        help="Gives the agent memory_get / memory_set tools for precise values it needs next time — the last id it processed, refs it already reported, a counter. Everything it stores is visible and editable on the Memory tab. Turn off only if you want the agent fully stateless."
+      >
+        <Switch
+          checked={s.kv_memory}
+          onCheckedChange={(v) => set({ kv_memory: v })}
         />
       </Row>
 

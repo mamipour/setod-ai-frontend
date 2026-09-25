@@ -3,7 +3,7 @@
 import { use, useEffect, useRef, useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { ArrowLeft, BookOpen, Eye, History, Loader2, MoreVertical, Play, Settings2, Sparkles, SlidersHorizontal, Trash2 } from "lucide-react"
+import { ArrowLeft, BookOpen, Database, Eye, History, Loader2, MoreVertical, Play, Settings2, Sparkles, SlidersHorizontal, Trash2 } from "lucide-react"
 import { agents, type SessionDetail } from "@/lib/api"
 import { useAgent } from "@/hooks/useAgents"
 import { useUser } from "@/hooks/useUser"
@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button"
 import { AgentTab } from "@/components/agents/AgentTab"
 import { AssistantTab } from "@/components/agents/AssistantTab"
 import { KnowledgeTab } from "@/components/agents/KnowledgeTab"
+import { MemoryTab } from "@/components/agents/MemoryTab"
 import { MessageRow } from "@/components/agents/CreateAgentFlow"
 import { SessionsTab } from "@/components/agents/SessionsTab"
 import { SettingsTab } from "@/components/agents/SettingsTab"
@@ -27,6 +28,7 @@ import { cn } from "@/lib/utils"
 const TABS = [
   { id: "Agent",     label: "Agent",     Icon: SlidersHorizontal },
   { id: "Knowledge", label: "Knowledge", Icon: BookOpen          },
+  { id: "Memory",    label: "Memory",    Icon: Database          },
   { id: "Runs",      label: "Runs",      Icon: History           },
   { id: "Copilot",   label: "Copilot",   Icon: Sparkles          },
   { id: "Settings",  label: "Settings",  Icon: Settings2         },
@@ -263,6 +265,7 @@ export default function AgentDetailPage({ params }: { params: Promise<{ id: stri
 
       {tab === "Agent" && <AgentTab agent={agent} orgId={orgId} onPatch={patch} />}
       {tab === "Knowledge" && <KnowledgeTab agentId={id} />}
+      {tab === "Memory" && <MemoryTab agentId={id} />}
       {tab === "Runs" && <SessionsTab agentId={id} />}
       {tab === "Copilot" && (
         <AssistantTab
