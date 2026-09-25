@@ -124,7 +124,9 @@ function LLMRow({
     >
       <div className="flex flex-col gap-3">
         <div className="flex items-center gap-3">
-          <Image src={meta.iconSrc} alt={meta.label} width={28} height={28} className="shrink-0 rounded dark:invert" />
+          <span className="shrink-0 inline-flex items-center justify-center rounded-lg bg-white p-1 dark:ring-1 dark:ring-white/10">
+            <Image src={meta.iconSrc} alt={meta.label} width={24} height={24} />
+          </span>
           {isConnected
             ? <StatusBadge status={existing!.status} />
             : <span className="text-xs text-muted-foreground">Not connected</span>}
