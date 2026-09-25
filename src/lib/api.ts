@@ -801,4 +801,23 @@ export const workspace = {
 
   testNotify: (orgId: string): Promise<{ ok: boolean; detail: string }> =>
     apiFetch(`/workspace/${orgId}/notify/test`, { method: "POST" }),
+
+  // ── Members ───────────────────────────────────────────────────────────────
+  listMembers: (orgId: string): Promise<{ user_id: string; email: string; name: string; role: string }[]> =>
+    apiFetch(`/workspace/${orgId}/members`),
+
+  inviteMember: (orgId: string, email: string, role: "owner" | "member"): Promise<{ ok: boolean; detail: string }> =>
+    apiFetch(`/workspace/${orgId}/members/invite`, {
+      method: "POST",
+      body: JSON.stringify({ email, role }),
+    }),
+
+  changeMemberRole: (orgId: string, userId: string, role: "owner" | "member"): Promise<{ user_id: string; email: string; name: string; role: string }> =>
+    apiFetch(`/workspace/${orgId}/members/${userId}/role`, {
+      method: "PATCH",
+      body: JSON.stringify({ role }),
+    }),
+
+  removeMember: (orgId: string, userId: string): Promise<void> =>
+    apiFetch(`/workspace/${orgId}/members/${userId}`, { method: "DELETE" }),
 }

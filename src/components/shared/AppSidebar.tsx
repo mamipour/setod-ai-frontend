@@ -14,6 +14,7 @@ import {
   Plug,
   ShieldCheck,
   StickyNote,
+  Users,
   Wand2,
   type LucideIcon,
   X,
@@ -30,6 +31,7 @@ const NAV: { href: string; label: string; Icon: LucideIcon }[] = [
   { href: "/skills",     label: "Skills",     Icon: Wand2 },
   { href: "/notes",      label: "Notes",      Icon: StickyNote },
   { href: "/approvals",  label: "Approvals",  Icon: ShieldCheck },
+  { href: "/members",    label: "Members",    Icon: Users },
 ]
 
 const BADGE_POLL_MS = 30_000
