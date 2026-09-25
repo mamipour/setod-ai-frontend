@@ -83,7 +83,7 @@ export default function TemplatesPage() {
       ) : (
         groups.map(({ category, items }) => (
           <section key={category} className="space-y-3">
-            <h2 className="text-sm font-semibold text-muted-foreground">{category}</h2>
+            <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{category}</h2>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {items.map((t) => (
                 <TemplateCard
@@ -203,9 +203,14 @@ function TemplateCard({
         </div>
       </button>
 
-      <div className="mt-4 flex items-center justify-between gap-2 border-t pt-3">
-        <div className="flex min-w-0 items-center gap-3">
-          <ConnectorIcons template={t} />
+      <div className="mt-4 flex items-end justify-between gap-3 border-t pt-3">
+        {/* Stack icons above trigger text so they never compete with the button for width */}
+        <div className="min-w-0 flex-1">
+          {(t.required_connectors.length + t.optional_connectors.length) > 0 && (
+            <div className="mb-1.5">
+              <ConnectorIcons template={t} />
+            </div>
+          )}
           <TriggerLine template={t} scheduleLabel={scheduleLabel} />
         </div>
         <Button
