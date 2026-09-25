@@ -4,7 +4,7 @@ export default function PrivacyPage() {
   return (
     <>
       <h1>Privacy Policy</h1>
-      <p>Last updated: August 26, 2026</p>
+      <p>Last updated: September 25, 2026</p>
 
       <p>
         This Privacy Policy explains what data this platform (the &quot;Service&quot;) collects,
@@ -79,8 +79,34 @@ export default function PrivacyPage() {
         &quot;Last updated&quot; date above. Continued use after changes constitutes acceptance.
       </p>
 
-      <h2>8. Contact</h2>
-      <p>Questions about this policy can be sent to the workspace administrator.</p>
+      <h2 id="data-deletion">8. Data deletion requests</h2>
+      <p>
+        You may request deletion of your personal data at any time. There are two ways to do this:
+      </p>
+      <ul>
+        <li>
+          <strong>Self-service.</strong> Deleting your account from the Settings page removes all
+          your agents, connectors, credentials, run history, and stored keys immediately and
+          permanently.
+        </li>
+        <li>
+          <strong>Email request.</strong> Send an email to{" "}
+          <a href="mailto:privacy@setod.com">privacy@setod.com</a> with the subject line
+          &quot;Data Deletion Request&quot; and include the email address associated with your
+          account. We will process your request within 30 days and confirm once complete.
+        </li>
+      </ul>
+      <p>
+        If your data was accessed via a third-party integration (such as Instagram or WhatsApp),
+        deletion from this Service does not affect data held by those third parties. Please
+        contact them separately to exercise your rights under their platforms.
+      </p>
+
+      <h2>9. Contact</h2>
+      <p>
+        Questions about this policy can be sent to{" "}
+        <a href="mailto:privacy@setod.com">privacy@setod.com</a>.
+      </p>
     </>
   )
 }
