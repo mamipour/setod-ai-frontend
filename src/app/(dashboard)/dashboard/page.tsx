@@ -221,19 +221,16 @@ function ActivityChart({ days }: { days: DailyRuns[] }) {
 function ContextualLinks({ agentList, overview }: { agentList: Agent[]; overview: Overview }) {
   const hints: { href: string; icon: React.ReactNode; title: string; text: string }[] = []
 
-  // Agents that haven't run in 7 days
-  const staleCount = agentList.filter((a) => {
-    if (a.status !== "published") return false
-    const updated = new Date(a.updated_at).getTime()
-    return Date.now() - updated > 7 * 24 * 60 * 60 * 1000
-  }).length
+  // Agents that have never run (health_score is null = no runs recorded)
+  const published = agentList.filter((a) => a.status === "published")
+  const neverRunCount = published.filter((a) => a.health_score === null).length
 
-  if (staleCount > 0) {
+  if (neverRunCount > 0 && published.length > 0) {
     hints.push({
       href: "/agents",
       icon: <Bot className="size-4" />,
-      title: `${staleCount} agent${staleCount > 1 ? "s" : ""} haven't run in 7 days`,
-      text: "Check their schedules or trigger a manual run.",
+      title: `${neverRunCount} agent${neverRunCount > 1 ? "s" : ""} ${neverRunCount === 1 ? "has" : "have"} never run`,
+      text: "Trigger a manual run or set up a schedule to get them going.",
     })
   }
 
