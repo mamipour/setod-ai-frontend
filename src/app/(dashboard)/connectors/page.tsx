@@ -3,7 +3,7 @@
 import { Suspense, useEffect, useRef, useState } from "react"
 import Image from "next/image"
 import { useSearchParams } from "next/navigation"
-import { Check, Lock, Search, X } from "lucide-react"
+import { Check, ChevronDown, Lock, Search, X } from "lucide-react"
 import { connectors, API_BASE, type Connector, type ConnectorType } from "@/lib/api"
 import { useUser } from "@/hooks/useUser"
 import { useActiveOrg } from "@/hooks/useActiveOrg"
@@ -302,6 +302,7 @@ function ConnectedCard({ connector, orgId, onDelete }: {
   const [webhookSecret, setWebhookSecret] = useState<string | null>(null)
   const [rotatingSecret, setRotatingSecret] = useState(false)
   const [copied, setCopied] = useState(false)
+  const [webhookExpanded, setWebhookExpanded] = useState(false)
   const isUnhealthy = connector.status === "error" || connector.status === "revoked"
   const isWebhook = connector.type === "webhook"
   const webhookUrl = isWebhook ? `${API_BASE}/hooks/${connector.id}` : null
@@ -397,8 +398,8 @@ function ConnectedCard({ connector, orgId, onDelete }: {
             </div>
           )}
 
-          {/* Webhook — always show URL + secret info */}
-          {isWebhook && (
+          {/* Webhook — expandable details */}
+          {isWebhook && webhookExpanded && (
             <div className="space-y-2">
               <div className="rounded-md border bg-muted/40 px-3 py-2 space-y-0.5">
                 <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Endpoint URL</p>
@@ -430,12 +431,19 @@ function ConnectedCard({ connector, orgId, onDelete }: {
           <div className="flex gap-2 flex-wrap">
             {isWebhook ? (
               <>
-                <Button size="sm" variant="outline" onClick={handleCopyUrl} className="text-xs gap-1.5">
-                  {copied ? <><Check className="size-3" /> Copied</> : "Copy URL"}
+                <Button size="sm" variant="outline" onClick={() => setWebhookExpanded(v => !v)} className="text-xs gap-1">
+                  {webhookExpanded ? <><ChevronDown className="size-3" /> Hide</> : <><ChevronDown className="size-3 -rotate-90" /> Show details</>}
                 </Button>
-                <Button size="sm" variant="outline" onClick={handleRotateSecret} disabled={rotatingSecret} className="text-xs">
-                  {rotatingSecret ? "Rotating…" : "Rotate secret"}
-                </Button>
+                {webhookExpanded && (
+                  <>
+                    <Button size="sm" variant="outline" onClick={handleCopyUrl} className="text-xs gap-1.5">
+                      {copied ? <><Check className="size-3" /> Copied</> : "Copy URL"}
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={handleRotateSecret} disabled={rotatingSecret} className="text-xs">
+                      {rotatingSecret ? "Rotating…" : "Rotate secret"}
+                    </Button>
+                  </>
+                )}
               </>
             ) : (
               <Button size="sm" variant="outline" onClick={handleTest} disabled={testing} className="text-xs">
