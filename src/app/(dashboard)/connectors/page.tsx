@@ -378,7 +378,9 @@ function ConnectedCard({ connector, orgId, onDelete }: {
             <ConnectorIcon iconSrc={meta?.iconSrc} icon={meta?.icon ?? "🔌"} />
             <div className="min-w-0">
               <CardTitle className="text-sm font-semibold truncate">
-                {connector.name.replace(/^[^·]+·\s*/, "")}
+                {connector.type === "webhook"
+                  ? connector.name
+                  : connector.name.replace(/^[^·]+·\s*/, "")}
               </CardTitle>
               <div className="flex items-center gap-2 mt-0.5">
                 <StatusDot status={connector.status} />
@@ -600,6 +602,7 @@ type TwilioStep = "form" | "confirm"
 
 function WebhookModal({ orgId, onSaved }: { orgId: string; onSaved: () => void }) {
   const [open, setOpen] = useState(false)
+  const [name, setName] = useState("")
   const [loading, setLoading] = useState(false)
   const [result, setResult] = useState<{ webhook_url: string; secret: string } | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -613,9 +616,10 @@ function WebhookModal({ orgId, onSaved }: { orgId: string; onSaved: () => void }
   }
 
   async function handleCreate() {
+    if (!name.trim()) return
     setLoading(true); setError(null)
     try {
-      const res = await connectors.createWebhook(orgId)
+      const res = await connectors.createWebhook(orgId, name.trim())
       setResult({ webhook_url: res.webhook_url, secret: res.secret })
       onSaved()
     } catch (e: unknown) {
@@ -625,7 +629,7 @@ function WebhookModal({ orgId, onSaved }: { orgId: string; onSaved: () => void }
     }
   }
 
-  function handleClose() { setOpen(false); setResult(null); setError(null) }
+  function handleClose() { setOpen(false); setResult(null); setError(null); setName("") }
 
   return (
     <>
@@ -644,6 +648,20 @@ function WebhookModal({ orgId, onSaved }: { orgId: string; onSaved: () => void }
                   that listen on this webhook. Payloads are delivered as JSON — the agent sees
                   the full body as its trigger message.
                 </p>
+                <div className="space-y-1">
+                  <Label className="text-xs">Name <span className="text-destructive">*</span></Label>
+                  <Input
+                    placeholder="e.g. Shopify orders, Contact form, Stripe events"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && name.trim() && handleCreate()}
+                    className="h-8 text-xs"
+                    autoFocus
+                  />
+                  <p className="text-[10px] text-muted-foreground">
+                    Used to identify this webhook on the connectors page.
+                  </p>
+                </div>
                 <p className="text-xs text-muted-foreground">
                   Optionally send an <code className="font-mono bg-muted px-1 rounded">X-Hub-Signature-256</code> header
                   (GitHub-style HMAC-SHA256) to authenticate requests.
@@ -651,7 +669,7 @@ function WebhookModal({ orgId, onSaved }: { orgId: string; onSaved: () => void }
                 {error && <p className="text-xs text-destructive">{error}</p>}
                 <div className="flex justify-end gap-2 pt-2">
                   <Button size="sm" variant="ghost" onClick={handleClose}>Cancel</Button>
-                  <Button size="sm" onClick={handleCreate} disabled={loading}>
+                  <Button size="sm" onClick={handleCreate} disabled={loading || !name.trim()}>
                     {loading ? "Creating…" : "Generate URL"}
                   </Button>
                 </div>
