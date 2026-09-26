@@ -11,13 +11,28 @@ export default function ToolsHelp() {
         lede="Every action an agent can take. Each tool pill has three states: on (blue), requires approval (amber), or off. See the Tool approvals page for how the approval flow works."
       />
 
+      <Section title="Reading the same account with several agents">
+        <P>
+          Reading tools keep a private position per agent. They do not use the read/unread
+          flag, because that flag is shared: if you open a group on your phone, or a second
+          agent reads the same inbox first, the flag flips and the message would otherwise
+          disappear for everyone else. So two agents can watch the same Gmail account or
+          Telegram groups for different purposes and each will see every message once.
+        </P>
+        <Callout>
+          Actions are still shared. If one agent archives an email or replies to a chat,
+          that is done for the account, not for the agent. Attach writing tools to one agent
+          per account and let the others read only.
+        </Callout>
+      </Section>
+
       <Section title="Google (Gmail and Calendar)">
         <Table
           head={["Tool", "What it does"]}
           rows={[
             [
               <C key="a">read_unread_emails</C>,
-              "Lists unread inbox mail: sender, subject, date and a short preview snippet. Only considers mail received on or after the day the agent was created — older unread messages are out of scope. Skips anything this agent already handled, and tells you how many it skipped. Does not include the full body or attachments.",
+              "Lists inbox mail that arrived since the agent's last run, oldest first: sender, subject, date and a short preview snippet. Mail you have already opened yourself is still included. Only considers mail received on or after the day the agent was created — older backlog is out of scope. Skips anything this agent already handled, and tells you how many it skipped. Does not include the full body or attachments.",
             ],
             [
               <C key="b">search_emails</C>,
@@ -70,7 +85,7 @@ export default function ToolsHelp() {
             ],
             [
               <C key="b">read_telegram_messages</C>,
-              "Lists chats with unread messages and a preview of the latest one. Skips chats already handled on an earlier run.",
+              "Every new message in your chats and groups since the agent's last run, grouped by chat and oldest first — whether or not you have read them yourself. Each line names the sender (name, @username, #id) and replies quote the message they answer. At most the newest 30 messages per chat; if a busy group had more, the tool says so. Your own messages and media contents are not included (a photo shows as [photo]).",
             ],
           ]}
         />
