@@ -645,7 +645,7 @@ function UpdateCredentialsModal({ connector, orgId, onUpdated }: {
       setError("Enter at least one new value to update."); setLoading(false); return
     }
     const credentials: Record<string, unknown> = {}
-    for (const f of fields) {
+    for (const f of fields ?? []) {
       if (values[f.key]?.trim()) credentials[f.key] = values[f.key].trim()
     }
     try {
