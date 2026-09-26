@@ -357,9 +357,21 @@ function ConnectedCard({ connector, orgId, onDelete }: {
   const [rotatingSecret, setRotatingSecret] = useState(false)
   const [copied, setCopied] = useState(false)
   const [webhookExpanded, setWebhookExpanded] = useState(false)
+  const [reconnecting, setReconnecting] = useState(false)
   const isUnhealthy = connector.status === "error" || connector.status === "revoked"
   const isWebhook = connector.type === "webhook"
   const webhookUrl = isWebhook ? `${API_BASE}/hooks/${connector.id}` : null
+  // Connectors that support in-place token refresh via OAuth
+  const canReconnect = connector.type === "instagram" || connector.type === "google_business_profile"
+
+  function handleReconnect() {
+    setReconnecting(true)
+    if (connector.type === "instagram") {
+      connectors.startInstagramOAuth(orgId, connector.id)
+    } else if (connector.type === "google_business_profile") {
+      window.location.href = connectors.gbpOAuthStartUrl(orgId, connector.id)
+    }
+  }
 
   async function handleTest() {
     if (connector.type === "twilio") { setTwilioPrompt(true); return }
@@ -524,6 +536,17 @@ function ConnectedCard({ connector, orgId, onDelete }: {
                 }}
               >
                 Re-sync
+              </Button>
+            )}
+            {canReconnect && (
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={reconnecting}
+                className="text-xs"
+                onClick={handleReconnect}
+              >
+                {reconnecting ? "Redirecting…" : "Reconnect"}
               </Button>
             )}
             <Button size="sm" variant="ghost" onClick={handleDelete} disabled={deleting}
@@ -2492,9 +2515,14 @@ function ConnectorsPageInner() {
 
   useEffect(() => {
     const connected = searchParams.get("connected")
+    const reconnected = searchParams.get("reconnected")
     if (connected) {
       setJustConnected(connected)
       window.history.replaceState(null, "", "/connectors")
+    } else if (reconnected) {
+      setJustConnected(`__reconnected__${reconnected}`)
+      window.history.replaceState(null, "", "/connectors")
+      fetchList()
     }
   }, [searchParams])
 
@@ -2545,7 +2573,12 @@ function ConnectorsPageInner() {
       {justConnected && (
         <div className="flex items-center gap-2 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800">
           <Check className="size-4 shrink-0" />
-          <span>{justConnected === "mcp" ? "MCP server" : justConnected} connected successfully.</span>
+          <span>
+            {justConnected?.startsWith("__reconnected__")
+              ? `${justConnected.replace("__reconnected__", "")} reconnected successfully.`
+              : justConnected === "mcp" ? "MCP server connected successfully."
+              : `${justConnected} connected successfully.`}
+          </span>
           <button className="ml-auto text-green-600 hover:text-green-800" onClick={() => setJustConnected(null)}>
             <X className="size-4" />
           </button>

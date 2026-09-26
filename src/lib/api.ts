@@ -241,9 +241,13 @@ export const connectors = {
     apiFetch(`/connectors/${id}/regen-secret?org_id=${orgId}`, { method: "POST" }),
 
   // ── Instagram ──────────────────────────────────────────────────────────────
-  /** Redirect the browser to Instagram's OAuth consent screen. */
-  startInstagramOAuth: (orgId: string) => {
-    window.location.href = `${API_BASE}/connectors/oauth/instagram/start?org_id=${orgId}`
+  /** Redirect the browser to Instagram's OAuth consent screen.
+   *  Pass connectorId to reconnect (refresh token) an existing connector. */
+  startInstagramOAuth: (orgId: string, connectorId?: string) => {
+    const url = new URL(`${API_BASE}/connectors/oauth/instagram/start`)
+    url.searchParams.set("org_id", orgId)
+    if (connectorId) url.searchParams.set("connector_id", connectorId)
+    window.location.href = url.toString()
   },
 
   // ── Slack outgoing webhook ─────────────────────────────────────────────────
@@ -326,8 +330,12 @@ export const connectors = {
       body: JSON.stringify({ org_id: orgId, shop_domain: shopDomain, access_token: accessToken, name: name ?? "" }),
     }),
 
-  gbpOAuthStartUrl: (orgId: string): string =>
-    `${API_BASE}/connectors/oauth/gbp/start?org_id=${orgId}`,
+  gbpOAuthStartUrl: (orgId: string, connectorId?: string): string => {
+    const url = new URL(`${API_BASE}/connectors/oauth/gbp/start`)
+    url.searchParams.set("org_id", orgId)
+    if (connectorId) url.searchParams.set("connector_id", connectorId)
+    return url.toString()
+  },
 
   createCalendly: (orgId: string, apiToken: string, name?: string): Promise<Connector> =>
     apiFetch("/connectors/calendly", {
