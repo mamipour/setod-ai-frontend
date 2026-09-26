@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { Info } from "lucide-react"
-import { agents, type Agent, type AgentSettings } from "@/lib/api"
+import { agents, type Agent, type AgentSettings, type MediaKindPolicy, DEFAULT_MEDIA_POLICY } from "@/lib/api"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { approxCost, tokensForBudget } from "@/components/agents/shared"
@@ -21,6 +21,7 @@ const SETTINGS_DEFAULTS: AgentSettings = {
   episodic_memory: false,
   kv_memory: true,
   daily_token_budget: 500_000,
+  media_policy: { ...DEFAULT_MEDIA_POLICY },
 }
 
 export function SettingsTab({
@@ -178,6 +179,69 @@ export function SettingsTab({
           onCheckedChange={(v) => set({ kv_memory: v })}
         />
       </Row>
+
+      {/* ── Media processing ─────────────────────────────────────────── */}
+      <div className="space-y-4 border-b pb-6">
+        <div>
+          <Label className="text-sm font-medium">Inbound media processing</Label>
+          <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+            Controls whether audio, images, and documents sent to channel connectors (Telegram,
+            WhatsApp, Instagram, SMS) are processed before a run. <strong>Off by default</strong> —
+            enable only for agents that need the content. Skipped media shows as a marker in the
+            transcript at zero cost.
+          </p>
+        </div>
+
+        {(
+          [
+            {
+              kind: "audio" as const,
+              label: "Transcribe voice notes",
+              help: "Converts audio messages to text via Whisper. Costs ~$0.006/min. Enable for support or intake agents that receive voice messages.",
+            },
+            {
+              kind: "image" as const,
+              label: "Describe images",
+              help: "One-paragraph description of photos via GPT-4o-mini. Enable for agents that need to understand what was shared.",
+            },
+            {
+              kind: "document" as const,
+              label: "Extract document text",
+              help: "Pulls text from PDF, TXT, MD, CSV files (no API cost — CPU only). On by default.",
+            },
+            {
+              kind: "video" as const,
+              label: "Acknowledge videos",
+              help: "No transcription today — videos are stored and shown as a [video] marker. Toggle off to skip storage entirely.",
+            },
+          ] as const
+        ).map(({ kind, label, help }) => {
+          const policy = s.media_policy ?? DEFAULT_MEDIA_POLICY
+          const isAuto = (policy[kind] ?? DEFAULT_MEDIA_POLICY[kind]) === "auto"
+          return (
+            <div key={kind} className="flex items-start justify-between gap-8 pl-4">
+              <div className="min-w-0 flex-1">
+                <p className="text-sm">{label}</p>
+                <p className="mt-0.5 text-xs text-muted-foreground">{help}</p>
+              </div>
+              <div className="w-56 shrink-0 flex items-center justify-end">
+                <Switch
+                  checked={isAuto}
+                  onCheckedChange={(v) =>
+                    set({
+                      media_policy: {
+                        ...DEFAULT_MEDIA_POLICY,
+                        ...(s.media_policy ?? {}),
+                        [kind]: v ? "auto" : "skip",
+                      },
+                    })
+                  }
+                />
+              </div>
+            </div>
+          )
+        })}
+      </div>
 
       <div className="flex items-start gap-2 rounded-lg border bg-muted/30 p-3 text-xs text-muted-foreground">
         <Info className="mt-0.5 size-3.5 shrink-0" />

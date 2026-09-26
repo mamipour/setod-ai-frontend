@@ -343,6 +343,26 @@ export type TriggerType = "schedule" | "channel" | "manual" | "agent"
 export type SessionStatus = "running" | "succeeded" | "error" | "waiting_approval"
 export type MessageRole = "user" | "assistant" | "tool" | "system"
 
+export type MediaKindPolicy = "auto" | "skip"
+
+export interface MediaPolicy {
+  /** Audio messages (voice notes). "auto" = Whisper transcription. Default: skip. */
+  audio: MediaKindPolicy
+  /** Images. "auto" = GPT-4o-mini one-paragraph description. Default: skip. */
+  image: MediaKindPolicy
+  /** Video. "auto" = marker only (no processing today). Default: skip. */
+  video: MediaKindPolicy
+  /** Documents (.pdf .txt .md .csv). "auto" = text extraction (no API cost). Default: auto. */
+  document: MediaKindPolicy
+}
+
+export const DEFAULT_MEDIA_POLICY: MediaPolicy = {
+  audio: "skip",
+  image: "skip",
+  video: "skip",
+  document: "auto",
+}
+
 export interface AgentSettings {
   max_iterations: number
   tool_concurrency: number
@@ -355,6 +375,12 @@ export interface AgentSettings {
   /** Key-value memory tools (memory_get/set/delete/list). Default on. */
   kv_memory: boolean
   daily_token_budget: number
+  /**
+   * Controls which inbound media kinds are processed before a run.
+   * "auto" = processed (Whisper / vision / extract). "skip" = stored + marker, no API call.
+   * Default for audio/image/video is "skip". Document defaults to "auto" (no API cost).
+   */
+  media_policy: MediaPolicy
 }
 
 /** One key-value memory entry. `key` carries the `shared:` prefix for workspace-wide rows. */
