@@ -240,6 +240,13 @@ export const connectors = {
   regenWebhookSecret: (id: string, orgId: string): Promise<{ connector: Connector; webhook_url: string; secret: string }> =>
     apiFetch(`/connectors/${id}/regen-secret?org_id=${orgId}`, { method: "POST" }),
 
+  /** Update any connector's credentials in place — agents keep their link. */
+  updateCredentials: (connectorId: string, orgId: string, credentials: Record<string, unknown>): Promise<Connector> =>
+    apiFetch(`/connectors/${connectorId}/credentials`, {
+      method: "PATCH",
+      body: JSON.stringify({ org_id: orgId, ...credentials }),
+    }),
+
   // ── Instagram ──────────────────────────────────────────────────────────────
   /** Redirect the browser to Instagram's OAuth consent screen.
    *  Pass connectorId to reconnect (refresh token) an existing connector. */

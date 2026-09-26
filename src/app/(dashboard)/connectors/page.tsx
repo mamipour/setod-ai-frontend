@@ -341,10 +341,11 @@ function StatusDot({ status }: { status: Connector["status"] }) {
 
 // ── Connected connector card ───────────────────────────────────────────────────
 
-function ConnectedCard({ connector, orgId, onDelete }: {
+function ConnectedCard({ connector, orgId, onDelete, onUpdated }: {
   connector: Connector
   orgId: string
   onDelete: () => void
+  onUpdated: () => void
 }) {
   const meta = catalogueFor(connector)
   const [testing, setTesting] = useState(false)
@@ -549,6 +550,7 @@ function ConnectedCard({ connector, orgId, onDelete }: {
                 {reconnecting ? "Redirecting…" : "Reconnect"}
               </Button>
             )}
+            <UpdateCredentialsModal connector={connector} orgId={orgId} onUpdated={onUpdated} />
             <Button size="sm" variant="ghost" onClick={handleDelete} disabled={deleting}
               className="text-xs text-destructive hover:text-destructive">
               {deleting ? "Removing…" : "Remove"}
@@ -577,6 +579,138 @@ function ConnectedCard({ connector, orgId, onDelete }: {
         </div>
       )}
     </div>
+  )
+}
+
+// ── Update credentials modal (all non-OAuth connectors) ───────────────────────
+
+type CredFields = {
+  label: string
+  key: string
+  type?: "text" | "password" | "textarea"
+  placeholder?: string
+}[]
+
+const CRED_FIELDS: Partial<Record<string, CredFields>> = {
+  gmail: [
+    { label: "Gmail address", key: "email", placeholder: "you@gmail.com" },
+    { label: "App Password", key: "app_password", type: "password", placeholder: "xxxx xxxx xxxx xxxx" },
+  ],
+  telegram_bot: [
+    { label: "Bot Token", key: "bot_token", type: "password", placeholder: "12345:ABC..." },
+  ],
+  twilio: [
+    { label: "Account SID", key: "account_sid", placeholder: "ACxxxx" },
+    { label: "Auth Token", key: "auth_token", type: "password", placeholder: "Auth token" },
+    { label: "Phone Number", key: "phone_number", placeholder: "+16135550100" },
+  ],
+  google_sheets: [
+    { label: "Service Account JSON", key: "sa_json", type: "textarea", placeholder: '{"type":"service_account",...}' },
+  ],
+  whatsapp: [
+    { label: "Phone Number ID", key: "phone_number_id", placeholder: "From WhatsApp Business dashboard" },
+    { label: "Access Token", key: "access_token", type: "password", placeholder: "EAAxx..." },
+    { label: "Verify Token", key: "verify_token", placeholder: "Your chosen verify token" },
+  ],
+  shopify: [
+    { label: "Shop Domain", key: "shop_domain", placeholder: "mystore.myshopify.com" },
+    { label: "Access Token", key: "access_token", type: "password", placeholder: "shpat_..." },
+  ],
+  hubspot: [{ label: "API Token", key: "api_token", type: "password", placeholder: "pat-na1-..." }],
+  pipedrive: [{ label: "API Token", key: "api_token", type: "password", placeholder: "Pipedrive API token" }],
+  notion: [{ label: "Integration Token", key: "api_token", type: "password", placeholder: "secret_..." }],
+  airtable: [{ label: "Personal Access Token", key: "api_token", type: "password", placeholder: "pat..." }],
+  calendly: [{ label: "API Token", key: "api_token", type: "password", placeholder: "Calendly personal token" }],
+  slack_webhook: [{ label: "Webhook URL", key: "webhook_url", placeholder: "https://hooks.slack.com/..." }],
+}
+
+function UpdateCredentialsModal({ connector, orgId, onUpdated }: {
+  connector: Connector; orgId: string; onUpdated: () => void
+}) {
+  const fields = CRED_FIELDS[connector.type]
+  if (!fields) return null
+
+  const [open, setOpen] = useState(false)
+  const [values, setValues] = useState<Record<string, string>>({})
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [success, setSuccess] = useState(false)
+
+  function reset() { setValues({}); setError(null); setSuccess(false) }
+
+  async function handleSave() {
+    setLoading(true); setError(null)
+    // Require at least one field to be filled
+    if (Object.values(values).every(v => !v.trim())) {
+      setError("Enter at least one new value to update."); setLoading(false); return
+    }
+    const credentials: Record<string, unknown> = {}
+    for (const f of fields) {
+      if (values[f.key]?.trim()) credentials[f.key] = values[f.key].trim()
+    }
+    try {
+      await connectors.updateCredentials(connector.id, orgId, credentials)
+      setSuccess(true)
+      onUpdated()
+      setTimeout(() => { setOpen(false); reset() }, 1500)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to update")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <>
+      <Button size="sm" variant="outline" className="text-xs" onClick={() => { reset(); setOpen(true) }}>
+        Update credentials
+      </Button>
+      {open && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/40" onClick={() => { setOpen(false); reset() }} />
+          <div className="relative z-10 w-full max-w-md rounded-xl border bg-card shadow-xl p-6 space-y-4">
+            <div>
+              <h2 className="font-semibold text-base">Update credentials</h2>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                {connector.name} — leave a field blank to keep the current value.
+              </p>
+            </div>
+            <div className="space-y-3">
+              {fields.map(f => (
+                <div key={f.key} className="space-y-1.5">
+                  <Label className="text-xs">{f.label}</Label>
+                  {f.type === "textarea" ? (
+                    <textarea
+                      className="w-full min-h-[80px] rounded-md border bg-background px-3 py-2 text-sm font-mono resize-y focus:outline-none focus:ring-1 focus:ring-ring"
+                      placeholder={f.placeholder}
+                      value={values[f.key] ?? ""}
+                      onChange={e => setValues(v => ({ ...v, [f.key]: e.target.value }))}
+                    />
+                  ) : (
+                    <Input
+                      type={f.type ?? "text"}
+                      placeholder={f.placeholder}
+                      value={values[f.key] ?? ""}
+                      onChange={e => setValues(v => ({ ...v, [f.key]: e.target.value }))}
+                      className="text-sm"
+                      onKeyDown={e => e.key === "Enter" && !loading && handleSave()}
+                    />
+                  )}
+                </div>
+              ))}
+            </div>
+            {error && <p className="text-xs text-red-600">{error}</p>}
+            {success && <p className="text-xs text-green-600 flex items-center gap-1"><Check className="size-3" /> Updated successfully.</p>}
+            <div className="flex justify-end gap-2">
+              <Button size="sm" variant="ghost" onClick={() => { setOpen(false); reset() }} className="text-xs">Cancel</Button>
+              <Button size="sm" onClick={handleSave} disabled={loading} className="text-xs">
+                {loading ? "Validating…" : "Save"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   )
 }
 
@@ -2631,7 +2765,7 @@ function ConnectorsPageInner() {
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {connectedList.map((c) => (
-              <ConnectedCard key={c.id} connector={c} orgId={orgId} onDelete={fetchList} />
+              <ConnectedCard key={c.id} connector={c} orgId={orgId} onDelete={fetchList} onUpdated={fetchList} />
             ))}
           </div>
         )}
