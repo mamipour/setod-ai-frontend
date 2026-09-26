@@ -37,6 +37,7 @@ export const CONNECTOR_LABEL: Record<ConnectorType, string> = {
   airtable: "Airtable",
   shopify: "Shopify",
   google_business_profile: "Google Business Profile",
+  calendly: "Calendly",
   openai: "OpenAI",
   anthropic: "Anthropic",
   mcp: "MCP server",

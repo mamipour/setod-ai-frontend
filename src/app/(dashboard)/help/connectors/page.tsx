@@ -324,6 +324,33 @@ export default function ConnectorsHelp() {
         </P>
       </Section>
 
+      <Section title="Calendly" id="calendly">
+        <P>
+          Connects using a <strong>Personal Access Token (PAT)</strong>. Go to{" "}
+          <a href="https://calendly.com/integrations/api_webhooks" target="_blank" rel="noreferrer" className="underline underline-offset-2">calendly.com/integrations/api_webhooks</a>{" "}
+          and generate a new token. When creating it, enable these scopes:{" "}
+          <C>event_types:read</C>, <C>scheduled_events:read</C>, <C>scheduled_events:write</C>,{" "}
+          <C>invitees:write</C>, <C>scheduling_links:write</C>. The token is shown once — copy
+          it immediately. Legacy tokens (created before scoped permissions) have full access
+          without selecting scopes.
+        </P>
+        <P>
+          Tools: <C>list_calendly_event_types</C> (returns scheduling URLs too),{" "}
+          <C>get_calendly_availability</C> (open slots for a date range),{" "}
+          <C>list_calendly_events</C>, <C>get_calendly_event</C>,{" "}
+          <C>create_calendly_booking</C>, <C>cancel_calendly_event</C>,{" "}
+          <C>create_scheduling_link</C>.
+        </P>
+        <Callout tone="warn" title="Programmatic booking requires a paid plan">
+          <p>
+            <C>create_calendly_booking</C> (booking on behalf of an invitee without a
+            redirect) requires a Calendly Professional plan or above. On a free plan the
+            tool returns a clear error. Use <C>create_scheduling_link</C> instead — it
+            generates a single-use URL you can send in a message, and works on all plans.
+          </p>
+        </Callout>
+      </Section>
+
       <Section title="Removing a connector">
         <P>
           If an agent is using it, you will be told which agents before anything is deleted.

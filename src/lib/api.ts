@@ -63,7 +63,7 @@ export const auth = {
 
 // ── Connectors ────────────────────────────────────────────────────────────────
 
-export type ConnectorType = "gmail" | "telegram_bot" | "telegram_client" | "twilio" | "webhook" | "slack_webhook" | "google_sheets" | "whatsapp" | "instagram" | "hubspot" | "pipedrive" | "notion" | "airtable" | "shopify" | "google_business_profile" | "openai" | "anthropic" | "mcp"
+export type ConnectorType = "gmail" | "telegram_bot" | "telegram_client" | "twilio" | "webhook" | "slack_webhook" | "google_sheets" | "whatsapp" | "instagram" | "hubspot" | "pipedrive" | "notion" | "airtable" | "shopify" | "google_business_profile" | "calendly" | "openai" | "anthropic" | "mcp"
 export type ConnectorStatus = "active" | "error" | "pending_auth" | "revoked"
 
 export interface Connector {
@@ -328,6 +328,12 @@ export const connectors = {
 
   gbpOAuthStartUrl: (orgId: string): string =>
     `${API_BASE}/connectors/oauth/gbp/start?org_id=${orgId}`,
+
+  createCalendly: (orgId: string, apiToken: string, name?: string): Promise<Connector> =>
+    apiFetch("/connectors/calendly", {
+      method: "POST",
+      body: JSON.stringify({ org_id: orgId, api_token: apiToken, name: name ?? "" }),
+    }),
 }
 
 // ── Agents ────────────────────────────────────────────────────────────────────

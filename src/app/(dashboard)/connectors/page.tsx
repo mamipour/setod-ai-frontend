@@ -27,7 +27,7 @@ interface CatalogueEntry {
   defaultUrl?: string
   urlRequired?: boolean
   available: boolean
-  category: "Email" | "Messaging" | "SMS & Voice" | "Automation" | "CRM" | "Productivity" | "E-commerce" | "Local business" | "MCP servers"
+  category: "Email" | "Messaging" | "SMS & Voice" | "Automation" | "CRM" | "Productivity" | "E-commerce" | "Local business" | "Scheduling" | "MCP servers"
 }
 
 const CATALOGUE: CatalogueEntry[] = [
@@ -181,6 +181,16 @@ const CATALOGUE: CatalogueEntry[] = [
     category: "Local business",
   },
   {
+    type: "calendly",
+    label: "Calendly",
+    description: "List event types, check availability, send booking links, and manage meetings.",
+    icon: "📅",
+    iconSrc: "/calendly.svg",
+    authMethod: "api_key",
+    available: true,
+    category: "Scheduling",
+  },
+  {
     type: "mcp",
     catalogKey: "github",
     label: "GitHub",
@@ -266,7 +276,7 @@ const CATALOGUE: CatalogueEntry[] = [
   },
 ]
 
-const CATEGORIES: CatalogueEntry["category"][] = ["Email", "Messaging", "SMS & Voice", "Automation", "CRM", "Productivity", "E-commerce", "Local business", "MCP servers"]
+const CATEGORIES: CatalogueEntry["category"][] = ["Email", "Messaging", "SMS & Voice", "Automation", "CRM", "Productivity", "Scheduling", "E-commerce", "Local business", "MCP servers"]
 
 const CATEGORY_LABEL: Record<CatalogueEntry["category"], string> = {
   "Email":          "Email",
@@ -275,6 +285,7 @@ const CATEGORY_LABEL: Record<CatalogueEntry["category"], string> = {
   "Automation":     "Automation",
   "CRM":            "CRM",
   "Productivity":   "Productivity",
+  "Scheduling":     "Scheduling",
   "E-commerce":     "E-commerce",
   "Local business": "Local business",
   "MCP servers":    "MCP servers",
@@ -1300,6 +1311,81 @@ function ShopifyModal({ orgId, onSaved }: { orgId: string; onSaved: () => void }
             <div className="flex justify-end gap-2 pt-2">
               <Button size="sm" variant="ghost" onClick={handleClose}>Cancel</Button>
               <Button size="sm" onClick={handleSave} disabled={loading || !shopDomain.trim() || !accessToken.trim()}>
+                {loading ? "Connecting…" : "Connect"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  )
+}
+
+// ── Calendly modal ────────────────────────────────────────────────────────────
+
+function CalendlyModal({ orgId, onSaved }: { orgId: string; onSaved: () => void }) {
+  const [open, setOpen] = useState(false)
+  const [apiToken, setApiToken] = useState("")
+  const [name, setName] = useState("")
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  function handleClose() { setOpen(false); setApiToken(""); setName(""); setError(null) }
+
+  async function handleSave() {
+    if (!apiToken.trim()) return
+    setLoading(true); setError(null)
+    try {
+      await connectors.createCalendly(orgId, apiToken.trim(), name.trim() || undefined)
+      handleClose(); onSaved()
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Failed to connect")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <>
+      <Button size="sm" variant="outline" className="text-xs" onClick={() => { setError(null); setOpen(true) }}>
+        Connect
+      </Button>
+      {open && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/40" onClick={handleClose} />
+          <div className="relative z-10 w-full max-w-md rounded-xl border bg-card shadow-xl p-6 space-y-4">
+            <h2 className="text-base font-semibold">Connect Calendly</h2>
+            <ol className="text-xs text-muted-foreground space-y-1 list-decimal list-inside">
+              <li>Go to <a href="https://calendly.com/integrations/api_webhooks" target="_blank" rel="noopener noreferrer" className="underline">calendly.com/integrations/api_webhooks</a>.</li>
+              <li>Under <strong>Personal Access Tokens</strong>, click <strong>Generate new token</strong>.</li>
+              <li>Enable scopes: <code className="bg-muted px-1 rounded text-[10px]">event_types:read</code>, <code className="bg-muted px-1 rounded text-[10px]">scheduled_events:read/write</code>, <code className="bg-muted px-1 rounded text-[10px]">invitees:write</code>, <code className="bg-muted px-1 rounded text-[10px]">scheduling_links:write</code>.</li>
+              <li>Copy the token (shown once) and paste it below.</li>
+            </ol>
+            <div className="space-y-3">
+              <div className="space-y-1">
+                <Label className="text-xs">Personal Access Token</Label>
+                <Input
+                  type="password"
+                  placeholder="eyJ…"
+                  value={apiToken}
+                  onChange={(e) => setApiToken(e.target.value)}
+                  className="h-8 text-xs font-mono"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Name (optional)</Label>
+                <Input
+                  placeholder="Calendly"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  className="h-8 text-xs"
+                />
+              </div>
+            </div>
+            {error && <p className="text-xs text-destructive">{error}</p>}
+            <div className="flex justify-end gap-2 pt-2">
+              <Button size="sm" variant="ghost" onClick={handleClose}>Cancel</Button>
+              <Button size="sm" onClick={handleSave} disabled={loading || !apiToken.trim()}>
                 {loading ? "Connecting…" : "Connect"}
               </Button>
             </div>
@@ -2342,6 +2428,7 @@ function AvailableCard({ type, catalogKey, label, description, icon, iconSrc, au
       const url = connectors.gbpOAuthStartUrl(orgId)
       return <a href={url}><Button size="sm" variant="outline" className="text-xs">Connect with Google</Button></a>
     }
+    if (type === "calendly") return <CalendlyModal orgId={orgId} onSaved={onSaved} />
     if (type === "mcp" && authMethod === "mcp_oauth") return (
       <McpOauthAppModal
         orgId={orgId}

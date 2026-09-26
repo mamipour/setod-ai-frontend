@@ -48,6 +48,7 @@ export const CONNECTOR_ICON: Partial<Record<string, string>> = {
   airtable: "/airtable.svg",
   shopify: "/shopify.svg",
   google_business_profile: "/google-business.svg",
+  calendly: "/calendly.svg",
 }
 
 const MCP_ICON_BY_LABEL: Array<[string, string]> = [
@@ -152,6 +153,15 @@ export const CONNECTOR_TOOLS: Partial<Record<string, Array<{ name: string; descr
     { name: "list_gbp_reviews",        description: "List recent reviews with star rating and reply status" },
     { name: "reply_to_gbp_review",     description: "Post or update a reply to a review" },
     { name: "delete_gbp_reply",        description: "Delete an existing reply to a review" },
+  ],
+  calendly: [
+    { name: "list_calendly_event_types",   description: "List active meeting types with scheduling URLs" },
+    { name: "get_calendly_availability",   description: "Get available time slots for a meeting type" },
+    { name: "list_calendly_events",        description: "List upcoming or cancelled scheduled events" },
+    { name: "get_calendly_event",          description: "Get full details for one event including invitee info" },
+    { name: "create_calendly_booking",     description: "Book a meeting programmatically (paid plan required)" },
+    { name: "cancel_calendly_event",       description: "Cancel an event and notify all invitees" },
+    { name: "create_scheduling_link",      description: "Generate a single-use booking link to send to someone" },
   ],
 }
 
