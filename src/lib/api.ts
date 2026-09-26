@@ -63,7 +63,7 @@ export const auth = {
 
 // ── Connectors ────────────────────────────────────────────────────────────────
 
-export type ConnectorType = "gmail" | "telegram_bot" | "telegram_client" | "twilio" | "webhook" | "slack_webhook" | "google_sheets" | "whatsapp" | "instagram" | "hubspot" | "pipedrive" | "openai" | "anthropic" | "mcp"
+export type ConnectorType = "gmail" | "telegram_bot" | "telegram_client" | "twilio" | "webhook" | "slack_webhook" | "google_sheets" | "whatsapp" | "instagram" | "hubspot" | "pipedrive" | "notion" | "airtable" | "shopify" | "google_business_profile" | "openai" | "anthropic" | "mcp"
 export type ConnectorStatus = "active" | "error" | "pending_auth" | "revoked"
 
 export interface Connector {
@@ -307,6 +307,27 @@ export const connectors = {
       method: "POST",
       body: JSON.stringify({ org_id: orgId, api_token: apiToken, name: name ?? "" }),
     }),
+
+  createNotion: (orgId: string, apiToken: string, name?: string): Promise<Connector> =>
+    apiFetch("/connectors/notion", {
+      method: "POST",
+      body: JSON.stringify({ org_id: orgId, api_token: apiToken, name: name ?? "" }),
+    }),
+
+  createAirtable: (orgId: string, apiToken: string, name?: string): Promise<Connector> =>
+    apiFetch("/connectors/airtable", {
+      method: "POST",
+      body: JSON.stringify({ org_id: orgId, api_token: apiToken, name: name ?? "" }),
+    }),
+
+  createShopify: (orgId: string, shopDomain: string, accessToken: string, name?: string): Promise<Connector> =>
+    apiFetch("/connectors/shopify", {
+      method: "POST",
+      body: JSON.stringify({ org_id: orgId, shop_domain: shopDomain, access_token: accessToken, name: name ?? "" }),
+    }),
+
+  gbpOAuthStartUrl: (orgId: string): string =>
+    `${API_BASE}/connectors/oauth/gbp/start?org_id=${orgId}`,
 }
 
 // ── Agents ────────────────────────────────────────────────────────────────────

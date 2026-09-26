@@ -27,7 +27,7 @@ interface CatalogueEntry {
   defaultUrl?: string
   urlRequired?: boolean
   available: boolean
-  category: "Email" | "Messaging" | "SMS & Voice" | "Automation" | "CRM" | "MCP servers"
+  category: "Email" | "Messaging" | "SMS & Voice" | "Automation" | "CRM" | "Productivity" | "E-commerce" | "Local business" | "MCP servers"
 }
 
 const CATALOGUE: CatalogueEntry[] = [
@@ -141,6 +141,46 @@ const CATALOGUE: CatalogueEntry[] = [
     category: "CRM",
   },
   {
+    type: "notion",
+    label: "Notion",
+    description: "Search pages, query databases, create rows, and append notes in Notion.",
+    icon: "N",
+    iconSrc: "/notion.svg",
+    authMethod: "api_key",
+    available: true,
+    category: "Productivity",
+  },
+  {
+    type: "airtable",
+    label: "Airtable",
+    description: "List, find, create and update Airtable records across your bases.",
+    icon: "📋",
+    iconSrc: "/airtable.svg",
+    authMethod: "api_key",
+    available: true,
+    category: "Productivity",
+  },
+  {
+    type: "shopify",
+    label: "Shopify",
+    description: "Look up orders and customers, search products, add notes, and cancel orders.",
+    icon: "🛒",
+    iconSrc: "/shopify.svg",
+    authMethod: "api_key",
+    available: true,
+    category: "E-commerce",
+  },
+  {
+    type: "google_business_profile",
+    label: "Google Business Profile",
+    description: "List reviews for your Google location and reply or delete replies.",
+    icon: "⭐",
+    iconSrc: "/google-business.svg",
+    authMethod: "oauth",
+    available: true,
+    category: "Local business",
+  },
+  {
     type: "mcp",
     catalogKey: "github",
     label: "GitHub",
@@ -226,15 +266,18 @@ const CATALOGUE: CatalogueEntry[] = [
   },
 ]
 
-const CATEGORIES: CatalogueEntry["category"][] = ["Email", "Messaging", "SMS & Voice", "Automation", "CRM", "MCP servers"]
+const CATEGORIES: CatalogueEntry["category"][] = ["Email", "Messaging", "SMS & Voice", "Automation", "CRM", "Productivity", "E-commerce", "Local business", "MCP servers"]
 
 const CATEGORY_LABEL: Record<CatalogueEntry["category"], string> = {
-  "Email":        "Email",
-  "Messaging":    "Messaging",
-  "SMS & Voice":  "SMS & Voice",
-  "Automation":   "Automation",
-  "CRM":          "CRM",
-  "MCP servers":  "MCP servers",
+  "Email":          "Email",
+  "Messaging":      "Messaging",
+  "SMS & Voice":    "SMS & Voice",
+  "Automation":     "Automation",
+  "CRM":            "CRM",
+  "Productivity":   "Productivity",
+  "E-commerce":     "E-commerce",
+  "Local business": "Local business",
+  "MCP servers":    "MCP servers",
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
@@ -1022,6 +1065,241 @@ function PipedriveModal({ orgId, onSaved }: { orgId: string; onSaved: () => void
             <div className="flex justify-end gap-2 pt-2">
               <Button size="sm" variant="ghost" onClick={handleClose}>Cancel</Button>
               <Button size="sm" onClick={handleSave} disabled={loading || !apiToken.trim()}>
+                {loading ? "Connecting…" : "Connect"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  )
+}
+
+// ── Notion modal ─────────────────────────────────────────────────────────────
+
+function NotionModal({ orgId, onSaved }: { orgId: string; onSaved: () => void }) {
+  const [open, setOpen] = useState(false)
+  const [apiToken, setApiToken] = useState("")
+  const [name, setName] = useState("")
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  function handleClose() { setOpen(false); setApiToken(""); setName(""); setError(null) }
+
+  async function handleSave() {
+    if (!apiToken.trim()) return
+    setLoading(true); setError(null)
+    try {
+      await connectors.createNotion(orgId, apiToken.trim(), name.trim() || undefined)
+      handleClose(); onSaved()
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Failed to connect")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <>
+      <Button size="sm" variant="outline" className="text-xs" onClick={() => { setError(null); setOpen(true) }}>
+        Connect
+      </Button>
+      {open && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/40" onClick={handleClose} />
+          <div className="relative z-10 w-full max-w-md rounded-xl border bg-card shadow-xl p-6 space-y-4">
+            <h2 className="text-base font-semibold">Connect Notion</h2>
+            <ol className="text-xs text-muted-foreground space-y-1 list-decimal list-inside">
+              <li>Go to <a href="https://www.notion.so/my-integrations" target="_blank" rel="noopener noreferrer" className="underline">notion.so/my-integrations</a> and click <strong>New integration</strong>.</li>
+              <li>Give it a name and select your workspace. Under <strong>Capabilities</strong>, enable Read/Update/Insert content.</li>
+              <li>Copy the <strong>Internal Integration Secret</strong> and paste it below.</li>
+              <li>In Notion, open each page or database you want the agent to access → <strong>⋯ → Connections → Add connection</strong> → select your integration.</li>
+            </ol>
+            <div className="space-y-3">
+              <div className="space-y-1">
+                <Label className="text-xs">Integration Secret</Label>
+                <Input
+                  type="password"
+                  placeholder="secret_…"
+                  value={apiToken}
+                  onChange={(e) => setApiToken(e.target.value)}
+                  className="h-8 text-xs font-mono"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Name (optional)</Label>
+                <Input
+                  placeholder="Notion"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  className="h-8 text-xs"
+                />
+              </div>
+            </div>
+            {error && <p className="text-xs text-destructive">{error}</p>}
+            <div className="flex justify-end gap-2 pt-2">
+              <Button size="sm" variant="ghost" onClick={handleClose}>Cancel</Button>
+              <Button size="sm" onClick={handleSave} disabled={loading || !apiToken.trim()}>
+                {loading ? "Connecting…" : "Connect"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  )
+}
+
+// ── Airtable modal ────────────────────────────────────────────────────────────
+
+function AirtableModal({ orgId, onSaved }: { orgId: string; onSaved: () => void }) {
+  const [open, setOpen] = useState(false)
+  const [apiToken, setApiToken] = useState("")
+  const [name, setName] = useState("")
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  function handleClose() { setOpen(false); setApiToken(""); setName(""); setError(null) }
+
+  async function handleSave() {
+    if (!apiToken.trim()) return
+    setLoading(true); setError(null)
+    try {
+      await connectors.createAirtable(orgId, apiToken.trim(), name.trim() || undefined)
+      handleClose(); onSaved()
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Failed to connect")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <>
+      <Button size="sm" variant="outline" className="text-xs" onClick={() => { setError(null); setOpen(true) }}>
+        Connect
+      </Button>
+      {open && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/40" onClick={handleClose} />
+          <div className="relative z-10 w-full max-w-md rounded-xl border bg-card shadow-xl p-6 space-y-4">
+            <h2 className="text-base font-semibold">Connect Airtable</h2>
+            <ol className="text-xs text-muted-foreground space-y-1 list-decimal list-inside">
+              <li>Go to <a href="https://airtable.com/create/tokens" target="_blank" rel="noopener noreferrer" className="underline">airtable.com/create/tokens</a> and click <strong>Create token</strong>.</li>
+              <li>Add scopes: <code className="bg-muted px-1 rounded text-[10px]">schema.bases:read</code>, <code className="bg-muted px-1 rounded text-[10px]">data.records:read</code>, <code className="bg-muted px-1 rounded text-[10px]">data.records:write</code>.</li>
+              <li>Under <strong>Access</strong>, add the bases you want the agent to access.</li>
+              <li>Copy the token and paste it below.</li>
+            </ol>
+            <div className="space-y-3">
+              <div className="space-y-1">
+                <Label className="text-xs">Personal Access Token</Label>
+                <Input
+                  type="password"
+                  placeholder="pat…"
+                  value={apiToken}
+                  onChange={(e) => setApiToken(e.target.value)}
+                  className="h-8 text-xs font-mono"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Name (optional)</Label>
+                <Input
+                  placeholder="Airtable"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  className="h-8 text-xs"
+                />
+              </div>
+            </div>
+            {error && <p className="text-xs text-destructive">{error}</p>}
+            <div className="flex justify-end gap-2 pt-2">
+              <Button size="sm" variant="ghost" onClick={handleClose}>Cancel</Button>
+              <Button size="sm" onClick={handleSave} disabled={loading || !apiToken.trim()}>
+                {loading ? "Connecting…" : "Connect"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  )
+}
+
+// ── Shopify modal ─────────────────────────────────────────────────────────────
+
+function ShopifyModal({ orgId, onSaved }: { orgId: string; onSaved: () => void }) {
+  const [open, setOpen] = useState(false)
+  const [shopDomain, setShopDomain] = useState("")
+  const [accessToken, setAccessToken] = useState("")
+  const [name, setName] = useState("")
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  function handleClose() { setOpen(false); setShopDomain(""); setAccessToken(""); setName(""); setError(null) }
+
+  async function handleSave() {
+    if (!shopDomain.trim() || !accessToken.trim()) return
+    setLoading(true); setError(null)
+    try {
+      await connectors.createShopify(orgId, shopDomain.trim(), accessToken.trim(), name.trim() || undefined)
+      handleClose(); onSaved()
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Failed to connect")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <>
+      <Button size="sm" variant="outline" className="text-xs" onClick={() => { setError(null); setOpen(true) }}>
+        Connect
+      </Button>
+      {open && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/40" onClick={handleClose} />
+          <div className="relative z-10 w-full max-w-md rounded-xl border bg-card shadow-xl p-6 space-y-4">
+            <h2 className="text-base font-semibold">Connect Shopify</h2>
+            <ol className="text-xs text-muted-foreground space-y-1 list-decimal list-inside">
+              <li>In your Shopify admin, go to <strong>Settings → Apps → Develop apps</strong>.</li>
+              <li>Click <strong>Create an app</strong>, give it a name.</li>
+              <li>Under <strong>Configuration → Admin API access scopes</strong>, add: <code className="bg-muted px-1 rounded text-[10px]">read_orders</code>, <code className="bg-muted px-1 rounded text-[10px]">read_customers</code>, <code className="bg-muted px-1 rounded text-[10px]">read_products</code>, <code className="bg-muted px-1 rounded text-[10px]">write_orders</code>.</li>
+              <li>Click <strong>Install app</strong>, then copy the <strong>Admin API access token</strong>.</li>
+            </ol>
+            <div className="space-y-3">
+              <div className="space-y-1">
+                <Label className="text-xs">Store domain</Label>
+                <Input
+                  placeholder="mystore.myshopify.com"
+                  value={shopDomain}
+                  onChange={(e) => setShopDomain(e.target.value)}
+                  className="h-8 text-xs font-mono"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Admin API access token</Label>
+                <Input
+                  type="password"
+                  placeholder="shpat_…"
+                  value={accessToken}
+                  onChange={(e) => setAccessToken(e.target.value)}
+                  className="h-8 text-xs font-mono"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Name (optional)</Label>
+                <Input
+                  placeholder="Shopify"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  className="h-8 text-xs"
+                />
+              </div>
+            </div>
+            {error && <p className="text-xs text-destructive">{error}</p>}
+            <div className="flex justify-end gap-2 pt-2">
+              <Button size="sm" variant="ghost" onClick={handleClose}>Cancel</Button>
+              <Button size="sm" onClick={handleSave} disabled={loading || !shopDomain.trim() || !accessToken.trim()}>
                 {loading ? "Connecting…" : "Connect"}
               </Button>
             </div>
@@ -2057,6 +2335,13 @@ function AvailableCard({ type, catalogKey, label, description, icon, iconSrc, au
     if (type === "instagram") return <InstagramOAuthButton orgId={orgId} />
     if (type === "hubspot") return <HubSpotModal orgId={orgId} onSaved={onSaved} />
     if (type === "pipedrive") return <PipedriveModal orgId={orgId} onSaved={onSaved} />
+    if (type === "notion") return <NotionModal orgId={orgId} onSaved={onSaved} />
+    if (type === "airtable") return <AirtableModal orgId={orgId} onSaved={onSaved} />
+    if (type === "shopify") return <ShopifyModal orgId={orgId} onSaved={onSaved} />
+    if (type === "google_business_profile") {
+      const url = connectors.gbpOAuthStartUrl(orgId)
+      return <a href={url}><Button size="sm" variant="outline" className="text-xs">Connect with Google</Button></a>
+    }
     if (type === "mcp" && authMethod === "mcp_oauth") return (
       <McpOauthAppModal
         orgId={orgId}

@@ -202,6 +202,128 @@ export default function ConnectorsHelp() {
         </Callout>
       </Section>
 
+      <Section title="HubSpot" id="hubspot">
+        <P>
+          Connects to HubSpot CRM using a <strong>Private App token</strong>. Go to{" "}
+          <strong>Settings → Integrations → Private apps</strong>, create a private app,
+          and enable scopes: <C>crm.objects.contacts.read/write</C>,{" "}
+          <C>crm.objects.deals.read/write</C>, <C>crm.objects.notes.read/write</C>.
+          Copy the generated token and paste it into the connector form.
+        </P>
+        <P>
+          Tools: <C>find_hubspot_contact</C>, <C>create_hubspot_contact</C>,{" "}
+          <C>update_hubspot_contact</C>, <C>create_hubspot_deal</C>,{" "}
+          <C>move_hubspot_deal</C>, <C>log_hubspot_note</C>,{" "}
+          <C>list_hubspot_pipeline_stages</C>.
+        </P>
+      </Section>
+
+      <Section title="Pipedrive" id="pipedrive">
+        <P>
+          Connects to Pipedrive using your API token. Go to{" "}
+          <strong>Settings → Personal preferences → API</strong> and copy the token.
+        </P>
+        <P>
+          Tools: <C>find_pipedrive_person</C>, <C>create_pipedrive_person</C>,{" "}
+          <C>update_pipedrive_person</C>, <C>create_pipedrive_deal</C>,{" "}
+          <C>move_pipedrive_deal</C>, <C>log_pipedrive_activity</C>,{" "}
+          <C>list_pipedrive_stages</C>.
+        </P>
+      </Section>
+
+      <Section title="Notion" id="notion">
+        <P>
+          Connects via an <strong>Internal Integration Secret</strong>. Create the
+          integration at{" "}
+          <a href="https://www.notion.so/my-integrations" target="_blank" rel="noreferrer" className="underline underline-offset-2">notion.so/my-integrations</a>{" "}
+          with Read/Update/Insert content capabilities. After creating it, you must share
+          each page or database with the integration from Notion&apos;s{" "}
+          <strong>⋯ → Connections</strong> menu — the agent can only see pages you have
+          explicitly shared.
+        </P>
+        <P>
+          Tools: <C>search_notion</C>, <C>get_notion_page</C>,{" "}
+          <C>query_notion_database</C>, <C>create_notion_page</C>,{" "}
+          <C>update_notion_page</C>, <C>append_notion_content</C>.
+        </P>
+        <Callout tone="info" title="Share pages first">
+          <p>
+            If the agent says &quot;no results&quot; or &quot;not found&quot;, it most likely
+            means the page was not shared with the integration. Open the page in Notion,
+            click ⋯ → Connections, and add your integration there.
+          </p>
+        </Callout>
+      </Section>
+
+      <Section title="Airtable" id="airtable">
+        <P>
+          Connects using a <strong>Personal Access Token (PAT)</strong>. Create one at{" "}
+          <a href="https://airtable.com/create/tokens" target="_blank" rel="noreferrer" className="underline underline-offset-2">airtable.com/create/tokens</a>.
+          Required scopes: <C>schema.bases:read</C>, <C>data.records:read</C>,{" "}
+          <C>data.records:write</C>. Under <strong>Access</strong>, add the specific bases
+          you want the agent to access.
+        </P>
+        <P>
+          Tools: <C>list_airtable_bases</C>, <C>list_airtable_records</C>,{" "}
+          <C>find_airtable_record</C> (uses Airtable formula syntax), <C>create_airtable_record</C>,{" "}
+          <C>update_airtable_record</C> (PATCH — unmentioned fields are preserved).
+        </P>
+      </Section>
+
+      <Section title="Shopify" id="shopify">
+        <P>
+          Uses a <strong>Custom App token</strong> — no OAuth, no partner account needed.
+          In your Shopify admin, go to <strong>Settings → Apps → Develop apps</strong>,
+          create an app, and configure these Admin API scopes:{" "}
+          <C>read_orders</C>, <C>read_customers</C>, <C>read_products</C>, <C>write_orders</C>.
+          After installing the app, copy the <strong>Admin API access token</strong> (starts
+          with <C>shpat_</C>).
+        </P>
+        <P>
+          The connector also needs your store&apos;s <strong>myshopify.com domain</strong>{" "}
+          (e.g. <C>mystore.myshopify.com</C>). Both fields are required.
+        </P>
+        <P>
+          Tools: <C>get_shopify_order</C>, <C>list_shopify_orders</C>,{" "}
+          <C>search_shopify_customer</C>, <C>list_shopify_products</C>,{" "}
+          <C>get_shopify_product</C>, <C>add_shopify_order_note</C>,{" "}
+          <C>cancel_shopify_order</C>.
+        </P>
+        <Callout tone="warn" title="Custom App vs Public App">
+          <p>
+            This connector uses the Custom App approach, which only works for connecting
+            your own store. If you need to connect multiple different stores (SaaS
+            scenario), you would need a Public App with OAuth — contact us.
+          </p>
+        </Callout>
+      </Section>
+
+      <Section title="Google Business Profile" id="google-business-profile">
+        <P>
+          Connects via Google OAuth with the <C>business.manage</C> scope. Click{" "}
+          <strong>Connect with Google</strong> and authorise the account that is an owner
+          or manager of your Google Business Profile location.
+        </P>
+        <Callout tone="warn" title="Requirements">
+          <p>
+            Your Google account must be an <strong>owner or manager</strong> of the GBP
+            location, and the location must be <strong>verified on Google</strong>. Unverified
+            locations do not appear in the reviews API.
+          </p>
+        </Callout>
+        <P>
+          Tools: <C>list_gbp_locations</C> (call this first to get the location id),{" "}
+          <C>list_gbp_reviews</C>, <C>reply_to_gbp_review</C>,{" "}
+          <C>delete_gbp_reply</C>.
+        </P>
+        <P>
+          A typical Review Responder agent runs on a schedule (e.g. every hour),
+          calls <C>list_gbp_reviews</C> to find unanswered reviews, drafts a reply,
+          and calls <C>reply_to_gbp_review</C> for each. Human approval can be added
+          before replies go live.
+        </P>
+      </Section>
+
       <Section title="Removing a connector">
         <P>
           If an agent is using it, you will be told which agents before anything is deleted.

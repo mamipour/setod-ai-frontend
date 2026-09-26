@@ -44,6 +44,10 @@ export const CONNECTOR_ICON: Partial<Record<string, string>> = {
   instagram: "/instagram.svg",
   hubspot: "/hubspot.svg",
   pipedrive: "/pipedrive.svg",
+  notion: "/notion.svg",
+  airtable: "/airtable.svg",
+  shopify: "/shopify.svg",
+  google_business_profile: "/google-business.svg",
 }
 
 const MCP_ICON_BY_LABEL: Array<[string, string]> = [
@@ -118,6 +122,36 @@ export const CONNECTOR_TOOLS: Partial<Record<string, Array<{ name: string; descr
     { name: "move_pipedrive_deal",            description: "Move a deal to a different stage" },
     { name: "log_pipedrive_activity",         description: "Log a note/activity on a person or deal" },
     { name: "list_pipedrive_stages",          description: "List pipeline stages and their ids" },
+  ],
+  notion: [
+    { name: "search_notion",           description: "Search pages and databases by keyword" },
+    { name: "get_notion_page",         description: "Read the full content of a Notion page" },
+    { name: "query_notion_database",   description: "List or filter rows from a Notion database" },
+    { name: "create_notion_page",      description: "Create a new page or database row" },
+    { name: "update_notion_page",      description: "Update properties on an existing page" },
+    { name: "append_notion_content",   description: "Append text to a page (logs, notes, summaries)" },
+  ],
+  airtable: [
+    { name: "list_airtable_bases",     description: "List accessible Airtable bases" },
+    { name: "list_airtable_records",   description: "List or filter records from a table" },
+    { name: "find_airtable_record",    description: "Find the first record matching a formula" },
+    { name: "create_airtable_record",  description: "Create a new record in a table" },
+    { name: "update_airtable_record",  description: "Update fields on an existing record" },
+  ],
+  shopify: [
+    { name: "get_shopify_order",       description: "Get full order details including tracking" },
+    { name: "list_shopify_orders",     description: "List recent orders filtered by status" },
+    { name: "search_shopify_customer", description: "Find a customer by email or phone" },
+    { name: "list_shopify_products",   description: "Search the product catalogue" },
+    { name: "get_shopify_product",     description: "Get a single product with variants and stock" },
+    { name: "add_shopify_order_note",  description: "Add an internal note to an order" },
+    { name: "cancel_shopify_order",    description: "Cancel an order and notify the customer" },
+  ],
+  google_business_profile: [
+    { name: "list_gbp_locations",      description: "List all Business Profile locations on this account" },
+    { name: "list_gbp_reviews",        description: "List recent reviews with star rating and reply status" },
+    { name: "reply_to_gbp_review",     description: "Post or update a reply to a review" },
+    { name: "delete_gbp_reply",        description: "Delete an existing reply to a review" },
   ],
 }
 
