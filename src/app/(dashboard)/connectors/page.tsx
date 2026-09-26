@@ -4,7 +4,7 @@ import { Suspense, useEffect, useRef, useState } from "react"
 import Image from "next/image"
 import { useSearchParams } from "next/navigation"
 import { Check, Lock, Search, X } from "lucide-react"
-import { connectors, type Connector, type ConnectorType } from "@/lib/api"
+import { connectors, API_BASE, type Connector, type ConnectorType } from "@/lib/api"
 import { useUser } from "@/hooks/useUser"
 import { useActiveOrg } from "@/hooks/useActiveOrg"
 import { Button } from "@/components/ui/button"
@@ -299,7 +299,12 @@ function ConnectedCard({ connector, orgId, onDelete }: {
   const [deleteError, setDeleteError] = useState<string | null>(null)
   const [twilioPrompt, setTwilioPrompt] = useState(false)
   const [twilioTo, setTwilioTo] = useState("")
+  const [webhookSecret, setWebhookSecret] = useState<string | null>(null)
+  const [rotatingSecret, setRotatingSecret] = useState(false)
+  const [copied, setCopied] = useState(false)
   const isUnhealthy = connector.status === "error" || connector.status === "revoked"
+  const isWebhook = connector.type === "webhook"
+  const webhookUrl = isWebhook ? `${API_BASE}/hooks/${connector.id}` : null
 
   async function handleTest() {
     if (connector.type === "twilio") { setTwilioPrompt(true); return }
@@ -339,6 +344,26 @@ function ConnectedCard({ connector, orgId, onDelete }: {
     }
   }
 
+  async function handleCopyUrl() {
+    if (!webhookUrl) return
+    await navigator.clipboard.writeText(webhookUrl)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
+
+  async function handleRotateSecret() {
+    if (!confirm("Rotate the signing secret? The old secret stops working immediately.")) return
+    setRotatingSecret(true)
+    try {
+      const res = await connectors.regenWebhookSecret(connector.id, orgId)
+      setWebhookSecret(res.secret)
+    } catch {
+      // ignore
+    } finally {
+      setRotatingSecret(false)
+    }
+  }
+
   return (
     <div className="relative">
       <Card
@@ -372,28 +397,51 @@ function ConnectedCard({ connector, orgId, onDelete }: {
             </div>
           )}
 
+          {/* Webhook — always show URL + secret info */}
+          {isWebhook && (
+            <div className="space-y-2">
+              <div className="rounded-md border bg-muted/40 px-3 py-2 space-y-0.5">
+                <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Endpoint URL</p>
+                <p className="text-xs font-mono break-all select-all">{webhookUrl}</p>
+              </div>
+              <div className="rounded-md border bg-muted/40 px-3 py-2 space-y-0.5">
+                <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Signing secret</p>
+                {webhookSecret
+                  ? <p className="text-xs font-mono break-all select-all">{webhookSecret}</p>
+                  : <p className="text-xs text-muted-foreground italic">Hidden — rotate to reveal a new one</p>
+                }
+              </div>
+            </div>
+          )}
+
           {/* Test result */}
           {testResult && (
-            <p
-              className={cn(
-                "flex items-center gap-1 text-xs",
-                testResult.ok ? "text-green-600" : "text-red-600",
-              )}
-            >
+            <p className={cn("flex items-center gap-1 text-xs", testResult.ok ? "text-green-600" : "text-red-600")}>
               {testResult.ok ? <Check className="size-3" /> : <X className="size-3" />}
               {testResult.detail}
             </p>
           )}
 
-          {/* Delete error (e.g. connector still in use by agents) */}
+          {/* Delete error */}
           {deleteError && (
             <p className="text-xs text-red-600">{deleteError}</p>
           )}
 
-          <div className="flex gap-2">
-            <Button size="sm" variant="outline" onClick={handleTest} disabled={testing} className="text-xs">
-              {testing ? "Testing…" : "Test"}
-            </Button>
+          <div className="flex gap-2 flex-wrap">
+            {isWebhook ? (
+              <>
+                <Button size="sm" variant="outline" onClick={handleCopyUrl} className="text-xs gap-1.5">
+                  {copied ? <><Check className="size-3" /> Copied</> : "Copy URL"}
+                </Button>
+                <Button size="sm" variant="outline" onClick={handleRotateSecret} disabled={rotatingSecret} className="text-xs">
+                  {rotatingSecret ? "Rotating…" : "Rotate secret"}
+                </Button>
+              </>
+            ) : (
+              <Button size="sm" variant="outline" onClick={handleTest} disabled={testing} className="text-xs">
+                {testing ? "Testing…" : "Test"}
+              </Button>
+            )}
             {connector.type === "mcp" && (
               <Button
                 size="sm"
