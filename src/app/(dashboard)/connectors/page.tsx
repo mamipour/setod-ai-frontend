@@ -663,14 +663,14 @@ function UpdateCredentialsModal({ connector, orgId, onUpdated }: {
   return (
     <>
       <Button size="sm" variant="outline" className="text-xs" onClick={() => { reset(); setOpen(true) }}>
-        Update credentials
+        Reconnect
       </Button>
       {open && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
           <div className="absolute inset-0 bg-black/40" onClick={() => { setOpen(false); reset() }} />
           <div className="relative z-10 w-full max-w-md rounded-xl border bg-card shadow-xl p-6 space-y-4">
             <div>
-              <h2 className="font-semibold text-base">Update credentials</h2>
+              <h2 className="font-semibold text-base">Reconnect</h2>
               <p className="text-xs text-muted-foreground mt-0.5">
                 {connector.name} — leave a field blank to keep the current value.
               </p>
