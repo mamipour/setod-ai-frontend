@@ -31,6 +31,8 @@ export const CONNECTOR_LABEL: Record<ConnectorType, string> = {
   google_sheets: "Google Sheets",
   whatsapp: "WhatsApp",
   instagram: "Instagram",
+  hubspot: "HubSpot",
+  pipedrive: "Pipedrive",
   openai: "OpenAI",
   anthropic: "Anthropic",
   mcp: "MCP server",

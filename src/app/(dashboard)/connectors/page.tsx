@@ -27,7 +27,7 @@ interface CatalogueEntry {
   defaultUrl?: string
   urlRequired?: boolean
   available: boolean
-  category: "Email" | "Messaging" | "SMS & Voice" | "Automation" | "MCP servers"
+  category: "Email" | "Messaging" | "SMS & Voice" | "Automation" | "CRM" | "MCP servers"
 }
 
 const CATALOGUE: CatalogueEntry[] = [
@@ -121,6 +121,26 @@ const CATALOGUE: CatalogueEntry[] = [
     category: "Messaging",
   },
   {
+    type: "hubspot",
+    label: "HubSpot",
+    description: "Find contacts, open deals, and log notes in HubSpot CRM.",
+    icon: "🔶",
+    iconSrc: "/hubspot.svg",
+    authMethod: "api_key",
+    available: true,
+    category: "CRM",
+  },
+  {
+    type: "pipedrive",
+    label: "Pipedrive",
+    description: "Find persons, create deals, and log activities in Pipedrive CRM.",
+    icon: "🟢",
+    iconSrc: "/pipedrive.svg",
+    authMethod: "api_key",
+    available: true,
+    category: "CRM",
+  },
+  {
     type: "mcp",
     catalogKey: "github",
     label: "GitHub",
@@ -206,13 +226,14 @@ const CATALOGUE: CatalogueEntry[] = [
   },
 ]
 
-const CATEGORIES: CatalogueEntry["category"][] = ["Email", "Messaging", "SMS & Voice", "Automation", "MCP servers"]
+const CATEGORIES: CatalogueEntry["category"][] = ["Email", "Messaging", "SMS & Voice", "Automation", "CRM", "MCP servers"]
 
 const CATEGORY_LABEL: Record<CatalogueEntry["category"], string> = {
   "Email":        "Email",
   "Messaging":    "Messaging",
   "SMS & Voice":  "SMS & Voice",
   "Automation":   "Automation",
+  "CRM":          "CRM",
   "MCP servers":  "MCP servers",
 }
 
@@ -788,6 +809,152 @@ function InstagramOAuthButton({ orgId }: { orgId: string }) {
     >
       {starting ? "Opening…" : "Connect"}
     </Button>
+  )
+}
+
+// ── HubSpot modal ─────────────────────────────────────────────────────────────
+
+function HubSpotModal({ orgId, onSaved }: { orgId: string; onSaved: () => void }) {
+  const [open, setOpen] = useState(false)
+  const [apiToken, setApiToken] = useState("")
+  const [name, setName] = useState("")
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  function handleClose() { setOpen(false); setApiToken(""); setName(""); setError(null) }
+
+  async function handleSave() {
+    if (!apiToken.trim()) return
+    setLoading(true); setError(null)
+    try {
+      await connectors.createHubSpot(orgId, apiToken.trim(), name.trim() || undefined)
+      handleClose(); onSaved()
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Failed to connect")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <>
+      <Button size="sm" variant="outline" className="text-xs" onClick={() => { setError(null); setOpen(true) }}>
+        Connect
+      </Button>
+      {open && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/40" onClick={handleClose} />
+          <div className="relative z-10 w-full max-w-md rounded-xl border bg-card shadow-xl p-6 space-y-4">
+            <h2 className="text-base font-semibold">Connect HubSpot</h2>
+            <ol className="text-xs text-muted-foreground space-y-1 list-decimal list-inside">
+              <li>In HubSpot, go to <strong>Settings → Integrations → Private apps</strong>.</li>
+              <li>Create a Private App with scopes: <code className="bg-muted px-1 rounded text-[10px]">crm.objects.contacts.read/write</code>, <code className="bg-muted px-1 rounded text-[10px]">crm.objects.deals.read/write</code>, <code className="bg-muted px-1 rounded text-[10px]">crm.objects.notes.read/write</code>.</li>
+              <li>Copy the generated token and paste it below.</li>
+            </ol>
+            <div className="space-y-3">
+              <div className="space-y-1">
+                <Label className="text-xs">Private App Token</Label>
+                <Input
+                  type="password"
+                  placeholder="pat-na1-xxxxxxxx-…"
+                  value={apiToken}
+                  onChange={(e) => setApiToken(e.target.value)}
+                  className="h-8 text-xs font-mono"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Name (optional)</Label>
+                <Input
+                  placeholder="HubSpot"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  className="h-8 text-xs"
+                />
+              </div>
+            </div>
+            {error && <p className="text-xs text-destructive">{error}</p>}
+            <div className="flex justify-end gap-2 pt-2">
+              <Button size="sm" variant="ghost" onClick={handleClose}>Cancel</Button>
+              <Button size="sm" onClick={handleSave} disabled={loading || !apiToken.trim()}>
+                {loading ? "Connecting…" : "Connect"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  )
+}
+
+// ── Pipedrive modal ───────────────────────────────────────────────────────────
+
+function PipedriveModal({ orgId, onSaved }: { orgId: string; onSaved: () => void }) {
+  const [open, setOpen] = useState(false)
+  const [apiToken, setApiToken] = useState("")
+  const [name, setName] = useState("")
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  function handleClose() { setOpen(false); setApiToken(""); setName(""); setError(null) }
+
+  async function handleSave() {
+    if (!apiToken.trim()) return
+    setLoading(true); setError(null)
+    try {
+      await connectors.createPipedrive(orgId, apiToken.trim(), name.trim() || undefined)
+      handleClose(); onSaved()
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Failed to connect")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <>
+      <Button size="sm" variant="outline" className="text-xs" onClick={() => { setError(null); setOpen(true) }}>
+        Connect
+      </Button>
+      {open && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/40" onClick={handleClose} />
+          <div className="relative z-10 w-full max-w-md rounded-xl border bg-card shadow-xl p-6 space-y-4">
+            <h2 className="text-base font-semibold">Connect Pipedrive</h2>
+            <p className="text-sm text-muted-foreground">
+              In Pipedrive, go to <strong>Settings → Personal preferences → API</strong> and copy your API token.
+            </p>
+            <div className="space-y-3">
+              <div className="space-y-1">
+                <Label className="text-xs">API Token</Label>
+                <Input
+                  type="password"
+                  placeholder="xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+                  value={apiToken}
+                  onChange={(e) => setApiToken(e.target.value)}
+                  className="h-8 text-xs font-mono"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Name (optional)</Label>
+                <Input
+                  placeholder="Pipedrive"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  className="h-8 text-xs"
+                />
+              </div>
+            </div>
+            {error && <p className="text-xs text-destructive">{error}</p>}
+            <div className="flex justify-end gap-2 pt-2">
+              <Button size="sm" variant="ghost" onClick={handleClose}>Cancel</Button>
+              <Button size="sm" onClick={handleSave} disabled={loading || !apiToken.trim()}>
+                {loading ? "Connecting…" : "Connect"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   )
 }
 
@@ -1814,6 +1981,8 @@ function AvailableCard({ type, catalogKey, label, description, icon, iconSrc, au
     if (type === "google_sheets") return <GoogleSheetsModal orgId={orgId} onSaved={onSaved} />
     if (type === "whatsapp") return <WhatsAppModal orgId={orgId} onSaved={onSaved} />
     if (type === "instagram") return <InstagramOAuthButton orgId={orgId} />
+    if (type === "hubspot") return <HubSpotModal orgId={orgId} onSaved={onSaved} />
+    if (type === "pipedrive") return <PipedriveModal orgId={orgId} onSaved={onSaved} />
     if (type === "mcp" && authMethod === "mcp_oauth") return (
       <McpOauthAppModal
         orgId={orgId}

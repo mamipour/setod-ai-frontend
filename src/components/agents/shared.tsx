@@ -42,6 +42,8 @@ export const CONNECTOR_ICON: Partial<Record<string, string>> = {
   google_sheets: "/google-sheet.svg",
   whatsapp: "/whatsapp.svg",
   instagram: "/instagram.svg",
+  hubspot: "/hubspot.svg",
+  pipedrive: "/pipedrive.svg",
 }
 
 const MCP_ICON_BY_LABEL: Array<[string, string]> = [
@@ -98,6 +100,24 @@ export const CONNECTOR_TOOLS: Partial<Record<string, Array<{ name: string; descr
     { name: "delete_instagram_comment",      description: "Permanently delete a comment" },
     { name: "read_instagram_messages",       description: "List recent inbound DMs" },
     { name: "reply_to_instagram_dm",         description: "Reply to a DM (within 24-hour window)" },
+  ],
+  hubspot: [
+    { name: "find_hubspot_contact",           description: "Look up a contact by email" },
+    { name: "create_hubspot_contact",         description: "Create a new contact" },
+    { name: "update_hubspot_contact",         description: "Update contact properties" },
+    { name: "create_hubspot_deal",            description: "Open a new deal (optionally linked to a contact)" },
+    { name: "move_hubspot_deal",              description: "Move a deal to a different pipeline stage" },
+    { name: "log_hubspot_note",               description: "Log a timestamped note on a contact" },
+    { name: "list_hubspot_pipeline_stages",   description: "List pipelines and their stage ids" },
+  ],
+  pipedrive: [
+    { name: "find_pipedrive_person",          description: "Look up a person by email" },
+    { name: "create_pipedrive_person",        description: "Create a new person" },
+    { name: "update_pipedrive_person",        description: "Update person fields" },
+    { name: "create_pipedrive_deal",          description: "Open a new deal (optionally linked to a person)" },
+    { name: "move_pipedrive_deal",            description: "Move a deal to a different stage" },
+    { name: "log_pipedrive_activity",         description: "Log a note/activity on a person or deal" },
+    { name: "list_pipedrive_stages",          description: "List pipeline stages and their ids" },
   ],
 }
 

@@ -63,7 +63,7 @@ export const auth = {
 
 // ── Connectors ────────────────────────────────────────────────────────────────
 
-export type ConnectorType = "gmail" | "telegram_bot" | "telegram_client" | "twilio" | "webhook" | "slack_webhook" | "google_sheets" | "whatsapp" | "instagram" | "openai" | "anthropic" | "mcp"
+export type ConnectorType = "gmail" | "telegram_bot" | "telegram_client" | "twilio" | "webhook" | "slack_webhook" | "google_sheets" | "whatsapp" | "instagram" | "hubspot" | "pipedrive" | "openai" | "anthropic" | "mcp"
 export type ConnectorStatus = "active" | "error" | "pending_auth" | "revoked"
 
 export interface Connector {
@@ -294,6 +294,18 @@ export const connectors = {
         verify_token: verifyToken,
         name: name ?? "",
       }),
+    }),
+
+  createHubSpot: (orgId: string, apiToken: string, name?: string): Promise<Connector> =>
+    apiFetch("/connectors/hubspot", {
+      method: "POST",
+      body: JSON.stringify({ org_id: orgId, api_token: apiToken, name: name ?? "" }),
+    }),
+
+  createPipedrive: (orgId: string, apiToken: string, name?: string): Promise<Connector> =>
+    apiFetch("/connectors/pipedrive", {
+      method: "POST",
+      body: JSON.stringify({ org_id: orgId, api_token: apiToken, name: name ?? "" }),
     }),
 }
 
