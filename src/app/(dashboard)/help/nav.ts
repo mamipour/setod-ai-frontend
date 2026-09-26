@@ -13,6 +13,7 @@ export const HELP_NAV = [
   { href: "/help/publishing", title: "Testing and publishing" },
   { href: "/help/runs", title: "Runs and troubleshooting" },
   { href: "/help/approvals", title: "Tool approvals" },
+  { href: "/help/conversations", title: "Conversations and media" },
   { href: "/help/memory", title: "How it avoids repeating itself" },
   { href: "/help/settings", title: "Settings, cost and limits" },
   { href: "/help/security", title: "Security and what's missing" },

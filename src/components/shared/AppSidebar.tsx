@@ -13,6 +13,7 @@ import {
   LayoutTemplate,
   LogOut,
   Menu,
+  MessageCircle,
   Monitor,
   Moon,
   PanelLeft,
@@ -39,13 +40,14 @@ import type { OrgMembership } from "@/lib/api"
 // ── Nav definition ────────────────────────────────────────────────────────────
 
 const NAV_MAIN: { href: string; label: string; Icon: LucideIcon }[] = [
-  { href: "/dashboard",  label: "Dashboard",  Icon: LayoutDashboard },
-  { href: "/agents",     label: "Agents",     Icon: Bot },
-  { href: "/templates",  label: "Templates",  Icon: LayoutTemplate },
-  { href: "/connectors", label: "Connectors", Icon: Plug },
-  { href: "/skills",     label: "Skills",     Icon: Wand2 },
-  { href: "/notes",      label: "Notes",      Icon: StickyNote },
-  { href: "/approvals",  label: "Approvals",  Icon: ShieldCheck },
+  { href: "/dashboard",      label: "Dashboard",      Icon: LayoutDashboard },
+  { href: "/agents",         label: "Agents",         Icon: Bot },
+  { href: "/templates",      label: "Templates",      Icon: LayoutTemplate },
+  { href: "/connectors",     label: "Connectors",     Icon: Plug },
+  { href: "/conversations",  label: "Conversations",  Icon: MessageCircle },
+  { href: "/skills",         label: "Skills",         Icon: Wand2 },
+  { href: "/notes",          label: "Notes",          Icon: StickyNote },
+  { href: "/approvals",      label: "Approvals",      Icon: ShieldCheck },
 ]
 
 const NAV_WORKSPACE: { href: string; label: string; Icon: LucideIcon }[] = [
