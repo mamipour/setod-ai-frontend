@@ -82,8 +82,8 @@ const CATALOGUE: CatalogueEntry[] = [
   },
   {
     type: "slack_webhook",
-    label: "Slack",
-    description: "Post messages to a Slack channel via an Incoming Webhook URL.",
+    label: "Slack Webhook",
+    description: "Post outbound messages to a Slack channel via an Incoming Webhook URL.",
     icon: "#",
     iconSrc: "/slack.svg",
     authMethod: "api_key",
@@ -217,8 +217,8 @@ const CATALOGUE: CatalogueEntry[] = [
   {
     type: "mcp",
     catalogKey: "notion",
-    label: "Notion",
-    description: "Read and update Notion pages and databases.",
+    label: "Notion (MCP)",
+    description: "Read and update Notion pages and databases via Notion's official MCP server.",
     icon: "N",
     iconSrc: "/notion.svg",
     authMethod: "mcp_oauth",
@@ -229,8 +229,8 @@ const CATALOGUE: CatalogueEntry[] = [
   {
     type: "mcp",
     catalogKey: "slack",
-    label: "Slack",
-    description: "Read channels and post messages through Slack MCP.",
+    label: "Slack (MCP)",
+    description: "Read channels, search messages, and post anywhere via Slack's official MCP server.",
     icon: "#",
     iconSrc: "/slack.svg",
     authMethod: "mcp_oauth",
@@ -927,17 +927,17 @@ function WebhookModal({ orgId, onSaved }: { orgId: string; onSaved: () => void }
 function SlackWebhookModal({ orgId, onSaved }: { orgId: string; onSaved: () => void }) {
   const [open, setOpen] = useState(false)
   const [webhookUrl, setWebhookUrl] = useState("")
-  const [name, setName] = useState("Slack")
+  const [name, setName] = useState("Slack Webhook")
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  function handleClose() { setOpen(false); setWebhookUrl(""); setName("Slack"); setError(null) }
+  function handleClose() { setOpen(false); setWebhookUrl(""); setName("Slack Webhook"); setError(null) }
 
   async function handleSave() {
     if (!webhookUrl.trim()) return
     setLoading(true); setError(null)
     try {
-      await connectors.createSlackWebhook(orgId, webhookUrl.trim(), name.trim() || "Slack")
+      await connectors.createSlackWebhook(orgId, webhookUrl.trim(), name.trim() || "Slack Webhook")
       handleClose(); onSaved()
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Failed to connect")
@@ -955,7 +955,7 @@ function SlackWebhookModal({ orgId, onSaved }: { orgId: string; onSaved: () => v
         <div className="fixed inset-0 z-50 flex items-center justify-center">
           <div className="absolute inset-0 bg-black/40" onClick={handleClose} />
           <div className="relative z-10 w-full max-w-md rounded-xl border bg-card shadow-xl p-6 space-y-4">
-            <h2 className="text-base font-semibold">Connect Slack</h2>
+            <h2 className="text-base font-semibold">Connect Slack Webhook</h2>
             <p className="text-sm text-muted-foreground">
               In Slack, go to <strong>Apps → Incoming Webhooks</strong> and create one for the channel
               you want. Paste the webhook URL below — a test message is sent immediately to confirm.
