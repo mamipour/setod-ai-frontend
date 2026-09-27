@@ -214,11 +214,11 @@ export default function ConversationsPage() {
   const currentStatus = thread?.conversation.status ?? "open"
 
   return (
-    <div className="flex h-[calc(100vh-4rem)] overflow-hidden">
+    <div className="flex h-[calc(100vh-4rem)] overflow-hidden p-4 gap-3">
       {/* ── Thread list ─────────────────────────────────────────────────────── */}
       <aside
         className={cn(
-          "w-full md:w-80 border-r flex flex-col shrink-0",
+          "w-full md:w-80 border rounded-xl flex flex-col shrink-0",
           selected ? "hidden md:flex" : "flex",
         )}
       >
@@ -282,7 +282,7 @@ export default function ConversationsPage() {
       {/* ── Thread view ─────────────────────────────────────────────────────── */}
       <div
         className={cn(
-          "flex-1 flex flex-col min-w-0",
+          "flex-1 flex flex-col min-w-0 border rounded-xl overflow-hidden",
           !selected ? "hidden md:flex" : "flex",
         )}
       >
