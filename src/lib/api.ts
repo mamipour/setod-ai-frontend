@@ -945,7 +945,20 @@ export interface WebSearchSettings {
   tavily_key_set: boolean
 }
 
+export interface TimezoneSettings {
+  timezone: string
+}
+
 export const workspace = {
+  getTimezone: (orgId: string): Promise<TimezoneSettings> =>
+    apiFetch(`/workspace/${orgId}/timezone`),
+
+  updateTimezone: (orgId: string, timezone: string): Promise<TimezoneSettings> =>
+    apiFetch(`/workspace/${orgId}/timezone`, {
+      method: "PATCH",
+      body: JSON.stringify({ timezone }),
+    }),
+
   getWebSearch: (orgId: string): Promise<WebSearchSettings> =>
     apiFetch(`/workspace/${orgId}/web-search`),
 

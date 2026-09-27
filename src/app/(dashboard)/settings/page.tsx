@@ -471,6 +471,77 @@ function WorkspaceNameRow({ orgId }: { orgId: string }) {
   )
 }
 
+// ── Timezone row ─────────────────────────────────────────────────────────────
+
+// Common IANA timezones — enough for a useful picker without being overwhelming
+const COMMON_TIMEZONES = [
+  "UTC",
+  "America/St_Johns",
+  "America/Halifax",
+  "America/Toronto",
+  "America/New_York",
+  "America/Chicago",
+  "America/Denver",
+  "America/Phoenix",
+  "America/Los_Angeles",
+  "America/Anchorage",
+  "America/Honolulu",
+  "Europe/London",
+  "Europe/Paris",
+  "Europe/Berlin",
+  "Europe/Amsterdam",
+  "Europe/Istanbul",
+  "Asia/Dubai",
+  "Asia/Karachi",
+  "Asia/Kolkata",
+  "Asia/Dhaka",
+  "Asia/Bangkok",
+  "Asia/Singapore",
+  "Asia/Tokyo",
+  "Asia/Seoul",
+  "Australia/Sydney",
+  "Pacific/Auckland",
+]
+
+function TimezoneRow({ orgId }: { orgId: string }) {
+  const [tz, setTz] = useState<string>("UTC")
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    workspace.getTimezone(orgId).then((r) => setTz(r.timezone)).catch(() => {})
+  }, [orgId])
+
+  async function save(next: string) {
+    setSaving(true); setError(null)
+    try { const r = await workspace.updateTimezone(orgId, next); setTz(r.timezone) }
+    catch (e: unknown) { setError(e instanceof Error ? e.message : "Failed to save") }
+    finally { setSaving(false) }
+  }
+
+  return (
+    <SettingRow
+      label="Workspace timezone"
+      description="Times in agent prompts, run logs, and notifications use this timezone. Set it to where your team is located."
+    >
+      <div className="flex items-center gap-2">
+        <select
+          value={tz}
+          onChange={(e) => save(e.target.value)}
+          disabled={saving}
+          className="h-8 rounded-md border bg-transparent px-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring disabled:opacity-50"
+        >
+          {COMMON_TIMEZONES.map((z) => (
+            <option key={z} value={z}>{z}</option>
+          ))}
+        </select>
+        {saving && <span className="text-xs text-muted-foreground">Saving…</span>}
+      </div>
+      {error && <p className="mt-1 text-xs text-destructive">{error}</p>}
+    </SettingRow>
+  )
+}
+
 // ── Side nav ──────────────────────────────────────────────────────────────────
 
 const NAV_ITEMS = [
@@ -582,6 +653,7 @@ function SettingsPageInner() {
 
           <Section id="workspace" title="Workspace">
             <WorkspaceNameRow orgId={orgId} />
+            <TimezoneRow orgId={orgId} />
           </Section>
 
         </div>
