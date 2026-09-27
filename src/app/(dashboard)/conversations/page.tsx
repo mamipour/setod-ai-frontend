@@ -236,14 +236,12 @@ export default function ConversationsPage() {
         </div>
 
         {list.length === 0 && !loadingList && (
-          <div className="flex-1 flex items-center justify-center text-sm text-muted-foreground p-8 text-center">
-            <div>
-              <MessageCircle className="mx-auto mb-2 opacity-40" size={32} />
-              <p>No conversations yet.</p>
-              <p className="text-xs mt-1 opacity-70">
-                Messages from Telegram, WhatsApp, Instagram, or SMS will appear here.
-              </p>
-            </div>
+          <div className="px-6 pt-10 text-sm text-muted-foreground">
+            <MessageCircle className="mb-3 opacity-30" size={28} />
+            <p className="font-medium text-foreground/60">No conversations yet</p>
+            <p className="text-xs mt-1 leading-relaxed opacity-70">
+              Messages from Telegram, WhatsApp, Instagram, or SMS will appear here.
+            </p>
           </div>
         )}
 
