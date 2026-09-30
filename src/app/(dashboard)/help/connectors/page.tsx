@@ -161,7 +161,8 @@ export default function ConnectorsHelp() {
         </P>
       </Section>
 
-      <Section title="Google Sheets" id="google-sheets">
+      {/* Google Sheets — disabled, use Airtable instead */}
+      {/* <Section title="Google Sheets" id="google-sheets">
         <P>
           Lets an agent read and write Google Sheets using a service account — a special
           Google account that authenticates without OAuth and never expires.
@@ -178,7 +179,7 @@ export default function ConnectorsHelp() {
           spreadsheets with it at any time. Tools: <C>read_rows</C>, <C>append_row</C>,{" "}
           <C>update_cell</C>.
         </P>
-      </Section>
+      </Section> */}
 
       <Section title="WhatsApp Business" id="whatsapp">
         <P>

@@ -28,7 +28,7 @@ export const CONNECTOR_LABEL: Record<ConnectorType, string> = {
   twilio: "Text messaging",
   webhook: "Inbound webhook",
   slack_webhook: "Slack",
-  google_sheets: "Google Sheets",
+  google_sheets: "Google Sheets", // disabled — hidden from UI, keep for type-safety
   whatsapp: "WhatsApp",
   instagram: "Instagram",
   hubspot: "HubSpot",
@@ -245,7 +245,7 @@ function SetupAgent({
   const isScratch = template.key === ""
   const wanted = isScratch
     ? // Scratch: every tool connector type that has at least one active connection becomes optional.
-      (["gmail", "telegram_bot", "telegram_client", "twilio", "whatsapp", "instagram", "slack_webhook", "google_sheets"] as ConnectorType[]).filter((t) =>
+      (["gmail", "telegram_bot", "telegram_client", "twilio", "whatsapp", "instagram", "slack_webhook" /*, "google_sheets" */] as ConnectorType[]).filter((t) =>
         connectors.some((c) => c.type === t && c.status === "active"),
       )
     : [...template.required_connectors, ...template.optional_connectors]

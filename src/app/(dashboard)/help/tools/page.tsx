@@ -118,7 +118,8 @@ export default function ToolsHelp() {
         />
       </Section>
 
-      <Section title="Google Sheets">
+      {/* Google Sheets — disabled, use Airtable instead */}
+      {/* <Section title="Google Sheets">
         <Table
           head={["Tool", "What it does"]}
           rows={[
@@ -136,7 +137,7 @@ export default function ToolsHelp() {
             ],
           ]}
         />
-      </Section>
+      </Section> */}
 
       <Section title="WhatsApp Business">
         <Table

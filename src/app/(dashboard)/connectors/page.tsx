@@ -90,16 +90,17 @@ const CATALOGUE: CatalogueEntry[] = [
     available: true,
     category: "Automation",
   },
-  {
-    type: "google_sheets",
-    label: "Google Sheets",
-    description: "Read and write spreadsheet data using a service account.",
-    icon: "📊",
-    iconSrc: "/google-sheet.svg",
-    authMethod: "api_key",
-    available: true,
-    category: "Automation",
-  },
+  // google_sheets: disabled — use Airtable instead (easier to connect)
+  // {
+  //   type: "google_sheets",
+  //   label: "Google Sheets",
+  //   description: "Read and write spreadsheet data using a service account.",
+  //   icon: "📊",
+  //   iconSrc: "/google-sheet.svg",
+  //   authMethod: "api_key",
+  //   available: true,
+  //   category: "Automation",
+  // },
   {
     type: "whatsapp",
     label: "WhatsApp Business",
@@ -604,9 +605,9 @@ const CRED_FIELDS: Partial<Record<string, CredFields>> = {
     { label: "Auth Token", key: "auth_token", type: "password", placeholder: "Auth token" },
     { label: "Phone Number", key: "phone_number", placeholder: "+16135550100" },
   ],
-  google_sheets: [
-    { label: "Service Account JSON", key: "sa_json", type: "textarea", placeholder: '{"type":"service_account",...}' },
-  ],
+  // google_sheets: [
+  //   { label: "Service Account JSON", key: "sa_json", type: "textarea", placeholder: '{"type":"service_account",...}' },
+  // ],
   whatsapp: [
     { label: "Phone Number ID", key: "phone_number_id", placeholder: "From WhatsApp Business dashboard" },
     { label: "Access Token", key: "access_token", type: "password", placeholder: "EAAxx..." },
@@ -2573,7 +2574,7 @@ function AvailableCard({ type, catalogKey, label, description, icon, iconSrc, au
     if (type === "twilio") return <TwilioModal orgId={orgId} onSaved={onSaved} />
     if (type === "webhook") return <WebhookModal orgId={orgId} onSaved={onSaved} />
     if (type === "slack_webhook") return <SlackWebhookModal orgId={orgId} onSaved={onSaved} />
-    if (type === "google_sheets") return <GoogleSheetsModal orgId={orgId} onSaved={onSaved} />
+    // if (type === "google_sheets") return <GoogleSheetsModal orgId={orgId} onSaved={onSaved} />
     if (type === "whatsapp") return <WhatsAppModal orgId={orgId} onSaved={onSaved} />
     if (type === "instagram") return <InstagramOAuthButton orgId={orgId} />
     if (type === "hubspot") return <HubSpotModal orgId={orgId} onSaved={onSaved} />
