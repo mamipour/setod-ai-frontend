@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server"
 
-const PUBLIC_PATHS = ["/", "/login", "/invite", "/terms", "/privacy"]
+const PUBLIC_PATHS = ["/", "/login", "/invite", "/terms", "/privacy", "/help"]
 
 // Reachable by anyone, signed in or not  -  landing + legal pages must never bounce.
-const UNRESTRICTED_PATHS = ["/", "/invite", "/terms", "/privacy"]
+const UNRESTRICTED_PATHS = ["/", "/invite", "/terms", "/privacy", "/help"]
 
 export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl
