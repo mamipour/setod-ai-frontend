@@ -232,29 +232,6 @@ export default function ConnectorsHelp() {
         </P>
       </Section>
 
-      <Section title="Notion" id="notion">
-        <P>
-          Connects via an <strong>Internal Integration Secret</strong>. Create the
-          integration at{" "}
-          <a href="https://www.notion.so/my-integrations" target="_blank" rel="noreferrer" className="underline underline-offset-2">notion.so/my-integrations</a>{" "}
-          with Read/Update/Insert content capabilities. After creating it, you must share
-          each page or database with the integration from Notion&apos;s{" "}
-          <strong>⋯ → Connections</strong> menu — the agent can only see pages you have
-          explicitly shared.
-        </P>
-        <P>
-          Tools: <C>search_notion</C>, <C>get_notion_page</C>,{" "}
-          <C>query_notion_database</C>, <C>create_notion_page</C>,{" "}
-          <C>update_notion_page</C>, <C>append_notion_content</C>.
-        </P>
-        <Callout tone="info" title="Share pages first">
-          <p>
-            If the agent says &quot;no results&quot; or &quot;not found&quot;, it most likely
-            means the page was not shared with the integration. Open the page in Notion,
-            click ⋯ → Connections, and add your integration there.
-          </p>
-        </Callout>
-      </Section>
 
       <Section title="Airtable" id="airtable">
         <P>

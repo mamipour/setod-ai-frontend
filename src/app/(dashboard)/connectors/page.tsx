@@ -142,16 +142,6 @@ const CATALOGUE: CatalogueEntry[] = [
     category: "CRM",
   },
   {
-    type: "notion",
-    label: "Notion",
-    description: "Search pages, query databases, create rows, and append notes in Notion.",
-    icon: "N",
-    iconSrc: "/notion.svg",
-    authMethod: "api_key",
-    available: true,
-    category: "Productivity",
-  },
-  {
     type: "airtable",
     label: "Airtable",
     description: "List, find, create and update Airtable records across your bases.",
@@ -619,7 +609,6 @@ const CRED_FIELDS: Partial<Record<string, CredFields>> = {
   ],
   hubspot: [{ label: "API Token", key: "api_token", type: "password", placeholder: "pat-na1-..." }],
   pipedrive: [{ label: "API Token", key: "api_token", type: "password", placeholder: "Pipedrive API token" }],
-  notion: [{ label: "Integration Token", key: "api_token", type: "password", placeholder: "secret_..." }],
   airtable: [{ label: "Personal Access Token", key: "api_token", type: "password", placeholder: "pat..." }],
   calendly: [{ label: "API Token", key: "api_token", type: "password", placeholder: "Calendly personal token" }],
   slack_webhook: [{ label: "Webhook URL", key: "webhook_url", placeholder: "https://hooks.slack.com/..." }],
@@ -1246,78 +1235,6 @@ function PipedriveModal({ orgId, onSaved }: { orgId: string; onSaved: () => void
 
 // ── Notion modal ─────────────────────────────────────────────────────────────
 
-function NotionModal({ orgId, onSaved }: { orgId: string; onSaved: () => void }) {
-  const [open, setOpen] = useState(false)
-  const [apiToken, setApiToken] = useState("")
-  const [name, setName] = useState("")
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-
-  function handleClose() { setOpen(false); setApiToken(""); setName(""); setError(null) }
-
-  async function handleSave() {
-    if (!apiToken.trim()) return
-    setLoading(true); setError(null)
-    try {
-      await connectors.createNotion(orgId, apiToken.trim(), name.trim() || undefined)
-      handleClose(); onSaved()
-    } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Failed to connect")
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  return (
-    <>
-      <Button size="sm" variant="outline" className="text-xs" onClick={() => { setError(null); setOpen(true) }}>
-        Connect
-      </Button>
-      {open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
-          <div className="absolute inset-0 bg-black/40" onClick={handleClose} />
-          <div className="relative z-10 w-full max-w-md rounded-xl border bg-card shadow-xl p-6 space-y-4">
-            <h2 className="text-base font-semibold">Connect Notion</h2>
-            <ol className="text-xs text-muted-foreground space-y-1 list-decimal list-inside">
-              <li>Go to <a href="https://www.notion.so/my-integrations" target="_blank" rel="noopener noreferrer" className="underline">notion.so/my-integrations</a> and click <strong>New integration</strong>.</li>
-              <li>Give it a name and select your workspace. Under <strong>Capabilities</strong>, enable Read/Update/Insert content.</li>
-              <li>Copy the <strong>Internal Integration Secret</strong> and paste it below.</li>
-              <li>In Notion, open each page or database you want the agent to access → <strong>⋯ → Connections → Add connection</strong> → select your integration.</li>
-            </ol>
-            <div className="space-y-3">
-              <div className="space-y-1">
-                <Label className="text-xs">Integration Secret</Label>
-                <Input
-                  type="password"
-                  placeholder="secret_…"
-                  value={apiToken}
-                  onChange={(e) => setApiToken(e.target.value)}
-                  className="h-8 text-xs font-mono"
-                />
-              </div>
-              <div className="space-y-1">
-                <Label className="text-xs">Name (optional)</Label>
-                <Input
-                  placeholder="Notion"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  className="h-8 text-xs"
-                />
-              </div>
-            </div>
-            {error && <p className="text-xs text-destructive">{error}</p>}
-            <div className="flex justify-end gap-2 pt-2">
-              <Button size="sm" variant="ghost" onClick={handleClose}>Cancel</Button>
-              <Button size="sm" onClick={handleSave} disabled={loading || !apiToken.trim()}>
-                {loading ? "Connecting…" : "Connect"}
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
-    </>
-  )
-}
 
 // ── Airtable modal ────────────────────────────────────────────────────────────
 
@@ -2579,7 +2496,6 @@ function AvailableCard({ type, catalogKey, label, description, icon, iconSrc, au
     if (type === "instagram") return <InstagramOAuthButton orgId={orgId} />
     if (type === "hubspot") return <HubSpotModal orgId={orgId} onSaved={onSaved} />
     if (type === "pipedrive") return <PipedriveModal orgId={orgId} onSaved={onSaved} />
-    if (type === "notion") return <NotionModal orgId={orgId} onSaved={onSaved} />
     if (type === "airtable") return <AirtableModal orgId={orgId} onSaved={onSaved} />
     if (type === "shopify") return <ShopifyModal orgId={orgId} onSaved={onSaved} />
     if (type === "google_business_profile") {
