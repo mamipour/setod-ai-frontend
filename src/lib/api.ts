@@ -949,7 +949,44 @@ export interface TimezoneSettings {
   timezone: string
 }
 
+// ── Workspace graph (read-only map) ───────────────────────────────────────────
+
+export interface GraphNode {
+  id: string
+  kind: "agent" | "connector"
+  name: string
+  icon?: string | null
+  status?: string | null
+  model?: string | null
+  schedule?: string | null
+  last_run_at?: string | null
+  last_run_status?: string | null
+  runs_24h: number
+  running: boolean
+  type?: string | null
+}
+
+export interface GraphEdge {
+  id: string
+  source: string
+  target: string
+  kind: "uses" | "trigger" | "calls"
+  label?: string | null
+  active: boolean
+  count_24h: number
+}
+
+export interface WorkspaceGraph {
+  nodes: GraphNode[]
+  edges: GraphEdge[]
+  generated_at: string
+  window_hours: number
+}
+
 export const workspace = {
+  getGraph: (orgId: string): Promise<WorkspaceGraph> =>
+    apiFetch(`/workspace/${orgId}/graph`),
+
   getTimezone: (orgId: string): Promise<TimezoneSettings> =>
     apiFetch(`/workspace/${orgId}/timezone`),
 
