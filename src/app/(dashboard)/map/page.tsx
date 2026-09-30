@@ -162,6 +162,7 @@ function MapInner() {
             zoomOnDoubleClick={false}
             minZoom={0.3}
             maxZoom={1.75}
+            proOptions={{ hideAttribution: true }}
             className="!bg-background"
           >
             <Background variant={BackgroundVariant.Dots} gap={20} size={1} />
