@@ -377,8 +377,9 @@ const DEFAULT_PRICE: [number, number] = [0.75, 4.50]  // gpt-5.4-mini (platform 
 
 function priceFor(modelSlug: string): [number, number] {
   if (!modelSlug) return DEFAULT_PRICE
-  // Try exact match first, then prefix match.
-  for (const [key, price] of Object.entries(MODEL_PRICING)) {
+  // Sort longest key first so "gpt-5.4-mini" wins over "gpt-5" on prefix matches.
+  const entries = Object.entries(MODEL_PRICING).sort((a, b) => b[0].length - a[0].length)
+  for (const [key, price] of entries) {
     if (modelSlug === key || modelSlug.startsWith(key)) return price
   }
   return DEFAULT_PRICE
