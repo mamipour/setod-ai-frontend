@@ -19,6 +19,12 @@ function Navbar() {
         {!onLogin && (
           <div className="flex items-center gap-5">
             <Link
+              href="/help"
+              className="text-sm text-muted-foreground transition-colors hover:text-foreground"
+            >
+              Docs
+            </Link>
+            <Link
               href="/login"
               className="text-sm text-muted-foreground transition-colors hover:text-foreground"
             >
@@ -43,6 +49,7 @@ function Footer() {
           <span>© {new Date().getFullYear()} setod</span>
         </div>
         <div className="flex gap-5">
+          <Link href="/help" className="transition-colors hover:text-foreground">Docs</Link>
           <Link href="/terms" className="transition-colors hover:text-foreground">Terms</Link>
           <Link href="/privacy" className="transition-colors hover:text-foreground">Privacy</Link>
           <Link href="/login" className="transition-colors hover:text-foreground">Sign in</Link>
