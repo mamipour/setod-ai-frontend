@@ -16,9 +16,12 @@ export default function HelpPublicLayout({ children }: { children: React.ReactNo
       {/* Top bar */}
       <header className="sticky top-0 z-30 border-b bg-background/95 backdrop-blur">
         <div className="mx-auto flex h-12 max-w-5xl items-center justify-between gap-4 px-4">
-          <Link href="/help" className="flex items-center gap-2 text-sm font-semibold">
+          <Link href="/" className="flex items-center gap-2 text-sm font-semibold">
             <span className="flex size-6 items-center justify-center rounded-md bg-primary text-primary-foreground text-xs font-bold">S</span>
-            <span>Setod Docs</span>
+            <span>Setod</span>
+          </Link>
+          <Link href="/help" className="text-sm text-muted-foreground transition-colors hover:text-foreground">
+            Docs
           </Link>
           <Link
             href="/dashboard"
