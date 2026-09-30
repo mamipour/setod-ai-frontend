@@ -352,6 +352,8 @@ export function duration(startedAt: string, finishedAt: string | null): string {
 /** Per-model pricing (USD per million tokens): [input_price, output_price]. */
 const MODEL_PRICING: Record<string, [number, number]> = {
   // OpenAI
+  "gpt-5.4":             [2.50,  10.00],
+  "gpt-5.4-mini":        [0.75,   4.50],
   "gpt-4o":              [2.50,  10.00],
   "gpt-4o-mini":         [0.15,   0.60],
   "gpt-4-turbo":         [10.00, 30.00],
@@ -369,7 +371,7 @@ const MODEL_PRICING: Record<string, [number, number]> = {
   "claude-haiku-3":      [0.25,   1.25],
 }
 
-const DEFAULT_PRICE: [number, number] = [0.15, 0.60]  // gpt-4o-mini (platform default model)
+const DEFAULT_PRICE: [number, number] = [0.75, 4.50]  // gpt-5.4-mini (platform default model)
 
 function priceFor(modelSlug: string): [number, number] {
   if (!modelSlug) return DEFAULT_PRICE
