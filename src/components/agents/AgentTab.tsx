@@ -21,6 +21,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { BrainPicker, connectorIconSrc, Modal, TRIGGER_LABEL, untilNow } from "@/components/agents/shared"
 
 type Snapshot = {
@@ -138,17 +139,18 @@ function AgentCallModal({
               No other published agents available in this workspace.
             </p>
           ) : (
-            <select
-              id="call-target"
-              value={targetId}
-              onChange={(e) => setTargetId(e.target.value)}
-              className="w-full rounded-md border bg-transparent px-2.5 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-ring"
-            >
-              <option value="">Select an agent…</option>
-              {choices.map((a) => (
-                <option key={a.id} value={a.id}>{a.name}</option>
-              ))}
-            </select>
+            <Select value={targetId} onValueChange={(v) => setTargetId(v ?? "")}>
+              <SelectTrigger id="call-target" className="h-8 w-full text-xs">
+                <SelectValue placeholder="Select an agent…" />
+              </SelectTrigger>
+              <SelectContent>
+                {choices.map((a) => (
+                  <SelectItem key={a.id} value={a.id} className="text-xs">
+                    {a.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           )}
         </div>
 
