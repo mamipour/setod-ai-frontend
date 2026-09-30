@@ -403,8 +403,12 @@ export default function DashboardPage() {
             />
             <StatCard
               label="Spend today"
-              value={approxCost(overview.tokens_today)}
-              trend={diff(overview.tokens_today, overview.tokens_yesterday)}
+              value={
+                overview.spend_today < 0.01
+                  ? "<$0.01"
+                  : `~$${overview.spend_today.toFixed(3)}`
+              }
+              trend={diff(overview.spend_today, overview.spend_yesterday)}
               foot={`${overview.tokens_today.toLocaleString()} tokens`}
             />
           </div>

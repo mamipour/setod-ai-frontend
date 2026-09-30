@@ -585,9 +585,13 @@ export interface Overview {
   runs_today: number
   failures_today: number
   tokens_today: number
+  /** Accurate per-model spend in USD (computed server-side). */
+  spend_today: number
   runs_yesterday: number
   failures_yesterday: number
   tokens_yesterday: number
+  /** Accurate per-model spend in USD for yesterday (computed server-side). */
+  spend_yesterday: number
   daily_runs: DailyRuns[]
   recent_sessions: OverviewSession[]
 }
