@@ -352,6 +352,8 @@ export function duration(startedAt: string, finishedAt: string | null): string {
 /** Per-model pricing (USD per million tokens): [input_price, output_price]. */
 const MODEL_PRICING: Record<string, [number, number]> = {
   // OpenAI
+  "gpt-5":               [10.00, 40.00],
+  "gpt-5-mini":          [0.25,   2.00],
   "gpt-5.4":             [2.50,  10.00],
   "gpt-5.4-mini":        [0.75,   4.50],
   "gpt-4o":              [2.50,  10.00],
