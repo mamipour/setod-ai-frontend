@@ -420,7 +420,7 @@ export function AgentTab({
           ) : (
             <div className="space-y-3">
               {tools.map((t) => (
-                <ToolGroup key={t.id} tool={t} agentId={agent.id} onChange={reload} onDetach={detach} />
+                <ToolGroup key={t.id} tool={t} agentId={agent.id} orgId={orgId} onChange={reload} onDetach={detach} />
               ))}
             </div>
           )}
@@ -788,17 +788,184 @@ function ModelPicker({
  * the tool actually runs. It is stored as a separate `approval_tools` list alongside
  * `enabled_tools` on the AgentTool row.
  */
-function ToolGroup({
+// ── Tables-specific access control ───────────────────────────────────────────
+function TablesToolGroup({
   tool,
   agentId,
+  orgId,
   onChange,
   onDetach,
 }: {
   tool: AgentTool
   agentId: string
+  orgId: string
   onChange: () => void
   onDetach: (connectorId: string) => void
 }) {
+  const [busy, setBusy] = useState(false)
+  const [tableNames, setTableNames] = useState<Record<string, string>>({}) // slug → display name
+
+  useEffect(() => {
+    tablesApi.list(orgId).then((tables) => {
+      const map: Record<string, string> = {}
+      tables.forEach((t) => { map[t.slug] = t.name })
+      setTableNames(map)
+    }).catch(() => {})
+  }, [orgId])
+
+  // Parse current enabled tools
+  const enabledSet = new Set(tool.tools.filter((t) => t.enabled).map((t) => t.name))
+  const allToolNames = tool.tools.map((t) => t.name)
+
+  // Unique table slugs from tool names (e.g. "leads_search" → "leads")
+  const slugs = [...new Set(
+    allToolNames
+      .filter((n) => n !== "query_tables")
+      .map((n) => n.replace(/_(?:search|get|create|update)$/, ""))
+  )]
+
+  function isReadEnabled(slug: string) {
+    return enabledSet.has(`${slug}_search`) || enabledSet.has(`${slug}_get`)
+  }
+  function isWriteEnabled(slug: string) {
+    return enabledSet.has(`${slug}_create`) || enabledSet.has(`${slug}_update`)
+  }
+  function isQueryEnabled() {
+    return enabledSet.has("query_tables")
+  }
+
+  async function saveEnabled(next: Set<string>) {
+    setBusy(true)
+    try {
+      await agents.attachTool(agentId, {
+        connector_id: tool.connector_id,
+        alias: tool.alias,
+        enabled_tools: next.size === allToolNames.length ? null : [...next],
+        approval_tools: null,
+      })
+      onChange()
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  function toggleRead(slug: string) {
+    const next = new Set(enabledSet)
+    const on = !isReadEnabled(slug)
+    ;[`${slug}_search`, `${slug}_get`].forEach((n) => on ? next.add(n) : next.delete(n))
+    saveEnabled(next)
+  }
+  function toggleWrite(slug: string) {
+    const next = new Set(enabledSet)
+    const on = !isWriteEnabled(slug)
+    ;[`${slug}_create`, `${slug}_update`].forEach((n) => on ? next.add(n) : next.delete(n))
+    saveEnabled(next)
+  }
+  function toggleQuery() {
+    const next = new Set(enabledSet)
+    isQueryEnabled() ? next.delete("query_tables") : next.add("query_tables")
+    saveEnabled(next)
+  }
+
+  const iconSrc = connectorIconSrc(tool.connector_type, tool.connector_name)
+
+  return (
+    <div className={cn("rounded-xl border p-3 space-y-3", busy && "opacity-60 pointer-events-none")}>
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2.5">
+          {iconSrc
+            ? <img src={iconSrc} alt="" width={20} height={20} className="shrink-0" />
+            : <div className="size-5 rounded bg-muted shrink-0" />}
+          <p className="text-sm font-medium">{tool.connector_name}</p>
+        </div>
+        <Button size="sm" variant="ghost" className="text-xs text-muted-foreground" onClick={() => onDetach(tool.connector_id)}>
+          <Trash2 className="size-3.5" />
+        </Button>
+      </div>
+
+      {/* query_tables global toggle */}
+      {allToolNames.includes("query_tables") && (
+        <div className="flex items-center justify-between rounded-lg bg-muted/40 px-3 py-2">
+          <div>
+            <p className="text-xs font-medium">SQL query across all tables</p>
+            <p className="text-[11px] text-muted-foreground">Read-only SELECT on any table</p>
+          </div>
+          <button onClick={toggleQuery}
+            className={cn("relative inline-flex h-5 w-9 shrink-0 rounded-full border-2 border-transparent transition-colors",
+              isQueryEnabled() ? "bg-primary" : "bg-muted-foreground/30")}>
+            <span className={cn("inline-block h-4 w-4 rounded-full bg-white shadow-sm transition-transform",
+              isQueryEnabled() ? "translate-x-4" : "translate-x-0")} />
+          </button>
+        </div>
+      )}
+
+      {/* Per-table access rows */}
+      {slugs.length === 0 ? (
+        <p className="text-xs text-muted-foreground italic">No tables created yet.</p>
+      ) : (
+        <div className="space-y-1.5">
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground/60">Table access</p>
+          <div className="divide-y rounded-lg border overflow-hidden">
+            {/* Header row */}
+            <div className="flex items-center bg-muted/40 px-3 py-1.5">
+              <span className="flex-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Table</span>
+              <span className="w-14 text-center text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Read</span>
+              <span className="w-14 text-center text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Write</span>
+            </div>
+            {slugs.map((slug) => (
+              <div key={slug} className="flex items-center px-3 py-2">
+                <span className="flex-1 text-xs font-medium">{tableNames[slug] ?? slug}</span>
+                {/* Read toggle */}
+                <div className="w-14 flex justify-center">
+                  <button onClick={() => toggleRead(slug)}
+                    className={cn("relative inline-flex h-4 w-8 shrink-0 rounded-full border-2 border-transparent transition-colors",
+                      isReadEnabled(slug) ? "bg-blue-500" : "bg-muted-foreground/30")}>
+                    <span className={cn("inline-block h-3 w-3 rounded-full bg-white shadow-sm transition-transform",
+                      isReadEnabled(slug) ? "translate-x-4" : "translate-x-0")} />
+                  </button>
+                </div>
+                {/* Write toggle */}
+                <div className="w-14 flex justify-center">
+                  <button onClick={() => toggleWrite(slug)}
+                    className={cn("relative inline-flex h-4 w-8 shrink-0 rounded-full border-2 border-transparent transition-colors",
+                      isWriteEnabled(slug) ? "bg-orange-500" : "bg-muted-foreground/30")}>
+                    <span className={cn("inline-block h-3 w-3 rounded-full bg-white shadow-sm transition-transform",
+                      isWriteEnabled(slug) ? "translate-x-4" : "translate-x-0")} />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+          <p className="text-[10px] text-muted-foreground">
+            <span className="text-blue-500 font-medium">Read</span> = search + get row. &nbsp;
+            <span className="text-orange-500 font-medium">Write</span> = create + update row.
+          </p>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── Generic connector tool group ───────────────────────────────────────────────
+/* Cycle: off → on → approval-required → off */
+function ToolGroup({
+  tool,
+  agentId,
+  orgId,
+  onChange,
+  onDetach,
+}: {
+  tool: AgentTool
+  agentId: string
+  orgId: string
+  onChange: () => void
+  onDetach: (connectorId: string) => void
+}) {
+  // Delegate tables connector to its dedicated UI
+  if (tool.connector_type === "tables") {
+    return <TablesToolGroup tool={tool} agentId={agentId} orgId={orgId} onChange={onChange} onDetach={onDetach} />
+  }
   const [busy, setBusy] = useState(false)
 
   function nextState(t: { enabled: boolean; requires_approval: boolean }) {
