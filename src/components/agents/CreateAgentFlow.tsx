@@ -349,7 +349,8 @@ function SetupAgent({
         await agents.attachTool(agent.id, {
           connector_id: connectorId,
           // null means "all tools" — more future-proof than an exhaustive list.
-          enabled_tools: enabled.length === allTools.length ? null : enabled,
+          // Tables start with no access; the owner opts tables in on the agent page.
+          enabled_tools: type === "tables" ? [] : enabled.length === allTools.length ? null : enabled,
           approval_tools: approval.length === 0 ? null : approval,
         })
       }
@@ -603,12 +604,10 @@ function ConnectorRow({
               </button>
             )}
           </div>
-          {isEnabled && tools.length > 0 && (
-            <div className="mt-2 flex flex-wrap gap-1.5">
-              {tools.map((t) => (
-                <span key={t.name} className="rounded-full bg-primary/10 px-2 py-0.5 text-[11px] text-primary">{t.name}</span>
-              ))}
-            </div>
+          {isEnabled && (
+            <p className="mt-2 text-[11px] text-muted-foreground">
+              Starts with no table access. Pick which tables it can read or write on the agent page after creating.
+            </p>
           )}
         </div>
       )
@@ -685,8 +684,15 @@ function ConnectorRow({
         )}
       </div>
 
+      {/* Tables: per-table access is configured on the agent page, not here */}
+      {isEnabled && type === "tables" && (
+        <p className="mt-2 text-[11px] text-muted-foreground">
+          Starts with no table access. Pick which tables it can read or write on the agent page after creating.
+        </p>
+      )}
+
       {/* Tool pills — three states: on → requires approval (shield) → off → on */}
-      {isEnabled && tools.length > 0 && (
+      {isEnabled && type !== "tables" && tools.length > 0 && (
         <>
           <div className="mt-3 flex flex-wrap gap-1.5">
             {tools.map((t) => {
