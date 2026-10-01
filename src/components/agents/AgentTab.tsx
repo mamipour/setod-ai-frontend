@@ -8,6 +8,7 @@ import {
   connectors as connectorsApi,
   notes as notesApi,
   skills as skillsApi,
+  tablesApi,
   type Agent,
   type AgentLink,
   type AgentTool,
@@ -33,7 +34,7 @@ type Snapshot = {
 }
 import { cn } from "@/lib/utils"
 
-const TOOL_TYPES = ["gmail", "telegram_bot", "telegram_client", "twilio", "mcp", "whatsapp", "instagram", "slack_webhook", "google_sheets"]
+const TOOL_TYPES = ["gmail", "telegram_bot", "telegram_client", "twilio", "mcp", "whatsapp", "instagram", "slack_webhook", "google_sheets", "tables"]
 
 
 /** Autosaves a field after the user stops typing, rather than on every keystroke. */
@@ -237,7 +238,8 @@ export function AgentTab({
   }
 
   useEffect(() => {
-    connectorsApi.list(orgId).then(setConnectors)
+    // Auto-provision built-in tables connector, then fetch connector list.
+    tablesApi.list(orgId).catch(() => {}).then(() => connectorsApi.list(orgId).then(setConnectors))
     agents.schedulePresets().then(setPresets)
     agents.publishHistory(agent.id).then(setHistory)
     setSkillsLoading(true)
