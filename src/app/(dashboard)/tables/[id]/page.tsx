@@ -563,12 +563,14 @@ function SpreadsheetGrid({
   const [editValue, setEditValue] = useState<unknown>(null)
   const [saving, setSaving] = useState<string | null>(null) // rowId being saved
   const [historyRowId, setHistoryRowId] = useState<string | null>(null)
+  // Cell-level validation errors: key = `${rowId}:${colKey}`
+  const [cellErrors, setCellErrors] = useState<Record<string, string>>({})
   // Draft new rows (pending creation)
   const [draftRows, setDraftRows] = useState<DraftRow[]>([])
   const [draftEditing, setDraftEditing] = useState<{ draftIdx: number; colKey: string } | null>(null)
   const [draftValue, setDraftValue] = useState<unknown>(null)
   const [savingDraft, setSavingDraft] = useState(false)
-  const [errors, setErrors] = useState<Record<string, string>>({}) // rowId → error
+  const [errors, setErrors] = useState<Record<string, string>>({}) // rowId → error (delete/draft ops only)
 
   const totalRows = rows.length + draftRows.length
 
@@ -606,7 +608,10 @@ function SpreadsheetGrid({
       })
       onRowsChanged()
     } catch (e: unknown) {
-      setErrors((prev) => ({ ...prev, [row.id]: e instanceof Error ? e.message : "Save failed" }))
+      const msg = e instanceof Error ? e.message : "Save failed"
+      const key = `${row.id}:${editing.colKey}`
+      setCellErrors((prev) => ({ ...prev, [key]: msg }))
+      setTimeout(() => setCellErrors((p) => { const n = { ...p }; delete n[key]; return n }), 4000)
     } finally {
       setSaving(null)
     }
@@ -784,7 +789,7 @@ function SpreadsheetGrid({
                 {/* Data cells */}
                 {visibleCols.map((col) => {
                   const isEditing = editing?.rowIdx === rowIdx && editing?.colKey === col.key
-                  const hasError = errors[row.id]
+                  const cellError = cellErrors[`${row.id}:${col.key}`]
 
                   return (
                     <td
@@ -793,11 +798,12 @@ function SpreadsheetGrid({
                       className={cn(
                         CELL_BASE,
                         COL_W,
-                        "cursor-cell transition-colors",
+                        "cursor-cell transition-colors relative",
                         isEditing
-                          ? "bg-primary/5 ring-1 ring-inset ring-primary z-10 relative"
+                          ? "bg-primary/5 ring-1 ring-inset ring-primary z-10"
+                          : cellError
+                          ? "ring-1 ring-inset ring-red-500/70"
                           : "hover:bg-accent/40",
-                        hasError && "bg-red-50",
                       )}
                     >
                       {isEditing ? (
@@ -811,6 +817,11 @@ function SpreadsheetGrid({
                         />
                       ) : (
                         <CellDisplay col={col} value={row.data[col.key]} />
+                      )}
+                      {cellError && (
+                        <div className="pointer-events-none absolute top-full left-0 z-50 mt-0.5 max-w-[220px] rounded-md bg-destructive px-2 py-1 text-[10px] leading-tight text-destructive-foreground shadow-lg">
+                          {cellError}
+                        </div>
                       )}
                     </td>
                   )
@@ -911,14 +922,14 @@ function SpreadsheetGrid({
       </div>{/* /grid scroll area */}
       </div>{/* /left flex-col */}
 
-      {/* Error toast */}
+      {/* Error toast — only for delete / draft-save failures */}
       {Object.keys(errors).length > 0 && (
         <div className="fixed bottom-4 right-4 z-50 flex flex-col gap-2">
           {Object.entries(errors).map(([id, msg]) => (
-            <div key={id} className="flex items-center gap-2 rounded-lg bg-red-600 px-3 py-2 text-xs text-white shadow-lg">
+            <div key={id} className="flex items-center gap-2 rounded-lg bg-destructive px-3 py-2 text-xs text-destructive-foreground shadow-lg">
               <AlertCircle className="size-3.5 shrink-0" />
               {msg}
-              <button onClick={() => setErrors((p) => { const n = {...p}; delete n[id]; return n })}><X className="size-3" /></button>
+              <button onClick={() => setErrors((p) => { const n = { ...p }; delete n[id]; return n })}><X className="size-3" /></button>
             </div>
           ))}
         </div>
