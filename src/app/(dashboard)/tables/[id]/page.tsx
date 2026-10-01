@@ -21,6 +21,10 @@ import {
   X,
   Check,
   AlertCircle,
+  EyeOff,
+  Pencil,
+  Type,
+  ListChecks,
 } from "lucide-react"
 import {
   tablesApi,
@@ -48,6 +52,12 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  DropdownMenuSub,
+  DropdownMenuSubTrigger,
+  DropdownMenuSubContent,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuCheckboxItem,
 } from "@/components/ui/dropdown-menu"
 import {
   Select,
@@ -528,13 +538,88 @@ function SpreadsheetGrid({
   table,
   rows,
   onRowsChanged,
+  onTableChanged,
 }: {
   orgId: string
   table: OrgTable
   rows: OrgTableRow[]
   onRowsChanged: () => void
+  onTableChanged: (t: OrgTable) => void
 }) {
-  const visibleCols = table.columns.filter((c) => !c.hidden_from_agents)
+  // Humans see every column; `hidden_from_agents` only affects agent tools (marked with an icon).
+  const visibleCols = table.columns
+
+  // ── Column (schema) editing — Excel-style, from the header row ───────────────
+  const [addingCol, setAddingCol] = useState(false)
+  const [newColName, setNewColName] = useState("")
+  const [renamingKey, setRenamingKey] = useState<string | null>(null)
+  const [renameValue, setRenameValue] = useState("")
+  const [colBusy, setColBusy] = useState(false)
+  const [colError, setColError] = useState("")
+  const [optionsCol, setOptionsCol] = useState<ColumnDef | null>(null)   // editing select options
+  const [deletingCol, setDeletingCol] = useState<ColumnDef | null>(null)
+  const newColInputRef = useRef<HTMLInputElement>(null)
+  // Guards against Enter + the blur that disabling the input triggers in some browsers → double create
+  const creatingColRef = useRef(false)
+
+  function showColError(e: unknown) {
+    setColError(e instanceof Error ? e.message : "Column change failed")
+    setTimeout(() => setColError(""), 6000)
+  }
+
+  /** Derive a unique snake_case key from a display name (backend: ^[a-z][a-z0-9_]{0,39}$). */
+  function makeColKey(name: string): string {
+    let key = name.toLowerCase().trim().replace(/\s+/g, "_").replace(/[^a-z0-9_]/g, "").slice(0, 40)
+    if (!key || !/^[a-z]/.test(key)) key = `col_${key}`.slice(0, 40)
+    const existing = new Set(table.columns.map((c) => c.key))
+    let candidate = key, n = 2
+    while (existing.has(candidate)) candidate = `${key.slice(0, 36)}_${n++}`
+    return candidate
+  }
+
+  /** Create a new text column from the inline header input. Returns true on success. */
+  async function createColumn(name: string): Promise<boolean> {
+    const trimmed = name.trim()
+    if (!trimmed || creatingColRef.current) return false
+    creatingColRef.current = true
+    setColBusy(true)
+    try {
+      const t = await tablesApi.addColumn(orgId, table.id, { key: makeColKey(trimmed), name: trimmed, type: "text" })
+      onTableChanged(t)
+      return true
+    } catch (e) { showColError(e); return false } finally { creatingColRef.current = false; setColBusy(false) }
+  }
+
+  async function patchColumn(key: string, body: Partial<ColumnDef>) {
+    setColBusy(true)
+    try { onTableChanged(await tablesApi.updateColumn(orgId, table.id, key, body)) }
+    catch (e) { showColError(e) } finally { setColBusy(false) }
+  }
+
+  async function removeColumn(key: string) {
+    setColBusy(true)
+    try { onTableChanged(await tablesApi.removeColumn(orgId, table.id, key)); setDeletingCol(null) }
+    catch (e) { showColError(e) } finally { setColBusy(false) }
+  }
+
+  function startRename(col: ColumnDef) { setRenamingKey(col.key); setRenameValue(col.name) }
+  async function commitRename() {
+    if (!renamingKey) return
+    const key = renamingKey, value = renameValue.trim()
+    const col = table.columns.find((c) => c.key === key)
+    setRenamingKey(null)
+    if (col && value && value !== col.name) await patchColumn(key, { name: value })
+  }
+
+  /** Type change: switching to `select` needs options first, so route through the options dialog. */
+  function changeType(col: ColumnDef, type: ColumnType) {
+    if (type === col.type) return
+    if (type === "select") { setOptionsCol({ ...col, type: "select", options: col.options ?? [] }); return }
+    patchColumn(col.key, { type })
+  }
+
+  // Focus the "+" input when it opens
+  useEffect(() => { if (addingCol) newColInputRef.current?.focus() }, [addingCol])
 
   // ── Top scrollbar sync ────────────────────────────────────────────────────────
   const scrollContainerRef = useRef<HTMLDivElement>(null)
@@ -798,18 +883,137 @@ function SpreadsheetGrid({
               {visibleCols.map((col) => (
                 <th
                   key={col.key}
+                  onDoubleClick={() => startRename(col)}
+                  title={renamingKey === col.key ? undefined : "Double-click to rename"}
                   className={cn(
-                    "sticky top-0 z-20 border-b border-r bg-muted/80 backdrop-blur-sm",
-                    "px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wide text-muted-foreground whitespace-nowrap",
+                    "group/th sticky top-0 z-20 border-b border-r bg-muted/80 backdrop-blur-sm",
+                    "px-3 py-1.5 text-left text-[11px] font-semibold uppercase tracking-wide text-muted-foreground whitespace-nowrap",
                     COL_W,
                   )}
                 >
-                  {col.name}
-                  {col.required && <span className="ml-1 text-destructive">*</span>}
+                  {renamingKey === col.key ? (
+                    <input
+                      autoFocus
+                      value={renameValue}
+                      onChange={(e) => setRenameValue(e.target.value)}
+                      onBlur={commitRename}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") { e.preventDefault(); commitRename() }
+                        if (e.key === "Escape") { e.preventDefault(); setRenamingKey(null) }
+                      }}
+                      className="w-full bg-transparent normal-case tracking-normal font-semibold text-foreground outline-none ring-1 ring-primary rounded px-1 -mx-1"
+                    />
+                  ) : (
+                    <div className="flex items-center gap-1">
+                      <span className="truncate">{col.name}</span>
+                      {col.required && <span className="text-destructive">*</span>}
+                      {col.hidden_from_agents && (
+                        <EyeOff className="size-3 shrink-0 text-muted-foreground/60" aria-label="Hidden from agents" />
+                      )}
+                      <span className="ml-auto text-[9px] font-normal normal-case tracking-normal text-muted-foreground/50 group-hover/th:hidden">
+                        {COLUMN_TYPES.find((t) => t.value === col.type)?.label}
+                      </span>
+                      {/* Column menu — appears on hover, like Excel's header dropdown */}
+                      <DropdownMenu>
+                        <DropdownMenuTrigger
+                          className="ml-auto hidden group-hover/th:inline-flex data-[popup-open]:inline-flex rounded p-0.5 hover:bg-accent text-muted-foreground"
+                          onDoubleClick={(e) => e.stopPropagation()}
+                        >
+                          <ChevronDown className="size-3" />
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="start" className="text-xs min-w-[180px]">
+                          <DropdownMenuItem onClick={() => startRename(col)}>
+                            <Pencil className="size-3.5 mr-2" /> Rename
+                          </DropdownMenuItem>
+                          <DropdownMenuSub>
+                            <DropdownMenuSubTrigger>
+                              <Type className="size-3.5 mr-2" /> Type: {COLUMN_TYPES.find((t) => t.value === col.type)?.label}
+                            </DropdownMenuSubTrigger>
+                            <DropdownMenuSubContent className="text-xs">
+                              <DropdownMenuRadioGroup value={col.type} onValueChange={(v) => changeType(col, v as ColumnType)}>
+                                {COLUMN_TYPES.filter((t) => t.value !== "link").map((t) => (
+                                  <DropdownMenuRadioItem key={t.value} value={t.value}>{t.label}</DropdownMenuRadioItem>
+                                ))}
+                              </DropdownMenuRadioGroup>
+                            </DropdownMenuSubContent>
+                          </DropdownMenuSub>
+                          {col.type === "select" && (
+                            <DropdownMenuItem onClick={() => setOptionsCol(col)}>
+                              <ListChecks className="size-3.5 mr-2" /> Edit options…
+                            </DropdownMenuItem>
+                          )}
+                          <DropdownMenuSeparator />
+                          <DropdownMenuCheckboxItem
+                            checked={!!col.required}
+                            onCheckedChange={(v) => patchColumn(col.key, { required: !!v })}
+                          >
+                            Required
+                          </DropdownMenuCheckboxItem>
+                          <DropdownMenuCheckboxItem
+                            checked={!!col.hidden_from_agents}
+                            onCheckedChange={(v) => patchColumn(col.key, { hidden_from_agents: !!v })}
+                          >
+                            Hidden from agents
+                          </DropdownMenuCheckboxItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            onClick={() => setDeletingCol(col)}
+                            className="text-destructive focus:text-destructive"
+                          >
+                            <Trash2 className="size-3.5 mr-2" /> Delete column
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                  )}
                 </th>
               ))}
+
+              {/* "+" column — type a name and press Enter, like a new Excel header */}
+              <th
+                className="sticky top-0 z-20 border-b border-r bg-muted/80 backdrop-blur-sm px-1 py-1 text-left"
+                style={addingCol ? { width: 180, minWidth: 180 } : { width: 40, minWidth: 40 }}
+              >
+                {addingCol ? (
+                  <input
+                    ref={newColInputRef}
+                    value={newColName}
+                    disabled={colBusy}
+                    placeholder="Column name"
+                    onChange={(e) => setNewColName(e.target.value)}
+                    onBlur={async () => {
+                      if (creatingColRef.current) return   // Enter/Tab already handling it
+                      // Blur with text behaves like Enter; blur empty just closes.
+                      if (newColName.trim()) await createColumn(newColName)
+                      setNewColName(""); setAddingCol(false)
+                    }}
+                    onKeyDown={async (e) => {
+                      if (e.key === "Escape") { e.preventDefault(); setNewColName(""); setAddingCol(false) }
+                      if (e.key === "Enter" || e.key === "Tab") {
+                        e.preventDefault()
+                        const ok = await createColumn(newColName)
+                        if (!ok) return
+                        setNewColName("")
+                        // Tab keeps adding columns; Enter is done.
+                        if (e.key === "Enter") setAddingCol(false)
+                        else newColInputRef.current?.focus()
+                      }
+                    }}
+                    className="h-6 w-full rounded bg-background px-1.5 text-[11px] font-semibold text-foreground outline-none ring-1 ring-primary"
+                  />
+                ) : (
+                  <button
+                    onClick={() => setAddingCol(true)}
+                    disabled={colBusy}
+                    title="Add column"
+                    className="flex h-6 w-full items-center justify-center rounded text-muted-foreground hover:bg-accent hover:text-foreground"
+                  >
+                    {colBusy ? <Loader2 className="size-3.5 animate-spin" /> : <Plus className="size-3.5" />}
+                  </button>
+                )}
+              </th>
               {/* Actions col */}
-              <th className="sticky top-0 z-20 w-8 border-b bg-muted/80 backdrop-blur-sm" />
+              <th className="sticky top-0 z-20 border-b bg-muted/80 backdrop-blur-sm" style={{ width: 72, minWidth: 72 }} />
             </tr>
           </thead>
 
@@ -872,6 +1076,8 @@ function SpreadsheetGrid({
                   )
                 })}
 
+                {/* Spacer under the "+" header */}
+                <td className="border-b border-r h-9" />
                 {/* Row actions */}
                 <td className="border-b px-1 text-center h-9" style={{ width: 72, minWidth: 72 }}>
                   {saving === row.id ? (
@@ -944,6 +1150,7 @@ function SpreadsheetGrid({
                     </td>
                   )
                 })}
+                <td className="border-b border-r h-9" />
                 {/* Draft actions — always visible so saving is discoverable */}
                 <td className="border-b px-1 text-center h-9" style={{ width: 72, minWidth: 72 }}>
                   {savingDraft ? (
@@ -976,7 +1183,7 @@ function SpreadsheetGrid({
             {/* Add row button row */}
             <tr>
               <td
-                colSpan={visibleCols.length + 2}
+                colSpan={visibleCols.length + 3}
                 className="border-b py-1 px-3"
               >
                 <button
@@ -1002,9 +1209,16 @@ function SpreadsheetGrid({
       </div>{/* /grid scroll area */}
       </div>{/* /left flex-col */}
 
-      {/* Error toast — only for delete / draft-save failures */}
-      {Object.keys(errors).length > 0 && (
+      {/* Error toast — delete / draft-save / column-schema failures */}
+      {(Object.keys(errors).length > 0 || colError) && (
         <div className="fixed bottom-4 right-4 z-50 flex flex-col gap-2">
+          {colError && (
+            <div className="flex items-center gap-2 rounded-lg bg-destructive px-3 py-2 text-xs text-destructive-foreground shadow-lg">
+              <AlertCircle className="size-3.5 shrink-0" />
+              {colError}
+              <button onClick={() => setColError("")}><X className="size-3" /></button>
+            </div>
+          )}
           {Object.entries(errors).map(([id, msg]) => (
             <div key={id} className="flex items-center gap-2 rounded-lg bg-destructive px-3 py-2 text-xs text-destructive-foreground shadow-lg">
               <AlertCircle className="size-3.5 shrink-0" />
@@ -1024,7 +1238,98 @@ function SpreadsheetGrid({
           onClose={() => setHistoryRowId(null)}
         />
       )}
+
+      {/* Column dialogs */}
+      <SelectOptionsDialog
+        col={optionsCol}
+        busy={colBusy}
+        onClose={() => setOptionsCol(null)}
+        onSave={async (options) => {
+          if (!optionsCol) return
+          await patchColumn(optionsCol.key, { type: "select", options })
+          setOptionsCol(null)
+        }}
+      />
+      <Dialog open={!!deletingCol} onOpenChange={(o) => !o && setDeletingCol(null)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader><DialogTitle>Delete column &ldquo;{deletingCol?.name}&rdquo;?</DialogTitle></DialogHeader>
+          <p className="text-xs text-muted-foreground">
+            The column is removed from the table and from every agent&apos;s view of it. Values already stored
+            in this column stay in the row data and in history, but are no longer shown or editable.
+          </p>
+          <DialogFooter>
+            <Button variant="ghost" size="sm" className="text-xs" onClick={() => setDeletingCol(null)}>Cancel</Button>
+            <Button variant="destructive" size="sm" className="text-xs" disabled={colBusy}
+              onClick={() => deletingCol && removeColumn(deletingCol.key)}>
+              {colBusy && <Loader2 className="mr-1.5 size-3.5 animate-spin" />}Delete column
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
+  )
+}
+
+// ── Select options dialog (used when a column becomes / is a select) ─────────
+function SelectOptionsDialog({
+  col,
+  busy,
+  onClose,
+  onSave,
+}: {
+  col: ColumnDef | null
+  busy: boolean
+  onClose: () => void
+  onSave: (options: string[]) => void
+}) {
+  return (
+    <Dialog open={!!col} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="max-w-sm">
+        <DialogHeader><DialogTitle>Options for &ldquo;{col?.name}&rdquo;</DialogTitle></DialogHeader>
+        {/* Keyed by column so the textarea state resets when a different column is opened */}
+        {col && <SelectOptionsForm key={col.key} col={col} busy={busy} onClose={onClose} onSave={onSave} />}
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+function SelectOptionsForm({
+  col,
+  busy,
+  onClose,
+  onSave,
+}: {
+  col: ColumnDef
+  busy: boolean
+  onClose: () => void
+  onSave: (options: string[]) => void
+}) {
+  const [text, setText] = useState((col.options ?? []).join("\n"))
+  const options = text.split(/\n|,/).map((s) => s.trim()).filter(Boolean)
+
+  return (
+    <>
+        <div className="space-y-1">
+          <Label className="text-xs">One option per line</Label>
+          <textarea
+            autoFocus
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            rows={6}
+            placeholder={"New\nIn Progress\nDone"}
+            className="w-full rounded-md border bg-background px-2 py-1.5 text-xs outline-none focus:ring-1 focus:ring-primary"
+          />
+          <p className="text-[11px] text-muted-foreground">
+            Existing values that aren&apos;t in the list stay stored but will fail validation when edited.
+          </p>
+        </div>
+        <DialogFooter>
+          <Button variant="ghost" size="sm" className="text-xs" onClick={onClose}>Cancel</Button>
+          <Button size="sm" className="text-xs" disabled={busy || options.length === 0} onClick={() => onSave(options)}>
+            {busy && <Loader2 className="mr-1.5 size-3.5 animate-spin" />}Save
+          </Button>
+        </DialogFooter>
+    </>
   )
 }
 
@@ -1186,6 +1491,7 @@ export default function TableDetailPage() {
           table={table}
           rows={rows}
           onRowsChanged={() => loadRows(table, search, offset)}
+          onTableChanged={setTable}
         />
       </div>
 
