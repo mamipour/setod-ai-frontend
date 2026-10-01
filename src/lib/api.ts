@@ -37,7 +37,16 @@ async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
 
   if (!res.ok) {
     const error = await res.json().catch(() => ({ detail: res.statusText }))
-    throw new Error(error.detail ?? "API error")
+    const detail = error.detail
+    const message =
+      typeof detail === "string"
+        ? detail
+        : Array.isArray(detail)
+        ? detail.map((d: { msg?: string; loc?: string[] }) => d.msg ?? JSON.stringify(d)).join("; ")
+        : detail != null
+        ? JSON.stringify(detail)
+        : res.statusText || "API error"
+    throw new Error(message)
   }
 
   if (res.status === 204 || res.headers.get("content-length") === "0") {
@@ -1232,7 +1241,7 @@ export const tablesApi = {
     columns?: ColumnDef[]
     unique_on?: string[]
   }): Promise<OrgTable> =>
-    apiFetch(`/tables?org_id=${orgId}`, { method: "POST", body: JSON.stringify(body) }),
+    apiFetch(`/tables?org_id=${orgId}`, { method: "POST", body: JSON.stringify({ org_id: orgId, ...body }) }),
 
   get: (orgId: string, tableId: string): Promise<OrgTable> => apiFetch(`/tables/${tableId}?org_id=${orgId}`),
 
