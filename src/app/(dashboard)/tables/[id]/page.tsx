@@ -572,6 +572,8 @@ function SpreadsheetGrid({
   const [historyRowId, setHistoryRowId] = useState<string | null>(null)
   // Cell-level validation errors: key = `${rowId}:${colKey}`
   const [cellErrors, setCellErrors] = useState<Record<string, string>>({})
+  // Row pending delete confirmation
+  const [pendingDelete, setPendingDelete] = useState<string | null>(null)
   // Draft new rows (pending creation)
   const [draftRows, setDraftRows] = useState<DraftRow[]>([])
   const [draftEditing, setDraftEditing] = useState<{ draftIdx: number; colKey: string } | null>(null)
@@ -835,13 +837,32 @@ function SpreadsheetGrid({
                 })}
 
                 {/* Row actions */}
-                <td className="border-b px-1 text-center w-8 h-9">
+                <td className="border-b px-1 text-center h-9" style={{ width: 72, minWidth: 72 }}>
                   {saving === row.id ? (
                     <Loader2 className="size-3 animate-spin text-muted-foreground mx-auto" />
+                  ) : pendingDelete === row.id ? (
+                    /* Inline confirm */
+                    <div className="flex items-center justify-center gap-1">
+                      <button
+                        onClick={() => { deleteRow(row.id); setPendingDelete(null) }}
+                        className="rounded px-1.5 py-0.5 text-[10px] font-medium bg-red-600 text-white hover:bg-red-700"
+                        title="Confirm delete"
+                      >
+                        Delete
+                      </button>
+                      <button
+                        onClick={() => setPendingDelete(null)}
+                        className="rounded p-0.5 text-muted-foreground hover:text-foreground"
+                        title="Cancel"
+                      >
+                        <X className="size-3" />
+                      </button>
+                    </div>
                   ) : (
                     <button
-                      onClick={() => deleteRow(row.id)}
+                      onClick={() => setPendingDelete(row.id)}
                       className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-red-500 transition-opacity"
+                      title="Delete row"
                     >
                       <Trash2 className="size-3" />
                     </button>
