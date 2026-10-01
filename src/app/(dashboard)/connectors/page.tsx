@@ -434,7 +434,7 @@ function ConnectedCard({ connector, orgId, onDelete, onUpdated }: {
       >
         <CardHeader className="pb-2">
           <div className="flex min-w-0 items-center gap-3">
-            <ConnectorIcon iconSrc={meta?.iconSrc} icon={meta?.icon ?? "🔌"} />
+            <ConnectorIcon iconSrc={isBuiltIn ? "/tables.svg" : meta?.iconSrc} icon={meta?.icon ?? "🔌"} />
             <div className="min-w-0">
               <CardTitle className="text-sm font-semibold truncate">
                 {connector.type === "webhook"
