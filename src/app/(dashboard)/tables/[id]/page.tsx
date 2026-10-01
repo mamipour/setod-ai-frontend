@@ -149,13 +149,17 @@ function CellEditor({
   value,
   onChange,
   onCommit,
+  onEnter,
   onCancel,
   onTab,
 }: {
   col: ColumnDef
   value: unknown
   onChange: (v: unknown) => void
+  /** Called on blur and, unless onEnter is given, on Enter. */
   onCommit: () => void
+  /** Optional Enter override — draft rows use it to save the whole row. */
+  onEnter?: () => void
   onCancel: () => void
   onTab: (shift: boolean) => void
 }) {
@@ -169,7 +173,7 @@ function CellEditor({
   }, [])
 
   function handleKeyDown(e: React.KeyboardEvent) {
-    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); onCommit() }
+    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); (onEnter ?? onCommit)() }
     if (e.key === "Escape") { e.preventDefault(); onCancel() }
     if (e.key === "Tab") { e.preventDefault(); onTab(e.shiftKey) }
   }
@@ -209,6 +213,8 @@ function CellEditor({
         onKeyDown={(e) => {
           if (e.key === "Escape") { e.preventDefault(); onCancel() }
           if (e.key === "Tab") { e.preventDefault(); onTab(e.shiftKey) }
+          // Plain Enter is a newline in long text; Ctrl/Cmd+Enter commits.
+          if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) { e.preventDefault(); (onEnter ?? onCommit)() }
         }}
         onBlur={onCommit}
         rows={3}
@@ -265,11 +271,12 @@ function CellDisplay({ col, value }: { col: ColumnDef; value: unknown }) {
     )
   }
 
-  if (col.type === "datetime" && typeof value === "string") {
-    try { return <span>{new Date(value).toLocaleString()}</span> } catch { /* fall through */ }
-  }
-  if (col.type === "date" && typeof value === "string") {
-    try { return <span>{new Date(value).toLocaleDateString()}</span> } catch { /* fall through */ }
+  // Date parsing never throws; an unparseable value falls through to the raw string below.
+  if ((col.type === "datetime" || col.type === "date") && typeof value === "string") {
+    const d = new Date(value)
+    if (!Number.isNaN(d.getTime())) {
+      return <span>{col.type === "datetime" ? d.toLocaleString() : d.toLocaleDateString()}</span>
+    }
   }
 
   return <span className="truncate block max-w-[200px]">{String(value)}</span>
@@ -580,9 +587,19 @@ function SpreadsheetGrid({
   const [draftEditing, setDraftEditing] = useState<{ draftIdx: number; colKey: string } | null>(null)
   const [draftValue, setDraftValue] = useState<unknown>(null)
   const [savingDraft, setSavingDraft] = useState(false)
+  // Refs mirror draft state so commit → save can run in one event without waiting
+  // for React to flush (same reason editValueRef exists for existing rows).
+  const draftRowsRef = useRef<DraftRow[]>([])
+  const draftValueRef = useRef<unknown>(null)
+  function updateDraftRows(next: DraftRow[]) {
+    draftRowsRef.current = next
+    setDraftRows(next)
+  }
+  function applyDraftValue(v: unknown) {
+    draftValueRef.current = v
+    setDraftValue(v)
+  }
   const [errors, setErrors] = useState<Record<string, string>>({}) // rowId → error (delete/draft ops only)
-
-  const totalRows = rows.length + draftRows.length
 
   // ── Cell click ────────────────────────────────────────────────────────────────
   function startEdit(rowIdx: number, colKey: string) {
@@ -594,7 +611,7 @@ function SpreadsheetGrid({
 
   function startDraftEdit(draftIdx: number, colKey: string) {
     setDraftEditing({ draftIdx, colKey })
-    setDraftValue(draftRows[draftIdx]?.data[colKey] ?? null)
+    applyDraftValue(draftRowsRef.current[draftIdx]?.data[colKey] ?? null)
     setEditing(null)
   }
 
@@ -631,38 +648,51 @@ function SpreadsheetGrid({
   function cancelEdit() { setEditing(null); applyEditValue(null) }
 
   // ── Commit draft row cell ─────────────────────────────────────────────────────
-  function commitDraftCell() {
-    if (!draftEditing) return
-    setDraftRows((prev) => {
-      const copy = [...prev]
-      copy[draftEditing.draftIdx] = {
-        data: { ...copy[draftEditing.draftIdx].data, [draftEditing.colKey]: draftValue === "" ? null : draftValue },
-      }
-      return copy
-    })
-    setDraftEditing(null); setDraftValue(null)
+  /** Folds the cell being edited into its draft row. Returns the draft index so a
+   *  caller can save that row in the same event. */
+  function commitDraftCell(): number | null {
+    if (!draftEditing) return null
+    const { draftIdx, colKey } = draftEditing
+    const v = draftValueRef.current
+    const copy = [...draftRowsRef.current]
+    if (copy[draftIdx]) {
+      copy[draftIdx] = { data: { ...copy[draftIdx].data, [colKey]: v === "" ? null : v } }
+      updateDraftRows(copy)
+    }
+    setDraftEditing(null); applyDraftValue(null)
+    return draftIdx
   }
 
   // ── Save a draft row ─────────────────────────────────────────────────────────
-  async function saveDraftRow(draftIdx: number) {
-    const draft = draftRows[draftIdx]
-    if (!draft) return
-    // Check if anything was entered
+  /** Creates the row. Returns true on success (or when the draft was empty and simply dropped). */
+  async function saveDraftRow(draftIdx: number): Promise<boolean> {
+    const draft = draftRowsRef.current[draftIdx]
+    if (!draft) return false
     const hasData = Object.values(draft.data).some((v) => v != null && v !== "")
     if (!hasData) {
-      setDraftRows((prev) => prev.filter((_, i) => i !== draftIdx))
-      return
+      updateDraftRows(draftRowsRef.current.filter((_, i) => i !== draftIdx))
+      return true
     }
     setSavingDraft(true)
     try {
       await tablesApi.createRow(orgId, table.id, draft.data)
-      setDraftRows((prev) => prev.filter((_, i) => i !== draftIdx))
+      updateDraftRows(draftRowsRef.current.filter((_, i) => i !== draftIdx))
       onRowsChanged()
+      return true
     } catch (e: unknown) {
-      setErrors((prev) => ({ ...prev, [`draft_${draftIdx}`]: e instanceof Error ? e.message : "Save failed" }))
+      const key = `draft_${draftIdx}`
+      setErrors((prev) => ({ ...prev, [key]: e instanceof Error ? e.message : "Save failed" }))
+      setTimeout(() => setErrors((p) => { const n = { ...p }; delete n[key]; return n }), 6000)
+      return false
     } finally {
       setSavingDraft(false)
     }
+  }
+
+  /** Enter in a draft cell: commit the cell and save the whole row. */
+  function saveDraftFromCell() {
+    const idx = commitDraftCell()
+    if (idx !== null) saveDraftRow(idx)
   }
 
   // ── Delete row ────────────────────────────────────────────────────────────────
@@ -688,13 +718,9 @@ function SpreadsheetGrid({
       } else if (rowIdx < rows.length - 1) {
         setTimeout(() => startEdit(rowIdx + 1, visibleCols[0].key), 10)
       } else {
-        // Move to first draft or add new draft
-        if (draftRows.length > 0) {
-          setTimeout(() => startDraftEdit(0, visibleCols[0].key), 10)
-        } else {
-          addDraftRow()
-          setTimeout(() => startDraftEdit(0, visibleCols[0].key), 50)
-        }
+        // Move to first draft, or open a new one
+        const idx = draftRowsRef.current.length > 0 ? 0 : addDraftRow()
+        setTimeout(() => startDraftEdit(idx, visibleCols[0].key), 50)
       }
     } else {
       if (colIdx > 0) {
@@ -707,17 +733,18 @@ function SpreadsheetGrid({
 
   function tabFromDraft(shift: boolean) {
     if (!draftEditing) return
-    commitDraftCell()
     const colIdx = visibleCols.findIndex((c) => c.key === draftEditing.colKey)
-    const draftIdx = draftEditing.draftIdx
+    const draftIdx = commitDraftCell()
+    if (draftIdx === null) return
     if (!shift) {
       if (colIdx < visibleCols.length - 1) {
         setTimeout(() => startDraftEdit(draftIdx, visibleCols[colIdx + 1].key), 10)
       } else {
-        // Save this draft, move to next
-        saveDraftRow(draftIdx).then(() => {
-          addDraftRow()
-          setTimeout(() => startDraftEdit(0, visibleCols[0].key), 50)
+        // Past the last cell: save this draft and open a fresh one so entry can continue.
+        saveDraftRow(draftIdx).then((ok) => {
+          if (!ok) return // keep the draft on screen with its error
+          const newIdx = addDraftRow()
+          setTimeout(() => startDraftEdit(newIdx, visibleCols[0].key), 50)
         })
       }
     } else {
@@ -729,8 +756,16 @@ function SpreadsheetGrid({
     }
   }
 
-  function addDraftRow() {
-    setDraftRows((prev) => [...prev, { data: {} }])
+  /** Appends an empty draft and returns its index. */
+  function addDraftRow(): number {
+    const next = [...draftRowsRef.current, { data: {} }]
+    updateDraftRows(next)
+    return next.length - 1
+  }
+
+  function discardDraft(draftIdx: number) {
+    if (draftEditing?.draftIdx === draftIdx) { setDraftEditing(null); applyDraftValue(null) }
+    updateDraftRows(draftRowsRef.current.filter((_, i) => i !== draftIdx))
   }
 
   // ── Render ────────────────────────────────────────────────────────────────────
@@ -875,8 +910,8 @@ function SpreadsheetGrid({
             {/* Draft (new) rows */}
             {draftRows.map((draft, draftIdx) => (
               <tr key={`draft_${draftIdx}`} className="group bg-primary/[0.02]">
-                <td className="border-b border-r bg-primary/5 px-2 text-center text-[10px] text-muted-foreground h-9" style={{ width: 64, minWidth: 64 }}>
-                  <span className="text-primary font-semibold">*</span>
+                <td className="border-b border-r bg-primary/5 px-2 text-center h-9" style={{ width: 64, minWidth: 64 }}>
+                  <span className="rounded bg-primary/15 px-1.5 py-0.5 text-[10px] font-medium text-primary">new</span>
                 </td>
                 {visibleCols.map((col) => {
                   const isEditing = draftEditing?.draftIdx === draftIdx && draftEditing?.colKey === col.key
@@ -897,9 +932,10 @@ function SpreadsheetGrid({
                         <CellEditor
                           col={col}
                           value={draftValue}
-                          onChange={setDraftValue}
+                          onChange={applyDraftValue}
                           onCommit={() => { commitDraftCell() }}
-                          onCancel={() => { setDraftEditing(null); setDraftValue(null) }}
+                          onEnter={saveDraftFromCell}
+                          onCancel={() => { setDraftEditing(null); applyDraftValue(null) }}
                           onTab={tabFromDraft}
                         />
                       ) : (
@@ -908,16 +944,30 @@ function SpreadsheetGrid({
                     </td>
                   )
                 })}
-                <td className="border-b px-1 text-center w-8 h-9">
+                {/* Draft actions — always visible so saving is discoverable */}
+                <td className="border-b px-1 text-center h-9" style={{ width: 72, minWidth: 72 }}>
                   {savingDraft ? (
                     <Loader2 className="size-3 animate-spin text-muted-foreground mx-auto" />
                   ) : (
-                    <button
-                      onClick={() => setDraftRows((prev) => prev.filter((_, i) => i !== draftIdx))}
-                      className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-red-500 transition-opacity"
-                    >
-                      <X className="size-3" />
-                    </button>
+                    <div className="flex items-center justify-center gap-1">
+                      <button
+                        // preventDefault keeps the active cell from blurring (and committing) first
+                        onMouseDown={(e) => e.preventDefault()}
+                        onClick={() => { const idx = commitDraftCell(); saveDraftRow(idx ?? draftIdx) }}
+                        title="Save row (Enter)"
+                        className="rounded px-1.5 py-0.5 text-[10px] font-medium bg-primary text-primary-foreground hover:bg-primary/90"
+                      >
+                        Save
+                      </button>
+                      <button
+                        onMouseDown={(e) => e.preventDefault()}
+                        onClick={() => discardDraft(draftIdx)}
+                        title="Discard"
+                        className="rounded p-0.5 text-muted-foreground hover:text-foreground"
+                      >
+                        <X className="size-3" />
+                      </button>
+                    </div>
                   )}
                 </td>
               </tr>
@@ -930,11 +980,12 @@ function SpreadsheetGrid({
                 className="border-b py-1 px-3"
               >
                 <button
-                  onClick={() => { addDraftRow(); setTimeout(() => startDraftEdit(draftRows.length, visibleCols[0]?.key ?? ""), 50) }}
+                  onClick={() => { const idx = addDraftRow(); setTimeout(() => startDraftEdit(idx, visibleCols[0]?.key ?? ""), 50) }}
                   className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors py-1 px-1 rounded hover:bg-accent/40 w-full"
                 >
                   <Plus className="size-3.5" />
                   Add row
+                  <span className="ml-auto text-[10px] text-muted-foreground/60">Enter or Save commits a new row</span>
                 </button>
               </td>
             </tr>
@@ -945,7 +996,7 @@ function SpreadsheetGrid({
         {rows.length === 0 && draftRows.length === 0 && (
           <div className="flex flex-col items-center justify-center py-16 text-center">
             <p className="text-sm text-muted-foreground">No rows yet.</p>
-            <p className="text-xs text-muted-foreground/60 mt-1">Click "Add row" above or press the button in the toolbar.</p>
+            <p className="text-xs text-muted-foreground/60 mt-1">Click &ldquo;Add row&rdquo; above to start entering data.</p>
           </div>
         )}
       </div>{/* /grid scroll area */}
