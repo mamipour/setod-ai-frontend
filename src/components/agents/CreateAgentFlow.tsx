@@ -6,6 +6,7 @@ import { ArrowLeft, Check, Loader2, Plus, Shield, TriangleAlert, Lock } from "lu
 import {
   agents,
   connectors as connectorsApi,
+  tablesApi,
   type AgentTemplate,
   type Connector,
   type ConnectorType,
@@ -66,20 +67,25 @@ export function CreateAgentFlow({ orgId, onClose, initialTemplateKey }: Props) {
 
   useEffect(() => {
     if (!orgId) return
-    Promise.all([agents.templates(orgId), connectorsApi.list(orgId), agents.schedulePresets()])
-      .then(([t, c, p]) => {
+    async function init() {
+      try {
+        // Ensure the built-in tables connector is provisioned first, then fetch everything.
+        await tablesApi.list(orgId).catch(() => {/* ignore */})
+        const [t, c, p] = await Promise.all([agents.templates(orgId), connectorsApi.list(orgId), agents.schedulePresets()])
         setTemplates(t)
         setConnectors(c)
         setPresets(p)
-        // Preselected template: land on setup directly. An unknown key (template removed
-        // since the page loaded) falls back to the picker rather than a blank form.
+        // Preselected template: land on setup directly.
         const preset = initialTemplateKey ? t.find((x) => x.key === initialTemplateKey) : undefined
         if (preset) {
           setChosen(preset)
           setStep("setup")
         }
-      })
-      .finally(() => setLoading(false))
+      } finally {
+        setLoading(false)
+      }
+    }
+    init()
   }, [orgId, initialTemplateKey])
 
   function refreshConnectors() {
@@ -246,9 +252,13 @@ function SetupAgent({
   const isScratch = template.key === ""
   const wanted = isScratch
     ? // Scratch: every tool connector type that has at least one active connection becomes optional.
-      (["gmail", "telegram_bot", "telegram_client", "twilio", "whatsapp", "instagram", "slack_webhook" /*, "google_sheets", "notion" */] as ConnectorType[]).filter((t) =>
-        connectors.some((c) => c.type === t && c.status === "active"),
-      )
+      // "tables" is always included — it's built-in and auto-provisioned.
+      [
+        ...(["gmail", "telegram_bot", "telegram_client", "twilio", "whatsapp", "instagram", "slack_webhook" /*, "google_sheets", "notion" */] as ConnectorType[]).filter((t) =>
+          connectors.some((c) => c.type === t && c.status === "active"),
+        ),
+        "tables" as ConnectorType,
+      ]
     : [...template.required_connectors, ...template.optional_connectors]
   const [chosen, setChosen] = useState<Record<string, string>>({})
 
@@ -573,6 +583,37 @@ function ConnectorRow({
   const tools = CONNECTOR_TOOLS[type] ?? []
 
   if (options.length === 0) {
+    // Built-in connectors (tables) are always available — no "Connect" step needed.
+    // They are auto-provisioned on first use, so just show a toggleable row.
+    if (type === "tables") {
+      return (
+        <div className={cn("rounded-xl border p-3 transition-colors", !isEnabled && "opacity-60")}>
+          <div className="flex items-center justify-between gap-3">
+            <button type="button" className="flex items-center gap-1.5 text-xs" onClick={() => onToggle?.(!isEnabled)}>
+              {iconSrc && <Image src={iconSrc} alt="" width={16} height={16} className="shrink-0 opacity-70" />}
+              <span className="font-medium">{label}</span>
+              <span className="text-muted-foreground/60 text-[11px]">built-in</span>
+            </button>
+            {onToggle && (
+              <button type="button" onClick={() => onToggle(!isEnabled)}
+                className={cn("relative inline-flex h-5 w-9 shrink-0 rounded-full border-2 border-transparent transition-colors",
+                  isEnabled ? "bg-primary" : "bg-muted-foreground/30")}>
+                <span className={cn("pointer-events-none inline-block h-4 w-4 rounded-full bg-white shadow-sm transition-transform",
+                  isEnabled ? "translate-x-4" : "translate-x-0")} />
+              </button>
+            )}
+          </div>
+          {isEnabled && tools.length > 0 && (
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {tools.map((t) => (
+                <span key={t.name} className="rounded-full bg-primary/10 px-2 py-0.5 text-[11px] text-primary">{t.name}</span>
+              ))}
+            </div>
+          )}
+        </div>
+      )
+    }
+
     return (
       <div className="flex items-center justify-between rounded-lg border border-dashed px-3 py-2">
         <span className="flex items-center gap-1.5 text-xs text-muted-foreground">

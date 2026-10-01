@@ -36,8 +36,8 @@ export const CONNECTOR_ICON: Partial<Record<string, string>> = {
   telegram_client: "/telegram.svg",
   twilio: "/twilio.svg",
   openai: "/openai.svg",
-  // tables connector uses the Table2 lucide icon (rendered inline, no SVG file needed)
   anthropic: "/anthropic.svg",
+  tables: "/tables.svg",
   mcp: "/mcp.svg",
   slack_webhook: "/slack.svg",
   google_sheets: "/google-sheet.svg",
