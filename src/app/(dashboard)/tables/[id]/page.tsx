@@ -732,7 +732,7 @@ function SpreadsheetGrid({
         ref={topBarRef}
         onScroll={onTopScroll}
         className="overflow-x-scroll overflow-y-hidden shrink-0 border-b"
-        style={{ height: 12 }}
+        style={{ height: 20 }}
       >
         <div style={{ width: contentWidth || "100%", height: 1 }} />
       </div>
