@@ -2,10 +2,11 @@
 
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
-import { Plus, Table2, Loader2, ChevronRight, FileSpreadsheet } from "lucide-react"
+import { Plus, Table2, Loader2, ChevronRight, FileSpreadsheet, Trash2 } from "lucide-react"
 import { tablesApi, type OrgTable, type TablePreset } from "@/lib/api"
 import { useActiveOrg } from "@/hooks/useActiveOrg"
 import { Button } from "@/components/ui/button"
+import { DeleteTableDialog } from "@/components/tables/DeleteTableDialog"
 import {
   Dialog,
   DialogContent,
@@ -175,12 +176,17 @@ function CreateTableDialog({
 }
 
 // ── Table card ─────────────────────────────────────────────────────────────────
-function TableCard({ table }: { table: OrgTable }) {
+function TableCard({ table, onDelete }: { table: OrgTable; onDelete: () => void }) {
   const router = useRouter()
   return (
-    <button
+    // div+role rather than <button>: the delete control is itself a button and
+    // nested interactive elements are invalid HTML.
+    <div
+      role="link"
+      tabIndex={0}
       onClick={() => router.push(`/tables/${table.id}`)}
-      className="group flex w-full items-center justify-between gap-3 rounded-xl border bg-card px-4 py-3 text-left transition-colors hover:bg-accent/40"
+      onKeyDown={(e) => { if (e.key === "Enter") router.push(`/tables/${table.id}`) }}
+      className="group flex w-full cursor-pointer items-center justify-between gap-3 rounded-xl border bg-card px-4 py-3 text-left transition-colors hover:bg-accent/40"
     >
       <div className="flex items-center gap-3 min-w-0">
         <Table2 className="size-4 shrink-0 text-muted-foreground" />
@@ -193,9 +199,17 @@ function TableCard({ table }: { table: OrgTable }) {
       </div>
       <div className="flex items-center gap-3 shrink-0 text-xs text-muted-foreground">
         <span>{table.columns.length} col{table.columns.length !== 1 ? "s" : ""}</span>
+        <button
+          type="button"
+          onClick={(e) => { e.stopPropagation(); onDelete() }}
+          title="Delete table"
+          className="rounded p-1 opacity-0 transition-opacity hover:bg-destructive/10 hover:text-destructive group-hover:opacity-100"
+        >
+          <Trash2 className="size-3.5" />
+        </button>
         <ChevronRight className="size-3.5 opacity-0 transition-opacity group-hover:opacity-100" />
       </div>
-    </button>
+    </div>
   )
 }
 
@@ -207,6 +221,7 @@ export default function TablesPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
   const [creating, setCreating] = useState(false)
+  const [deleting, setDeleting] = useState<OrgTable | null>(null)
   const router = useRouter()
 
   async function load() {
@@ -263,7 +278,7 @@ export default function TablesPage() {
       ) : (
         <div className="grid gap-2">
           {tables.map((t) => (
-            <TableCard key={t.id} table={t} />
+            <TableCard key={t.id} table={t} onDelete={() => setDeleting(t)} />
           ))}
         </div>
       )}
@@ -273,6 +288,13 @@ export default function TablesPage() {
         onClose={() => setCreating(false)}
         onCreated={handleCreated}
         orgId={orgId}
+      />
+      <DeleteTableDialog
+        table={deleting}
+        orgId={orgId}
+        open={deleting !== null}
+        onClose={() => setDeleting(null)}
+        onDeleted={() => { setDeleting(null); load() }}
       />
     </div>
   )

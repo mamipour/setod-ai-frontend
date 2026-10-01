@@ -31,6 +31,7 @@ import {
   type ColumnType,
 } from "@/lib/api"
 import { useActiveOrg } from "@/hooks/useActiveOrg"
+import { DeleteTableDialog } from "@/components/tables/DeleteTableDialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -996,6 +997,7 @@ export default function TableDetailPage() {
 
   const [addingColumn, setAddingColumn] = useState(false)
   const [importing, setImporting] = useState(false)
+  const [confirmingDelete, setConfirmingDelete] = useState(false)
 
   const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -1114,6 +1116,13 @@ export default function TableDetailPage() {
               <DropdownMenuItem onClick={() => { if (table && orgId) loadRows(table, search, offset) }}>
                 <RefreshCw className="size-3.5 mr-2" /> Refresh
               </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onClick={() => setConfirmingDelete(true)}
+                className="text-destructive focus:text-destructive"
+              >
+                <Trash2 className="size-3.5 mr-2" /> Delete table
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
@@ -1160,6 +1169,13 @@ export default function TableDetailPage() {
         orgId={orgId}
         tableId={table.id}
         onDone={() => { setImporting(false); if (table) loadRows(table, search, offset) }}
+      />
+      <DeleteTableDialog
+        table={table}
+        orgId={orgId}
+        open={confirmingDelete}
+        onClose={() => setConfirmingDelete(false)}
+        onDeleted={() => router.push("/tables")}
       />
     </div>
   )

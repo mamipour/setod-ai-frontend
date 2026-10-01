@@ -1231,6 +1231,14 @@ export interface TablePreset {
   unique_on: string[]
 }
 
+/** One agent's access to a table, as reported by GET /tables/{id}/agents. */
+export interface TableAgentAccess {
+  id: string
+  name: string
+  read: boolean
+  write: boolean
+}
+
 export const tablesApi = {
   // Table CRUD
   list: (orgId: string): Promise<OrgTable[]> => apiFetch(`/tables?org_id=${orgId}`),
@@ -1252,8 +1260,13 @@ export const tablesApi = {
   }): Promise<OrgTable> =>
     apiFetch(`/tables/${tableId}?org_id=${orgId}`, { method: "PATCH", body: JSON.stringify(body) }),
 
-  delete: (orgId: string, tableId: string): Promise<{ ok: boolean }> =>
-    apiFetch(`/tables/${tableId}?org_id=${orgId}`, { method: "DELETE" }),
+  /** Agents that can read and/or write this table. Shown before deleting. */
+  agentsUsing: (orgId: string, tableId: string): Promise<TableAgentAccess[]> =>
+    apiFetch(`/tables/${tableId}/agents?org_id=${orgId}`),
+
+  /** Owner only. 409 if agents use the table and `force` is false; with force their access is removed. */
+  delete: (orgId: string, tableId: string, force = false): Promise<void> =>
+    apiFetch(`/tables/${tableId}?org_id=${orgId}${force ? "&force=true" : ""}`, { method: "DELETE" }),
 
   // Column operations
   addColumn: (orgId: string, tableId: string, col: ColumnDef): Promise<OrgTable> =>
