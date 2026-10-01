@@ -45,12 +45,12 @@ const NAV_MAIN: { href: string; label: string; Icon: LucideIcon }[] = [
   { href: "/dashboard",      label: "Dashboard",      Icon: LayoutDashboard },
   { href: "/agents",         label: "Agents",         Icon: Bot },
   { href: "/map",            label: "Map",            Icon: Waypoints },
-  { href: "/tables",         label: "Tables",         Icon: Table2 },
   { href: "/templates",      label: "Templates",      Icon: LayoutTemplate },
   { href: "/connectors",     label: "Connectors",     Icon: Plug },
   { href: "/conversations",  label: "Conversations",  Icon: MessageCircle },
   { href: "/skills",         label: "Skills",         Icon: Wand2 },
   { href: "/notes",          label: "Notes",          Icon: StickyNote },
+  { href: "/tables",         label: "Tables",         Icon: Table2 },
   { href: "/approvals",      label: "Approvals",      Icon: ShieldCheck },
 ]
 
