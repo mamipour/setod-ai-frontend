@@ -1,18 +1,23 @@
 "use client"
 
-import { useEffect, useRef, useState, useCallback } from "react"
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react"
 import { useParams, useRouter } from "next/navigation"
 import {
   ArrowLeft,
   ChevronDown,
   Download,
+  History,
   Loader2,
   Plus,
   RefreshCw,
   Settings2,
   Trash2,
   Upload,
-  History,
   X,
   Check,
   AlertCircle,
@@ -67,6 +72,194 @@ const COLUMN_TYPES: { value: ColumnType; label: string }[] = [
   { value: "link",      label: "Link" },
 ]
 
+// ── Inline cell editor ─────────────────────────────────────────────────────────
+function CellEditor({
+  col,
+  value,
+  onChange,
+  onCommit,
+  onCancel,
+  onTab,
+}: {
+  col: ColumnDef
+  value: unknown
+  onChange: (v: unknown) => void
+  onCommit: () => void
+  onCancel: () => void
+  onTab: (shift: boolean) => void
+}) {
+  const inputRef = useRef<HTMLInputElement & HTMLSelectElement>(null)
+
+  useEffect(() => {
+    inputRef.current?.focus()
+    if (inputRef.current && typeof inputRef.current.select === "function") {
+      inputRef.current.select()
+    }
+  }, [])
+
+  function handleKeyDown(e: React.KeyboardEvent) {
+    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); onCommit() }
+    if (e.key === "Escape") { e.preventDefault(); onCancel() }
+    if (e.key === "Tab") { e.preventDefault(); onTab(e.shiftKey) }
+  }
+
+  const str = value == null ? "" : String(value)
+
+  if (col.type === "checkbox") {
+    return (
+      <input
+        type="checkbox"
+        checked={!!value}
+        onChange={(e) => { onChange(e.target.checked); onCommit() }}
+        className="h-4 w-4 cursor-pointer"
+        autoFocus
+      />
+    )
+  }
+
+  if (col.type === "select") {
+    return (
+      <select
+        ref={inputRef as React.RefObject<HTMLSelectElement>}
+        value={str}
+        onChange={(e) => { onChange(e.target.value); onCommit() }}
+        onKeyDown={handleKeyDown}
+        onBlur={onCommit}
+        className="w-full bg-transparent text-xs outline-none"
+      >
+        <option value="">—</option>
+        {(col.options ?? []).map((o) => (
+          <option key={o} value={o}>{o}</option>
+        ))}
+      </select>
+    )
+  }
+
+  if (col.type === "long_text") {
+    return (
+      <textarea
+        ref={inputRef as unknown as React.RefObject<HTMLTextAreaElement>}
+        value={str}
+        onChange={(e) => onChange(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Escape") { e.preventDefault(); onCancel() }
+          if (e.key === "Tab") { e.preventDefault(); onTab(e.shiftKey) }
+        }}
+        onBlur={onCommit}
+        rows={3}
+        className="w-full min-w-[200px] resize-none bg-transparent text-xs outline-none"
+        autoFocus
+      />
+    )
+  }
+
+  return (
+    <input
+      ref={inputRef}
+      type={
+        col.type === "number" ? "number" :
+        col.type === "date" ? "date" :
+        col.type === "datetime" ? "datetime-local" :
+        col.type === "email" ? "email" :
+        "text"
+      }
+      value={str}
+      onChange={(e) => onChange(e.target.value)}
+      onKeyDown={handleKeyDown}
+      onBlur={onCommit}
+      className="w-full min-w-[80px] bg-transparent text-xs outline-none"
+    />
+  )
+}
+
+// ── Cell display ───────────────────────────────────────────────────────────────
+function CellDisplay({ col, value }: { col: ColumnDef; value: unknown }) {
+  if (value == null || value === "") return <span className="text-muted-foreground/30">—</span>
+
+  if (col.type === "checkbox") return value ? <Check className="size-3.5 text-green-500" /> : null
+
+  if (col.type === "select") {
+    return (
+      <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-medium text-primary">
+        {String(value)}
+      </span>
+    )
+  }
+
+  if (col.type === "url") {
+    return (
+      <a
+        href={String(value)}
+        target="_blank"
+        rel="noopener noreferrer"
+        onClick={(e) => e.stopPropagation()}
+        className="text-blue-500 underline underline-offset-2 hover:text-blue-400 truncate block max-w-[180px]"
+      >
+        {String(value)}
+      </a>
+    )
+  }
+
+  if (col.type === "datetime" && typeof value === "string") {
+    try { return <span>{new Date(value).toLocaleString()}</span> } catch { /* fall through */ }
+  }
+  if (col.type === "date" && typeof value === "string") {
+    try { return <span>{new Date(value).toLocaleDateString()}</span> } catch { /* fall through */ }
+  }
+
+  return <span className="truncate block max-w-[200px]">{String(value)}</span>
+}
+
+// ── Row history panel ─────────────────────────────────────────────────────────
+function RowHistoryPanel({
+  orgId,
+  tableId,
+  rowId,
+  onClose,
+}: {
+  orgId: string
+  tableId: string
+  rowId: string
+  onClose: () => void
+}) {
+  const [events, setEvents] = useState<OrgTableEvent[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    tablesApi.rowHistory(orgId, tableId, rowId).then(setEvents).finally(() => setLoading(false))
+  }, [orgId, tableId, rowId])
+
+  return (
+    <div className="flex flex-col gap-3 w-72 border-l bg-background p-4 overflow-y-auto shrink-0">
+      <div className="flex items-center justify-between">
+        <h3 className="text-sm font-semibold">Row history</h3>
+        <button onClick={onClose} className="rounded p-0.5 hover:bg-accent"><X className="size-3.5" /></button>
+      </div>
+      {loading ? (
+        <Loader2 className="size-4 animate-spin text-muted-foreground" />
+      ) : events.length === 0 ? (
+        <p className="text-xs text-muted-foreground">No history.</p>
+      ) : (
+        <div className="space-y-3">
+          {events.map((ev) => (
+            <div key={ev.id} className="space-y-1">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-xs font-medium capitalize">{ev.action}</span>
+                <span className="text-[11px] text-muted-foreground">{new Date(ev.created_at).toLocaleString()}</span>
+              </div>
+              {ev.after && (
+                <pre className="rounded bg-muted px-2 py-1.5 text-[10px] overflow-x-auto max-h-32">
+                  {JSON.stringify(ev.after, null, 2)}
+                </pre>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ── Add column dialog ─────────────────────────────────────────────────────────
 function AddColumnDialog({
   open,
@@ -116,14 +309,12 @@ function AddColumnDialog({
         <div className="space-y-3 py-1">
           <div className="space-y-1">
             <Label className="text-xs">Name *</Label>
-            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Status" className="text-xs" />
+            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Status" className="text-xs" autoFocus />
           </div>
           <div className="space-y-1">
             <Label className="text-xs">Type</Label>
             <Select value={type} onValueChange={(v) => setType(v as ColumnType)}>
-              <SelectTrigger className="text-xs h-8">
-                <SelectValue />
-              </SelectTrigger>
+              <SelectTrigger className="text-xs h-8"><SelectValue /></SelectTrigger>
               <SelectContent>
                 {COLUMN_TYPES.map((ct) => (
                   <SelectItem key={ct.value} value={ct.value} className="text-xs">{ct.label}</SelectItem>
@@ -146,70 +337,11 @@ function AddColumnDialog({
         <DialogFooter>
           <Button variant="ghost" size="sm" onClick={onClose} className="text-xs">Cancel</Button>
           <Button size="sm" onClick={handle} disabled={saving} className="text-xs">
-            {saving && <Loader2 className="mr-1.5 size-3.5 animate-spin" />}
-            Add column
+            {saving && <Loader2 className="mr-1.5 size-3.5 animate-spin" />}Add column
           </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  )
-}
-
-// ── Row history panel ─────────────────────────────────────────────────────────
-function RowHistoryPanel({
-  orgId,
-  tableId,
-  rowId,
-  onClose,
-}: {
-  orgId: string
-  tableId: string
-  rowId: string
-  onClose: () => void
-}) {
-  const [events, setEvents] = useState<OrgTableEvent[]>([])
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    tablesApi.rowHistory(orgId, tableId, rowId).then(setEvents).finally(() => setLoading(false))
-  }, [orgId, tableId, rowId])
-
-  const ACTION_LABELS: Record<string, string> = {
-    create: "Created",
-    update: "Updated",
-    delete: "Deleted",
-    restore: "Restored",
-    schema: "Schema changed",
-  }
-
-  return (
-    <div className="flex flex-col gap-3 min-w-[280px] max-w-xs border-l bg-background p-4">
-      <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold">Row history</h3>
-        <button onClick={onClose} className="rounded p-0.5 hover:bg-accent"><X className="size-3.5" /></button>
-      </div>
-      {loading ? (
-        <Loader2 className="size-4 animate-spin text-muted-foreground" />
-      ) : events.length === 0 ? (
-        <p className="text-xs text-muted-foreground">No history.</p>
-      ) : (
-        <div className="space-y-3 overflow-y-auto">
-          {events.map((ev) => (
-            <div key={ev.id} className="space-y-1">
-              <div className="flex items-center justify-between gap-2">
-                <span className="text-xs font-medium">{ACTION_LABELS[ev.action] ?? ev.action}</span>
-                <span className="text-[11px] text-muted-foreground">{new Date(ev.created_at).toLocaleString()}</span>
-              </div>
-              {ev.after && (
-                <pre className="rounded bg-muted px-2 py-1.5 text-[10px] overflow-x-auto">
-                  {JSON.stringify(ev.after, null, 2)}
-                </pre>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
   )
 }
 
@@ -276,22 +408,13 @@ function ImportDialog({
             <>
               <div className="space-y-1">
                 <Label className="text-xs">File (CSV or XLSX)</Label>
-                <Input
-                  type="file"
-                  accept=".csv,.xlsx"
-                  className="text-xs"
-                  onChange={(e) => { setFile(e.target.files?.[0] ?? null); setPreview(null) }}
-                />
+                <Input type="file" accept=".csv,.xlsx" className="text-xs"
+                  onChange={(e) => { setFile(e.target.files?.[0] ?? null); setPreview(null) }} />
               </div>
               {preview && (
                 <div className="rounded-lg bg-muted px-3 py-2 text-xs space-y-1">
                   <p className="font-medium">{preview.total_rows} rows ready to import</p>
-                  {preview.errors.length > 0 && (
-                    <ul className="text-amber-600 space-y-0.5">
-                      {preview.errors.slice(0, 5).map((e, i) => <li key={i}>{e}</li>)}
-                      {preview.errors.length > 5 && <li>…and {preview.errors.length - 5} more</li>}
-                    </ul>
-                  )}
+                  {preview.errors.slice(0, 5).map((e, i) => <p key={i} className="text-amber-600">{e}</p>)}
                 </div>
               )}
               {error && <p className="text-xs text-red-600">{error}</p>}
@@ -300,24 +423,20 @@ function ImportDialog({
             <div className="flex flex-col items-center gap-3 py-4">
               <Check className="size-8 text-green-500" />
               <p className="text-sm font-medium">Import complete</p>
-              <p className="text-xs text-muted-foreground">{done.imported} rows imported, {done.skipped} skipped (duplicates).</p>
+              <p className="text-xs text-muted-foreground">{done.imported} rows imported, {done.skipped} skipped.</p>
             </div>
           )}
         </div>
         <DialogFooter>
-          <Button variant="ghost" size="sm" onClick={handleClose} className="text-xs">
-            {done ? "Close" : "Cancel"}
-          </Button>
+          <Button variant="ghost" size="sm" onClick={handleClose} className="text-xs">{done ? "Close" : "Cancel"}</Button>
           {!done && !preview && (
             <Button size="sm" onClick={handlePreview} disabled={!file || previewing} className="text-xs">
-              {previewing && <Loader2 className="mr-1.5 size-3.5 animate-spin" />}
-              Preview
+              {previewing && <Loader2 className="mr-1.5 size-3.5 animate-spin" />}Preview
             </Button>
           )}
           {!done && preview && (
             <Button size="sm" onClick={handleImport} disabled={importing || preview.total_rows === 0} className="text-xs">
-              {importing && <Loader2 className="mr-1.5 size-3.5 animate-spin" />}
-              Import {preview.total_rows} rows
+              {importing && <Loader2 className="mr-1.5 size-3.5 animate-spin" />}Import {preview.total_rows} rows
             </Button>
           )}
         </DialogFooter>
@@ -326,238 +445,390 @@ function ImportDialog({
   )
 }
 
-// ── Inline row editor (simple form-based fallback) ────────────────────────────
-function RowEditorPanel({
+// ── Types ──────────────────────────────────────────────────────────────────────
+interface EditingCell { rowIdx: number; colKey: string }
+// A "draft row" is an unsaved new row being typed at the bottom
+interface DraftRow { data: Record<string, unknown> }
+
+// ── Spreadsheet grid ───────────────────────────────────────────────────────────
+function SpreadsheetGrid({
   orgId,
   table,
-  row,
-  onClose,
-  onSaved,
-  onDeleted,
+  rows,
+  onRowsChanged,
 }: {
   orgId: string
   table: OrgTable
-  row: OrgTableRow | null   // null = new row
-  onClose: () => void
-  onSaved: () => void
-  onDeleted: () => void
+  rows: OrgTableRow[]
+  onRowsChanged: () => void
 }) {
-  const [data, setData] = useState<Record<string, unknown>>(() => row?.data ?? {})
-  const [saving, setSaving] = useState(false)
-  const [deleting, setDeleting] = useState(false)
-  const [showHistory, setShowHistory] = useState(false)
-  const [error, setError] = useState("")
-
   const visibleCols = table.columns.filter((c) => !c.hidden_from_agents)
+  const [editing, setEditing] = useState<EditingCell | null>(null)
+  const [editValue, setEditValue] = useState<unknown>(null)
+  const [saving, setSaving] = useState<string | null>(null) // rowId being saved
+  const [historyRowId, setHistoryRowId] = useState<string | null>(null)
+  // Draft new rows (pending creation)
+  const [draftRows, setDraftRows] = useState<DraftRow[]>([])
+  const [draftEditing, setDraftEditing] = useState<{ draftIdx: number; colKey: string } | null>(null)
+  const [draftValue, setDraftValue] = useState<unknown>(null)
+  const [savingDraft, setSavingDraft] = useState(false)
+  const [errors, setErrors] = useState<Record<string, string>>({}) // rowId → error
 
-  async function handleSave() {
-    setSaving(true); setError("")
+  const totalRows = rows.length + draftRows.length
+
+  // ── Cell click ────────────────────────────────────────────────────────────────
+  function startEdit(rowIdx: number, colKey: string) {
+    const row = rows[rowIdx]
+    setEditing({ rowIdx, colKey })
+    setEditValue(row.data[colKey] ?? null)
+    setDraftEditing(null)
+  }
+
+  function startDraftEdit(draftIdx: number, colKey: string) {
+    setDraftEditing({ draftIdx, colKey })
+    setDraftValue(draftRows[draftIdx]?.data[colKey] ?? null)
+    setEditing(null)
+  }
+
+  // ── Commit existing row cell ─────────────────────────────────────────────────
+  async function commitEdit() {
+    if (!editing) return
+    const row = rows[editing.rowIdx]
+    const col = visibleCols.find((c) => c.key === editing.colKey)
+    if (!row || !col) { setEditing(null); return }
+
+    // No change?
+    const prev = row.data[editing.colKey]
+    const cur = editValue
+    if (String(prev ?? "") === String(cur ?? "")) { setEditing(null); return }
+
+    setSaving(row.id)
     try {
-      if (row) {
-        await tablesApi.updateRow(orgId, table.id, row.id, { data, expected_version: row.version })
-      } else {
-        await tablesApi.createRow(orgId, table.id, data)
+      await tablesApi.updateRow(orgId, table.id, row.id, {
+        data: { [editing.colKey]: cur === "" ? null : cur },
+        expected_version: row.version,
+      })
+      onRowsChanged()
+    } catch (e: unknown) {
+      setErrors((prev) => ({ ...prev, [row.id]: e instanceof Error ? e.message : "Save failed" }))
+    } finally {
+      setSaving(null)
+    }
+    setEditing(null)
+  }
+
+  function cancelEdit() { setEditing(null); setEditValue(null) }
+
+  // ── Commit draft row cell ─────────────────────────────────────────────────────
+  function commitDraftCell() {
+    if (!draftEditing) return
+    setDraftRows((prev) => {
+      const copy = [...prev]
+      copy[draftEditing.draftIdx] = {
+        data: { ...copy[draftEditing.draftIdx].data, [draftEditing.colKey]: draftValue === "" ? null : draftValue },
       }
-      onSaved()
+      return copy
+    })
+    setDraftEditing(null); setDraftValue(null)
+  }
+
+  // ── Save a draft row ─────────────────────────────────────────────────────────
+  async function saveDraftRow(draftIdx: number) {
+    const draft = draftRows[draftIdx]
+    if (!draft) return
+    // Check if anything was entered
+    const hasData = Object.values(draft.data).some((v) => v != null && v !== "")
+    if (!hasData) {
+      setDraftRows((prev) => prev.filter((_, i) => i !== draftIdx))
+      return
+    }
+    setSavingDraft(true)
+    try {
+      await tablesApi.createRow(orgId, table.id, draft.data)
+      setDraftRows((prev) => prev.filter((_, i) => i !== draftIdx))
+      onRowsChanged()
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Save failed.")
+      setErrors((prev) => ({ ...prev, [`draft_${draftIdx}`]: e instanceof Error ? e.message : "Save failed" }))
     } finally {
-      setSaving(false)
+      setSavingDraft(false)
     }
   }
 
-  async function handleDelete() {
-    if (!row) return
-    setDeleting(true)
+  // ── Delete row ────────────────────────────────────────────────────────────────
+  async function deleteRow(rowId: string) {
     try {
-      await tablesApi.deleteRow(orgId, table.id, row.id)
-      onDeleted()
+      await tablesApi.deleteRow(orgId, table.id, rowId)
+      onRowsChanged()
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Delete failed.")
-    } finally {
-      setDeleting(false)
+      setErrors((prev) => ({ ...prev, [rowId]: e instanceof Error ? e.message : "Delete failed" }))
     }
   }
+
+  // ── Tab navigation ────────────────────────────────────────────────────────────
+  function tabFromExisting(shift: boolean) {
+    if (!editing) return
+    commitEdit()
+    const colIdx = visibleCols.findIndex((c) => c.key === editing.colKey)
+    const rowIdx = editing.rowIdx
+    if (!shift) {
+      // Next col
+      if (colIdx < visibleCols.length - 1) {
+        setTimeout(() => startEdit(rowIdx, visibleCols[colIdx + 1].key), 10)
+      } else if (rowIdx < rows.length - 1) {
+        setTimeout(() => startEdit(rowIdx + 1, visibleCols[0].key), 10)
+      } else {
+        // Move to first draft or add new draft
+        if (draftRows.length > 0) {
+          setTimeout(() => startDraftEdit(0, visibleCols[0].key), 10)
+        } else {
+          addDraftRow()
+          setTimeout(() => startDraftEdit(0, visibleCols[0].key), 50)
+        }
+      }
+    } else {
+      if (colIdx > 0) {
+        setTimeout(() => startEdit(rowIdx, visibleCols[colIdx - 1].key), 10)
+      } else if (rowIdx > 0) {
+        setTimeout(() => startEdit(rowIdx - 1, visibleCols[visibleCols.length - 1].key), 10)
+      }
+    }
+  }
+
+  function tabFromDraft(shift: boolean) {
+    if (!draftEditing) return
+    commitDraftCell()
+    const colIdx = visibleCols.findIndex((c) => c.key === draftEditing.colKey)
+    const draftIdx = draftEditing.draftIdx
+    if (!shift) {
+      if (colIdx < visibleCols.length - 1) {
+        setTimeout(() => startDraftEdit(draftIdx, visibleCols[colIdx + 1].key), 10)
+      } else {
+        // Save this draft, move to next
+        saveDraftRow(draftIdx).then(() => {
+          addDraftRow()
+          setTimeout(() => startDraftEdit(0, visibleCols[0].key), 50)
+        })
+      }
+    } else {
+      if (colIdx > 0) {
+        setTimeout(() => startDraftEdit(draftIdx, visibleCols[colIdx - 1].key), 10)
+      } else if (rows.length > 0) {
+        setTimeout(() => startEdit(rows.length - 1, visibleCols[visibleCols.length - 1].key), 10)
+      }
+    }
+  }
+
+  function addDraftRow() {
+    setDraftRows((prev) => [...prev, { data: {} }])
+  }
+
+  // ── Render ────────────────────────────────────────────────────────────────────
+  const COL_W = "min-w-[140px] max-w-[240px]"
+  const CELL_BASE = "border-b border-r px-3 py-1.5 text-xs align-middle h-9"
 
   return (
-    <div className="flex flex-col min-w-[300px] max-w-sm border-l bg-background p-4 overflow-y-auto">
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="text-sm font-semibold">{row ? "Edit row" : "New row"}</h3>
-        <div className="flex items-center gap-1">
-          {row && (
-            <button
-              onClick={() => setShowHistory(!showHistory)}
-              title="Row history"
-              className="rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground"
-            >
-              <History className="size-3.5" />
-            </button>
-          )}
-          <button onClick={onClose} className="rounded p-0.5 hover:bg-accent">
-            <X className="size-3.5" />
-          </button>
-        </div>
+    <div className="flex flex-1 overflow-hidden">
+      {/* Grid scroll area */}
+      <div className="flex-1 overflow-auto">
+        <table className="min-w-full text-xs border-separate border-spacing-0 select-none">
+          {/* Column headers */}
+          <thead>
+            <tr>
+              {/* Row # */}
+              <th className="sticky top-0 z-20 w-10 border-b border-r bg-muted/80 backdrop-blur-sm" />
+              {visibleCols.map((col) => (
+                <th
+                  key={col.key}
+                  className={cn(
+                    "sticky top-0 z-20 border-b border-r bg-muted/80 backdrop-blur-sm",
+                    "px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wide text-muted-foreground whitespace-nowrap",
+                    COL_W,
+                  )}
+                >
+                  {col.name}
+                  {col.required && <span className="ml-1 text-destructive">*</span>}
+                </th>
+              ))}
+              {/* Actions col */}
+              <th className="sticky top-0 z-20 w-8 border-b bg-muted/80 backdrop-blur-sm" />
+            </tr>
+          </thead>
+
+          <tbody>
+            {/* Existing rows */}
+            {rows.map((row, rowIdx) => (
+              <tr key={row.id} className="group">
+                {/* Row number */}
+                <td className="border-b border-r bg-muted/30 px-2 text-center text-[10px] text-muted-foreground w-10 h-9">
+                  <div className="flex items-center justify-center gap-1">
+                    <span className="group-hover:hidden">{rowIdx + 1}</span>
+                    <button
+                      onClick={() => setHistoryRowId(historyRowId === row.id ? null : row.id)}
+                      className="hidden group-hover:flex items-center text-muted-foreground hover:text-foreground"
+                      title="Row history"
+                    >
+                      <History className="size-3" />
+                    </button>
+                  </div>
+                </td>
+
+                {/* Data cells */}
+                {visibleCols.map((col) => {
+                  const isEditing = editing?.rowIdx === rowIdx && editing?.colKey === col.key
+                  const hasError = errors[row.id]
+
+                  return (
+                    <td
+                      key={col.key}
+                      onClick={() => !isEditing && startEdit(rowIdx, col.key)}
+                      className={cn(
+                        CELL_BASE,
+                        COL_W,
+                        "cursor-cell transition-colors",
+                        isEditing
+                          ? "bg-primary/5 ring-1 ring-inset ring-primary z-10 relative"
+                          : "hover:bg-accent/40",
+                        hasError && "bg-red-50",
+                      )}
+                    >
+                      {isEditing ? (
+                        <CellEditor
+                          col={col}
+                          value={editValue}
+                          onChange={setEditValue}
+                          onCommit={commitEdit}
+                          onCancel={cancelEdit}
+                          onTab={tabFromExisting}
+                        />
+                      ) : (
+                        <CellDisplay col={col} value={row.data[col.key]} />
+                      )}
+                    </td>
+                  )
+                })}
+
+                {/* Row actions */}
+                <td className="border-b px-1 text-center w-8 h-9">
+                  {saving === row.id ? (
+                    <Loader2 className="size-3 animate-spin text-muted-foreground mx-auto" />
+                  ) : (
+                    <button
+                      onClick={() => deleteRow(row.id)}
+                      className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-red-500 transition-opacity"
+                    >
+                      <Trash2 className="size-3" />
+                    </button>
+                  )}
+                </td>
+              </tr>
+            ))}
+
+            {/* Draft (new) rows */}
+            {draftRows.map((draft, draftIdx) => (
+              <tr key={`draft_${draftIdx}`} className="group bg-primary/[0.02]">
+                <td className="border-b border-r bg-primary/5 px-2 text-center text-[10px] text-muted-foreground w-10 h-9">
+                  <span className="text-primary font-semibold">*</span>
+                </td>
+                {visibleCols.map((col) => {
+                  const isEditing = draftEditing?.draftIdx === draftIdx && draftEditing?.colKey === col.key
+                  return (
+                    <td
+                      key={col.key}
+                      onClick={() => !isEditing && startDraftEdit(draftIdx, col.key)}
+                      className={cn(
+                        CELL_BASE,
+                        COL_W,
+                        "cursor-cell",
+                        isEditing
+                          ? "bg-primary/10 ring-1 ring-inset ring-primary z-10 relative"
+                          : "hover:bg-accent/40",
+                      )}
+                    >
+                      {isEditing ? (
+                        <CellEditor
+                          col={col}
+                          value={draftValue}
+                          onChange={setDraftValue}
+                          onCommit={() => { commitDraftCell() }}
+                          onCancel={() => { setDraftEditing(null); setDraftValue(null) }}
+                          onTab={tabFromDraft}
+                        />
+                      ) : (
+                        <CellDisplay col={col} value={draft.data[col.key]} />
+                      )}
+                    </td>
+                  )
+                })}
+                <td className="border-b px-1 text-center w-8 h-9">
+                  {savingDraft ? (
+                    <Loader2 className="size-3 animate-spin text-muted-foreground mx-auto" />
+                  ) : (
+                    <button
+                      onClick={() => setDraftRows((prev) => prev.filter((_, i) => i !== draftIdx))}
+                      className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-red-500 transition-opacity"
+                    >
+                      <X className="size-3" />
+                    </button>
+                  )}
+                </td>
+              </tr>
+            ))}
+
+            {/* Add row button row */}
+            <tr>
+              <td
+                colSpan={visibleCols.length + 2}
+                className="border-b py-1 px-3"
+              >
+                <button
+                  onClick={() => { addDraftRow(); setTimeout(() => startDraftEdit(draftRows.length, visibleCols[0]?.key ?? ""), 50) }}
+                  className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors py-1 px-1 rounded hover:bg-accent/40 w-full"
+                >
+                  <Plus className="size-3.5" />
+                  Add row
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+
+        {/* Empty state */}
+        {rows.length === 0 && draftRows.length === 0 && (
+          <div className="flex flex-col items-center justify-center py-16 text-center">
+            <p className="text-sm text-muted-foreground">No rows yet.</p>
+            <p className="text-xs text-muted-foreground/60 mt-1">Click "Add row" above or press the button in the toolbar.</p>
+          </div>
+        )}
       </div>
 
-      {showHistory && row ? (
-        <RowHistoryPanel orgId={orgId} tableId={table.id} rowId={row.id} onClose={() => setShowHistory(false)} />
-      ) : (
-        <div className="space-y-3 flex-1">
-          {visibleCols.map((col) => (
-            <div key={col.key} className="space-y-1">
-              <Label className="text-xs">
-                {col.name}
-                {col.required && <span className="ml-1 text-destructive">*</span>}
-              </Label>
-              {col.type === "checkbox" ? (
-                <input
-                  type="checkbox"
-                  checked={!!data[col.key]}
-                  onChange={(e) => setData((d) => ({ ...d, [col.key]: e.target.checked }))}
-                  className="h-4 w-4"
-                />
-              ) : col.type === "select" ? (
-                <Select
-                  value={String(data[col.key] ?? "")}
-                  onValueChange={(v) => setData((d) => ({ ...d, [col.key]: v }))}
-                >
-                  <SelectTrigger className="h-8 text-xs">
-                    <SelectValue placeholder="Select…" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {(col.options ?? []).map((o) => (
-                      <SelectItem key={o} value={o} className="text-xs">{o}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              ) : col.type === "long_text" ? (
-                <textarea
-                  value={String(data[col.key] ?? "")}
-                  onChange={(e) => setData((d) => ({ ...d, [col.key]: e.target.value }))}
-                  className="w-full rounded-md border bg-background px-3 py-1.5 text-xs resize-y min-h-[80px] focus:outline-none focus:ring-1 focus:ring-ring"
-                />
-              ) : (
-                <Input
-                  type={col.type === "number" ? "number" : col.type === "date" ? "date" : col.type === "datetime" ? "datetime-local" : "text"}
-                  value={String(data[col.key] ?? "")}
-                  onChange={(e) => setData((d) => ({ ...d, [col.key]: e.target.value }))}
-                  className="h-8 text-xs"
-                />
-              )}
+      {/* Error toast */}
+      {Object.keys(errors).length > 0 && (
+        <div className="fixed bottom-4 right-4 z-50 flex flex-col gap-2">
+          {Object.entries(errors).map(([id, msg]) => (
+            <div key={id} className="flex items-center gap-2 rounded-lg bg-red-600 px-3 py-2 text-xs text-white shadow-lg">
+              <AlertCircle className="size-3.5 shrink-0" />
+              {msg}
+              <button onClick={() => setErrors((p) => { const n = {...p}; delete n[id]; return n })}><X className="size-3" /></button>
             </div>
           ))}
         </div>
       )}
 
-      {error && (
-        <div className="flex items-center gap-1.5 rounded-lg bg-red-50 px-2.5 py-2 text-xs text-red-700 mt-3">
-          <AlertCircle className="size-3.5 shrink-0" />
-          {error}
-        </div>
+      {/* Row history panel */}
+      {historyRowId && (
+        <RowHistoryPanel
+          orgId={orgId}
+          tableId={table.id}
+          rowId={historyRowId}
+          onClose={() => setHistoryRowId(null)}
+        />
       )}
-
-      <div className="flex items-center justify-between mt-4 pt-3 border-t gap-2">
-        {row ? (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleDelete}
-            disabled={deleting}
-            className="text-xs text-red-600 hover:text-red-700 hover:bg-red-50"
-          >
-            {deleting ? <Loader2 className="size-3.5 animate-spin" /> : <Trash2 className="size-3.5" />}
-          </Button>
-        ) : <span />}
-        <div className="flex gap-2">
-          <Button variant="ghost" size="sm" onClick={onClose} className="text-xs">Cancel</Button>
-          <Button size="sm" onClick={handleSave} disabled={saving} className="text-xs">
-            {saving && <Loader2 className="mr-1.5 size-3.5 animate-spin" />}
-            Save
-          </Button>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-// ── Main grid component ────────────────────────────────────────────────────────
-function TableGrid({
-  table,
-  rows,
-  onRowClick,
-}: {
-  table: OrgTable
-  rows: OrgTableRow[]
-  onRowClick: (row: OrgTableRow) => void
-}) {
-  // We use a simple HTML table instead of the full Glide grid for server-side
-  // compatibility and reliability. The Glide grid is available via the DataEditor
-  // import but requires canvas context. We render a standard table that looks like
-  // a spreadsheet with sticky headers and alternating rows.
-  const visibleCols = table.columns.filter((c) => !c.hidden_from_agents)
-
-  function formatCell(col: ColumnDef, val: unknown): string {
-    if (val === null || val === undefined || val === "") return ""
-    if (col.type === "checkbox") return val ? "✓" : ""
-    if (col.type === "datetime" && typeof val === "string") {
-      try { return new Date(val).toLocaleString() } catch { return String(val) }
-    }
-    if (col.type === "date" && typeof val === "string") {
-      try { return new Date(val).toLocaleDateString() } catch { return String(val) }
-    }
-    return String(val)
-  }
-
-  if (rows.length === 0) {
-    return (
-      <div className="flex flex-col items-center justify-center py-16 text-center">
-        <p className="text-sm font-medium text-muted-foreground">No rows yet</p>
-        <p className="mt-1 text-xs text-muted-foreground">Click "+ Add row" to add the first entry.</p>
-      </div>
-    )
-  }
-
-  return (
-    <div className="overflow-auto">
-      <table className="min-w-full text-xs border-separate border-spacing-0">
-        <thead>
-          <tr>
-            {visibleCols.map((col) => (
-              <th
-                key={col.key}
-                className="sticky top-0 z-10 border-b border-r bg-muted px-3 py-2 text-left font-medium text-muted-foreground whitespace-nowrap"
-              >
-                {col.name}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((row) => (
-            <tr
-              key={row.id}
-              onClick={() => onRowClick(row)}
-              className="cursor-pointer hover:bg-accent/40 transition-colors"
-            >
-              {visibleCols.map((col) => (
-                <td
-                  key={col.key}
-                  className="border-b border-r px-3 py-2 max-w-[240px] truncate"
-                  title={String(row.data[col.key] ?? "")}
-                >
-                  {formatCell(col, row.data[col.key])}
-                </td>
-              ))}
-            </tr>
-          ))}
-        </tbody>
-      </table>
     </div>
   )
 }
 
 // ── Page ──────────────────────────────────────────────────────────────────────
-const PAGE_SIZE = 100
+const PAGE_SIZE = 200
 
 export default function TableDetailPage() {
   const { id } = useParams<{ id: string }>()
@@ -574,10 +845,8 @@ export default function TableDetailPage() {
   const [rowsLoading, setRowsLoading] = useState(false)
   const [error, setError] = useState("")
 
-  // Panels
   const [addingColumn, setAddingColumn] = useState(false)
   const [importing, setImporting] = useState(false)
-  const [selectedRow, setSelectedRow] = useState<OrgTableRow | null | "new">(null)
 
   const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -619,16 +888,6 @@ export default function TableDetailPage() {
     }, 350)
   }
 
-  function handleRowSaved() {
-    setSelectedRow(null)
-    if (table && orgId) loadRows(table, search, offset)
-  }
-
-  function handleRowDeleted() {
-    setSelectedRow(null)
-    if (table && orgId) loadRows(table, search, offset)
-  }
-
   if (loading) {
     return (
       <div className="flex justify-center py-20">
@@ -649,9 +908,11 @@ export default function TableDetailPage() {
   }
 
   return (
-    <div className="flex h-full flex-col gap-4" style={{ maxWidth: "100%" }}>
-      {/* Header */}
-      <div className="flex items-center justify-between gap-3">
+    // Use full viewport height minus sidebar — override the max-w-4xl from layout
+    <div className="-mx-6 -mt-6 flex flex-col" style={{ height: "100vh" }}>
+
+      {/* ── Toolbar ── */}
+      <div className="flex items-center justify-between gap-3 border-b px-4 py-2 bg-background shrink-0">
         <div className="flex items-center gap-2 min-w-0">
           <button
             onClick={() => router.push("/tables")}
@@ -660,33 +921,27 @@ export default function TableDetailPage() {
             <ArrowLeft className="size-4" />
           </button>
           <div className="min-w-0">
-            <h1 className="text-xl font-bold truncate">{table.name}</h1>
+            <h1 className="text-sm font-semibold truncate">{table.name}</h1>
             {table.description && (
-              <p className="text-xs text-muted-foreground truncate">{table.description}</p>
+              <p className="text-[11px] text-muted-foreground truncate">{table.description}</p>
             )}
           </div>
+          <span className="text-[11px] text-muted-foreground ml-2">
+            {total.toLocaleString()} row{total !== 1 ? "s" : ""}
+            {rowsLoading && <Loader2 className="ml-1.5 inline size-3 animate-spin" />}
+          </span>
         </div>
 
-        {/* Toolbar */}
         <div className="flex items-center gap-2 shrink-0">
           <Input
             value={search}
             onChange={(e) => handleSearchChange(e.target.value)}
             placeholder="Search…"
-            className="h-8 w-40 text-xs"
+            className="h-7 w-36 text-xs"
           />
 
-          <Button
-            size="sm"
-            variant="outline"
-            className="h-8 text-xs"
-            onClick={() => setSelectedRow("new")}
-          >
-            <Plus className="size-3.5" /> Add row
-          </Button>
-
           <DropdownMenu>
-            <DropdownMenuTrigger className="inline-flex h-8 items-center gap-1 rounded-md border bg-background px-2 text-xs hover:bg-accent transition-colors">
+            <DropdownMenuTrigger className="inline-flex h-7 items-center gap-1 rounded-md border bg-background px-2 text-xs hover:bg-accent transition-colors">
               <Settings2 className="size-3.5" />
               <ChevronDown className="size-3" />
             </DropdownMenuTrigger>
@@ -707,9 +962,7 @@ export default function TableDetailPage() {
                 <Download className="size-3.5 mr-2" /> Export CSV
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem
-                onClick={() => { if (table && orgId) loadRows(table, search, offset) }}
-              >
+              <DropdownMenuItem onClick={() => { if (table && orgId) loadRows(table, search, offset) }}>
                 <RefreshCw className="size-3.5 mr-2" /> Refresh
               </DropdownMenuItem>
             </DropdownMenuContent>
@@ -717,64 +970,34 @@ export default function TableDetailPage() {
         </div>
       </div>
 
-      {/* Row count */}
-      <div className="text-xs text-muted-foreground">
-        {total.toLocaleString()} row{total !== 1 ? "s" : ""}
-        {rowsLoading && <Loader2 className="ml-2 inline size-3 animate-spin" />}
+      {/* ── Grid ── */}
+      <div className="flex flex-1 overflow-hidden">
+        <SpreadsheetGrid
+          orgId={orgId}
+          table={table}
+          rows={rows}
+          onRowsChanged={() => loadRows(table, search, offset)}
+        />
       </div>
 
-      {/* Main area */}
-      <div className="flex flex-1 overflow-hidden rounded-xl border bg-card">
-        {/* Grid */}
-        <div className="flex-1 overflow-auto">
-          <TableGrid
-            table={table}
-            rows={rows}
-            onRowClick={(row) => setSelectedRow(row)}
-          />
-        </div>
-
-        {/* Side panel */}
-        {selectedRow !== null && (
-          <RowEditorPanel
-            orgId={orgId}
-            table={table}
-            row={selectedRow === "new" ? null : selectedRow}
-            onClose={() => setSelectedRow(null)}
-            onSaved={handleRowSaved}
-            onDeleted={handleRowDeleted}
-          />
-        )}
-      </div>
-
-      {/* Pagination */}
+      {/* ── Pagination ── */}
       {total > PAGE_SIZE && (
-        <div className="flex items-center justify-between text-xs text-muted-foreground">
+        <div className="flex items-center justify-between border-t px-4 py-2 text-xs text-muted-foreground shrink-0 bg-background">
           <span>Showing {offset + 1}–{Math.min(offset + PAGE_SIZE, total)} of {total}</span>
           <div className="flex gap-2">
-            <Button
-              size="sm"
-              variant="outline"
-              className="h-7 text-xs"
-              disabled={offset === 0}
-              onClick={() => { const o = Math.max(0, offset - PAGE_SIZE); setOffset(o); loadRows(table, search, o) }}
-            >
+            <Button size="sm" variant="outline" className="h-6 text-xs" disabled={offset === 0}
+              onClick={() => { const o = Math.max(0, offset - PAGE_SIZE); setOffset(o); loadRows(table, search, o) }}>
               Previous
             </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              className="h-7 text-xs"
-              disabled={offset + PAGE_SIZE >= total}
-              onClick={() => { const o = offset + PAGE_SIZE; setOffset(o); loadRows(table, search, o) }}
-            >
+            <Button size="sm" variant="outline" className="h-6 text-xs" disabled={offset + PAGE_SIZE >= total}
+              onClick={() => { const o = offset + PAGE_SIZE; setOffset(o); loadRows(table, search, o) }}>
               Next
             </Button>
           </div>
         </div>
       )}
 
-      {/* Dialogs */}
+      {/* ── Dialogs ── */}
       <AddColumnDialog
         open={addingColumn}
         onClose={() => setAddingColumn(false)}
@@ -782,7 +1005,6 @@ export default function TableDetailPage() {
         orgId={orgId}
         tableId={table.id}
       />
-
       <ImportDialog
         open={importing}
         onClose={() => setImporting(false)}
