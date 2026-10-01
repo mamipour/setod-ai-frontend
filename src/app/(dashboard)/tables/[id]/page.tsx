@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState, useCallback } from "react"
 import { useParams, useRouter } from "next/navigation"
-import dynamic from "next/dynamic"
 import {
   ArrowLeft,
   ChevronDown,
@@ -52,12 +51,6 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { cn } from "@/lib/utils"
-
-// Glide Data Grid — SSR-safe dynamic import
-const DataEditor = dynamic(
-  () => import("@glideapps/glide-data-grid").then((m) => m.DataEditor),
-  { ssr: false, loading: () => <div className="flex h-64 items-center justify-center"><Loader2 className="size-5 animate-spin text-muted-foreground" /></div> }
-)
 
 // ── Column type options ────────────────────────────────────────────────────────
 const COLUMN_TYPES: { value: ColumnType; label: string }[] = [
