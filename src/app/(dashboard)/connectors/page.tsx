@@ -350,6 +350,7 @@ function ConnectedCard({ connector, orgId, onDelete, onUpdated }: {
   const [copied, setCopied] = useState(false)
   const [webhookExpanded, setWebhookExpanded] = useState(false)
   const [reconnecting, setReconnecting] = useState(false)
+  const isBuiltIn = connector.type === "tables"
   const isUnhealthy = connector.status === "error" || connector.status === "revoked"
   const isWebhook = connector.type === "webhook"
   const webhookUrl = isWebhook ? `${API_BASE}/hooks/${connector.id}` : null
@@ -489,7 +490,10 @@ function ConnectedCard({ connector, orgId, onDelete, onUpdated }: {
           )}
 
           <div className="flex gap-2 flex-wrap">
-            {isWebhook ? (
+            {isBuiltIn ? (
+              /* Built-in connectors (e.g. tables) — no Test, no Remove */
+              <p className="text-xs text-muted-foreground italic">Built-in — always available</p>
+            ) : isWebhook ? (
               <>
                 <Button size="sm" variant="outline" onClick={() => setWebhookExpanded(v => !v)} className="text-xs gap-1">
                   {webhookExpanded ? <><ChevronDown className="size-3" /> Hide</> : <><ChevronDown className="size-3 -rotate-90" /> Show details</>}
@@ -541,11 +545,13 @@ function ConnectedCard({ connector, orgId, onDelete, onUpdated }: {
                 {reconnecting ? "Redirecting…" : "Reconnect"}
               </Button>
             )}
-            <UpdateCredentialsModal connector={connector} orgId={orgId} onUpdated={onUpdated} />
-            <Button size="sm" variant="ghost" onClick={handleDelete} disabled={deleting}
-              className="text-xs text-destructive hover:text-destructive">
-              {deleting ? "Removing…" : "Remove"}
-            </Button>
+            {!isBuiltIn && <UpdateCredentialsModal connector={connector} orgId={orgId} onUpdated={onUpdated} />}
+            {!isBuiltIn && (
+              <Button size="sm" variant="ghost" onClick={handleDelete} disabled={deleting}
+                className="text-xs text-destructive hover:text-destructive">
+                {deleting ? "Removing…" : "Remove"}
+              </Button>
+            )}
           </div>
         </CardContent>
       </Card>
