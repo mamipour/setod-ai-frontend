@@ -41,6 +41,7 @@ export const CONNECTOR_LABEL: Record<ConnectorType, string> = {
   openai: "OpenAI",
   anthropic: "Anthropic",
   mcp: "MCP server",
+  tables: "Business tables",
 }
 
 const BUDGETS = [1, 2, 5, 10]

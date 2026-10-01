@@ -36,6 +36,7 @@ export const CONNECTOR_ICON: Partial<Record<string, string>> = {
   telegram_client: "/telegram.svg",
   twilio: "/twilio.svg",
   openai: "/openai.svg",
+  // tables connector uses the Table2 lucide icon (rendered inline, no SVG file needed)
   anthropic: "/anthropic.svg",
   mcp: "/mcp.svg",
   slack_webhook: "/slack.svg",
@@ -162,6 +163,15 @@ export const CONNECTOR_TOOLS: Partial<Record<string, Array<{ name: string; descr
     { name: "create_calendly_booking",     description: "Book a meeting programmatically (paid plan required)" },
     { name: "cancel_calendly_event",       description: "Cancel an event and notify all invitees" },
     { name: "create_scheduling_link",      description: "Generate a single-use booking link to send to someone" },
+  ],
+  // Tables: tools are generated per-table at build time (slug_search, slug_get, slug_create, slug_update + query_tables).
+  // Shown in the UI as a generic note; specific tool names depend on live table slugs.
+  tables: [
+    { name: "query_tables",  description: "Run a read-only SQL SELECT across all your business tables" },
+    { name: "{slug}_search", description: "Search rows in a specific table (one tool per table)" },
+    { name: "{slug}_get",    description: "Get a row by id from a specific table" },
+    { name: "{slug}_create", description: "Add a row to a specific table (respects dedup rules)" },
+    { name: "{slug}_update", description: "Partially update a row in a specific table" },
   ],
 }
 
