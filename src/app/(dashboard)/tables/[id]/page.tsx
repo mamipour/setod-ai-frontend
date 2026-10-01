@@ -756,7 +756,7 @@ function SpreadsheetGrid({
           <thead>
             <tr>
               {/* Row # */}
-              <th className="sticky top-0 z-20 w-10 border-b border-r bg-muted/80 backdrop-blur-sm" />
+              <th className="sticky top-0 z-20 w-14 border-b border-r bg-muted/80 backdrop-blur-sm" />
               {visibleCols.map((col) => (
                 <th
                   key={col.key}
@@ -779,8 +779,8 @@ function SpreadsheetGrid({
             {/* Existing rows */}
             {rows.map((row, rowIdx) => (
               <tr key={row.id} className="group">
-                {/* Row number — fixed w-10, icon overlaid so no layout shift */}
-                <td className="border-b border-r bg-muted/30 text-center text-[10px] text-muted-foreground w-10 h-9">
+                {/* Row number — fixed w-14, icon overlaid so no layout shift */}
+                <td className="border-b border-r bg-muted/30 text-center text-[10px] text-muted-foreground w-14 h-9">
                   <div className="relative flex items-center justify-center w-full h-full">
                     <span className="group-hover:invisible select-none">{rowIdx + 1}</span>
                     <button
@@ -853,7 +853,7 @@ function SpreadsheetGrid({
             {/* Draft (new) rows */}
             {draftRows.map((draft, draftIdx) => (
               <tr key={`draft_${draftIdx}`} className="group bg-primary/[0.02]">
-                <td className="border-b border-r bg-primary/5 px-2 text-center text-[10px] text-muted-foreground w-10 h-9">
+                <td className="border-b border-r bg-primary/5 px-2 text-center text-[10px] text-muted-foreground w-14 h-9">
                   <span className="text-primary font-semibold">*</span>
                 </td>
                 {visibleCols.map((col) => {
