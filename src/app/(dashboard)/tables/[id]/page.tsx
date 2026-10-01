@@ -67,6 +67,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { cn } from "@/lib/utils"
+import { deriveSlug, needsExplicitKey, isValidKey, uniqueKey, KEY_RULE_MSG } from "@/lib/slug"
 
 // ── Column type options ────────────────────────────────────────────────────────
 const COLUMN_TYPES: { value: ColumnType; label: string }[] = [
@@ -357,18 +358,21 @@ function AddColumnDialog({
   tableId: string
 }) {
   const [name, setName] = useState("")
+  const [key, setKey] = useState("")              // explicit English key, only asked for when needed
   const [type, setType] = useState<ColumnType>("text")
   const [required, setRequired] = useState(false)
   const [options, setOptions] = useState("")
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState("")
+  const askForKey = needsExplicitKey(name)
 
   async function handle() {
     if (!name.trim()) { setError("Name is required."); return }
+    if (askForKey && !isValidKey(key)) { setError(`English key is required for this name: ${KEY_RULE_MSG}.`); return }
     setSaving(true); setError("")
     try {
       const col: ColumnDef = {
-        key: name.toLowerCase().replace(/\s+/g, "_").replace(/[^a-z0-9_]/g, ""),
+        key: askForKey ? key.trim() : (deriveSlug(name) ?? ""),
         name: name.trim(),
         type,
         required,
@@ -376,7 +380,7 @@ function AddColumnDialog({
       }
       const t = await tablesApi.addColumn(orgId, tableId, col)
       onAdded(t)
-      setName(""); setType("text"); setRequired(false); setOptions("")
+      setName(""); setKey(""); setType("text"); setRequired(false); setOptions("")
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Failed to add column.")
     } finally {
@@ -393,6 +397,22 @@ function AddColumnDialog({
             <Label className="text-xs">Name *</Label>
             <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Status" className="text-xs" autoFocus />
           </div>
+          {askForKey && (
+            <div className="space-y-1">
+              <Label className="text-xs">English key for agents *</Label>
+              <Input
+                value={key}
+                onChange={(e) => setKey(e.target.value.toLowerCase())}
+                placeholder="e.g. status"
+                dir="ltr"
+                className={cn("text-xs font-mono", key && !isValidKey(key) && "border-destructive")}
+              />
+              <p className="text-[11px] text-muted-foreground">
+                Agents refer to this column as <span className="font-mono">{isValidKey(key) ? key : "key"}</span>; the column
+                is still shown as &ldquo;{name.trim()}&rdquo;. Use {KEY_RULE_MSG}.
+              </p>
+            </div>
+          )}
           <div className="space-y-1">
             <Label className="text-xs">Type</Label>
             <Select value={type} onValueChange={(v) => setType(v as ColumnType)}>
@@ -552,6 +572,9 @@ function SpreadsheetGrid({
   // ── Column (schema) editing — Excel-style, from the header row ───────────────
   const [addingCol, setAddingCol] = useState(false)
   const [newColName, setNewColName] = useState("")
+  const [newColKey, setNewColKey] = useState("")   // explicit English key; shown only for non-Latin names
+  const newColNeedsKey = needsExplicitKey(newColName)
+  const newColKeyRef = useRef<HTMLInputElement>(null)
   const [renamingKey, setRenamingKey] = useState<string | null>(null)
   const [renameValue, setRenameValue] = useState("")
   const [colBusy, setColBusy] = useState(false)
@@ -567,24 +590,32 @@ function SpreadsheetGrid({
     setTimeout(() => setColError(""), 6000)
   }
 
-  /** Derive a unique snake_case key from a display name (backend: ^[a-z][a-z0-9_]{0,39}$). */
-  function makeColKey(name: string): string {
-    let key = name.toLowerCase().trim().replace(/\s+/g, "_").replace(/[^a-z0-9_]/g, "").slice(0, 40)
-    if (!key || !/^[a-z]/.test(key)) key = `col_${key}`.slice(0, 40)
-    const existing = new Set(table.columns.map((c) => c.key))
-    let candidate = key, n = 2
-    while (existing.has(candidate)) candidate = `${key.slice(0, 36)}_${n++}`
-    return candidate
+  /**
+   * Resolve the key for a new column: the explicit key when the name has no Latin letters,
+   * otherwise derived from the name (same rule as the backend), de-duplicated against existing keys.
+   * Returns null when an explicit key is needed but missing/invalid — the caller reveals the key input.
+   */
+  function resolveColKey(name: string, explicit: string): string | null {
+    const existing = table.columns.map((c) => c.key)
+    if (needsExplicitKey(name)) return isValidKey(explicit) ? uniqueKey(explicit.trim(), existing) : null
+    const derived = deriveSlug(name)
+    return derived ? uniqueKey(derived, existing) : null
   }
 
   /** Create a new text column from the inline header input. Returns true on success. */
-  async function createColumn(name: string): Promise<boolean> {
+  async function createColumn(name: string, explicitKey = ""): Promise<boolean> {
     const trimmed = name.trim()
     if (!trimmed || creatingColRef.current) return false
+    const key = resolveColKey(trimmed, explicitKey)
+    if (!key) {
+      // Non-Latin name without a valid key: focus the key input instead of failing.
+      setTimeout(() => newColKeyRef.current?.focus(), 0)
+      return false
+    }
     creatingColRef.current = true
     setColBusy(true)
     try {
-      const t = await tablesApi.addColumn(orgId, table.id, { key: makeColKey(trimmed), name: trimmed, type: "text" })
+      const t = await tablesApi.addColumn(orgId, table.id, { key, name: trimmed, type: "text" })
       onTableChanged(t)
       return true
     } catch (e) { showColError(e); return false } finally { creatingColRef.current = false; setColBusy(false) }
@@ -972,35 +1003,58 @@ function SpreadsheetGrid({
               {/* "+" column — type a name and press Enter, like a new Excel header */}
               <th
                 className="sticky top-0 z-20 border-b border-r bg-muted/80 backdrop-blur-sm px-1 py-1 text-left"
-                style={addingCol ? { width: 180, minWidth: 180 } : { width: 40, minWidth: 40 }}
+                style={addingCol ? { width: newColNeedsKey ? 340 : 180, minWidth: newColNeedsKey ? 340 : 180 } : { width: 40, minWidth: 40 }}
               >
                 {addingCol ? (
-                  <input
-                    ref={newColInputRef}
-                    value={newColName}
-                    disabled={colBusy}
-                    placeholder="Column name"
-                    onChange={(e) => setNewColName(e.target.value)}
-                    onBlur={async () => {
+                  <div
+                    className="flex items-center gap-1"
+                    // One blur handler for the pair, so tabbing name → key doesn't count as leaving.
+                    onBlur={async (e) => {
+                      if (e.currentTarget.contains(e.relatedTarget as Node | null)) return
                       if (creatingColRef.current) return   // Enter/Tab already handling it
-                      // Blur with text behaves like Enter; blur empty just closes.
-                      if (newColName.trim()) await createColumn(newColName)
-                      setNewColName(""); setAddingCol(false)
+                      // Blur with text behaves like Enter; blur empty (or unresolved key) just closes.
+                      if (newColName.trim()) await createColumn(newColName, newColKey)
+                      setNewColName(""); setNewColKey(""); setAddingCol(false)
                     }}
                     onKeyDown={async (e) => {
-                      if (e.key === "Escape") { e.preventDefault(); setNewColName(""); setAddingCol(false) }
+                      if (e.key === "Escape") { e.preventDefault(); setNewColName(""); setNewColKey(""); setAddingCol(false); return }
+                      // Tab from the name field moves to the key field when one is needed.
+                      if (e.key === "Tab" && !e.shiftKey && newColNeedsKey && e.target === newColInputRef.current) return
                       if (e.key === "Enter" || e.key === "Tab") {
                         e.preventDefault()
-                        const ok = await createColumn(newColName)
+                        const ok = await createColumn(newColName, newColKey)
                         if (!ok) return
-                        setNewColName("")
+                        setNewColName(""); setNewColKey("")
                         // Tab keeps adding columns; Enter is done.
                         if (e.key === "Enter") setAddingCol(false)
                         else newColInputRef.current?.focus()
                       }
                     }}
-                    className="h-6 w-full rounded bg-background px-1.5 text-[11px] font-semibold text-foreground outline-none ring-1 ring-primary"
-                  />
+                  >
+                    <input
+                      ref={newColInputRef}
+                      value={newColName}
+                      disabled={colBusy}
+                      placeholder="Column name"
+                      onChange={(e) => setNewColName(e.target.value)}
+                      className="h-6 min-w-0 flex-1 rounded bg-background px-1.5 text-[11px] font-semibold text-foreground outline-none ring-1 ring-primary"
+                    />
+                    {newColNeedsKey && (
+                      <input
+                        ref={newColKeyRef}
+                        value={newColKey}
+                        disabled={colBusy}
+                        dir="ltr"
+                        placeholder="english_key"
+                        title={`Key agents use for this column — ${KEY_RULE_MSG}`}
+                        onChange={(e) => setNewColKey(e.target.value.toLowerCase())}
+                        className={cn(
+                          "h-6 min-w-0 flex-1 rounded bg-background px-1.5 font-mono text-[11px] normal-case tracking-normal text-foreground outline-none ring-1",
+                          newColKey && !isValidKey(newColKey) ? "ring-destructive" : "ring-primary/60",
+                        )}
+                      />
+                    )}
+                  </div>
                 ) : (
                   <button
                     onClick={() => setAddingCol(true)}

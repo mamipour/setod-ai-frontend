@@ -1245,6 +1245,8 @@ export const tablesApi = {
 
   create: (orgId: string, body: {
     name: string
+    /** Explicit English identifier; only needed when the name has no Latin letters. */
+    slug?: string
     description?: string
     columns?: ColumnDef[]
     unique_on?: string[]

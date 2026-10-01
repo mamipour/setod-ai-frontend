@@ -17,6 +17,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { cn } from "@/lib/utils"
+import { needsExplicitKey, isValidKey, KEY_RULE_MSG } from "@/lib/slug"
 
 // ── Preset picker card ─────────────────────────────────────────────────────────
 function PresetCard({
@@ -61,11 +62,15 @@ function CreateTableDialog({
   orgId: string
 }) {
   const [name, setName] = useState("")
+  const [slug, setSlug] = useState("")          // explicit English key, only asked for when needed
   const [description, setDescription] = useState("")
   const [presets, setPresets] = useState<Record<string, TablePreset>>({})
   const [selectedPreset, setSelectedPreset] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState("")
+
+  // A Persian/Cyrillic/CJK name has no faithful ASCII form, so the agent-facing key must be typed.
+  const askForKey = needsExplicitKey(name)
 
   useEffect(() => {
     if (!open || !orgId) return
@@ -78,23 +83,29 @@ function CreateTableDialog({
       setError("Name is required.")
       return
     }
+    if (askForKey && !isValidKey(slug)) {
+      setError(`English key is required for this name: ${KEY_RULE_MSG}.`)
+      return
+    }
     setSaving(true); setError("")
     try {
       let table: OrgTable
+      const explicit = askForKey ? slug.trim() : undefined
       if (selectedPreset) {
         // Create from preset — backend uses the preset's name/columns
         const preset = presets[selectedPreset]
         table = await tablesApi.create(orgId, {
           name: trimmed || preset.name,
+          slug: explicit,
           description: description.trim() || preset.description,
           columns: preset.columns,
           unique_on: preset.unique_on,
         })
       } else {
-        table = await tablesApi.create(orgId, { name: trimmed, description: description.trim() })
+        table = await tablesApi.create(orgId, { name: trimmed, slug: explicit, description: description.trim() })
       }
       onCreated(table)
-      setName(""); setDescription(""); setSelectedPreset(null)
+      setName(""); setSlug(""); setDescription(""); setSelectedPreset(null)
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Failed to create table.")
     } finally {
@@ -148,6 +159,26 @@ function CreateTableDialog({
               className="text-xs"
             />
           </div>
+          {askForKey && (
+            <div className="space-y-1.5">
+              <Label htmlFor="tbl-slug" className="text-xs">
+                English key for agents <span className="text-destructive">*</span>
+              </Label>
+              <Input
+                id="tbl-slug"
+                value={slug}
+                onChange={(e) => setSlug(e.target.value.toLowerCase())}
+                placeholder="e.g. customers"
+                className={cn("text-xs font-mono", slug && !isValidKey(slug) && "border-destructive")}
+                dir="ltr"
+              />
+              <p className="text-[11px] text-muted-foreground">
+                Agents call tools named <span className="font-mono">{isValidKey(slug) ? slug : "key"}_search</span>,{" "}
+                <span className="font-mono">{isValidKey(slug) ? slug : "key"}_create</span>… Use {KEY_RULE_MSG}.
+                The table keeps its name &ldquo;{name.trim()}&rdquo; everywhere else.
+              </p>
+            </div>
+          )}
           <div className="space-y-1.5">
             <Label htmlFor="tbl-desc" className="text-xs">Description (optional)</Label>
             <textarea
