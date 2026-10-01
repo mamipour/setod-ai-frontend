@@ -72,6 +72,76 @@ const COLUMN_TYPES: { value: ColumnType; label: string }[] = [
   { value: "link",      label: "Link" },
 ]
 
+// ── Custom inline select (avoids OS-native white popup in dark mode) ──────────
+function InlineCellSelect({
+  options,
+  value,
+  onChange,
+  onCommit,
+  onCancel,
+}: {
+  options: string[]
+  value: string
+  onChange: (v: string) => void
+  onCommit: () => void
+  onCancel: () => void
+}) {
+  const containerRef = useRef<HTMLDivElement>(null)
+
+  // Close on outside click
+  useEffect(() => {
+    function handleDown(e: MouseEvent) {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        onCommit()
+      }
+    }
+    document.addEventListener("mousedown", handleDown)
+    return () => document.removeEventListener("mousedown", handleDown)
+  }, [onCommit])
+
+  // Keyboard: Escape cancels
+  useEffect(() => {
+    function handleKey(e: KeyboardEvent) {
+      if (e.key === "Escape") { e.preventDefault(); onCancel() }
+    }
+    document.addEventListener("keydown", handleKey)
+    return () => document.removeEventListener("keydown", handleKey)
+  }, [onCancel])
+
+  return (
+    <div ref={containerRef} className="relative w-full">
+      {/* Current value display */}
+      <div className="flex items-center justify-between gap-1 text-xs">
+        <span className={value ? "" : "text-muted-foreground/40"}>
+          {value || "—"}
+        </span>
+        <ChevronDown className="size-3 shrink-0 text-muted-foreground" />
+      </div>
+      {/* Dropdown popup */}
+      <div className="absolute top-full left-0 z-[200] mt-0.5 min-w-[140px] max-h-52 overflow-y-auto rounded-lg border bg-popover text-popover-foreground shadow-xl py-1">
+        <button
+          className="w-full text-left px-3 py-1.5 text-xs text-muted-foreground hover:bg-accent"
+          onMouseDown={(e) => { e.preventDefault(); onChange(""); onCommit() }}
+        >
+          —
+        </button>
+        {options.map((o) => (
+          <button
+            key={o}
+            className={cn(
+              "w-full text-left px-3 py-1.5 text-xs hover:bg-accent",
+              value === o && "bg-accent font-medium",
+            )}
+            onMouseDown={(e) => { e.preventDefault(); onChange(o); onCommit() }}
+          >
+            {o}
+          </button>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 // ── Inline cell editor ─────────────────────────────────────────────────────────
 function CellEditor({
   col,
@@ -119,19 +189,13 @@ function CellEditor({
 
   if (col.type === "select") {
     return (
-      <select
-        ref={inputRef as React.RefObject<HTMLSelectElement>}
+      <InlineCellSelect
+        options={col.options ?? []}
         value={str}
-        onChange={(e) => { onChange(e.target.value); onCommit() }}
-        onKeyDown={handleKeyDown}
-        onBlur={onCommit}
-        className="w-full bg-transparent text-xs outline-none"
-      >
-        <option value="">—</option>
-        {(col.options ?? []).map((o) => (
-          <option key={o} value={o}>{o}</option>
-        ))}
-      </select>
+        onChange={onChange}
+        onCommit={onCommit}
+        onCancel={onCancel}
+      />
     )
   }
 
@@ -463,6 +527,38 @@ function SpreadsheetGrid({
   onRowsChanged: () => void
 }) {
   const visibleCols = table.columns.filter((c) => !c.hidden_from_agents)
+
+  // ── Top scrollbar sync ────────────────────────────────────────────────────────
+  const scrollContainerRef = useRef<HTMLDivElement>(null)
+  const topBarRef = useRef<HTMLDivElement>(null)
+  const tableRef = useRef<HTMLTableElement>(null)
+  const [contentWidth, setContentWidth] = useState(0)
+  const syncingRef = useRef(false)
+
+  useEffect(() => {
+    const el = tableRef.current
+    if (!el) return
+    const update = () => setContentWidth(el.scrollWidth)
+    update()
+    const ro = new ResizeObserver(update)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }) // run after every render so width stays accurate
+
+  function onMainScroll(e: React.UIEvent<HTMLDivElement>) {
+    if (syncingRef.current) return
+    syncingRef.current = true
+    if (topBarRef.current) topBarRef.current.scrollLeft = e.currentTarget.scrollLeft
+    syncingRef.current = false
+  }
+
+  function onTopScroll(e: React.UIEvent<HTMLDivElement>) {
+    if (syncingRef.current) return
+    syncingRef.current = true
+    if (scrollContainerRef.current) scrollContainerRef.current.scrollLeft = e.currentTarget.scrollLeft
+    syncingRef.current = false
+  }
+
   const [editing, setEditing] = useState<EditingCell | null>(null)
   const [editValue, setEditValue] = useState<unknown>(null)
   const [saving, setSaving] = useState<string | null>(null) // rowId being saved
@@ -628,9 +724,22 @@ function SpreadsheetGrid({
 
   return (
     <div className="flex flex-1 overflow-hidden">
+      {/* Left column: top-scrollbar + grid */}
+      <div className="flex flex-1 flex-col overflow-hidden">
+
+      {/* ── Top horizontal scrollbar (mirrors the grid's horizontal scroll) ── */}
+      <div
+        ref={topBarRef}
+        onScroll={onTopScroll}
+        className="overflow-x-scroll overflow-y-hidden shrink-0 border-b"
+        style={{ height: 12 }}
+      >
+        <div style={{ width: contentWidth || "100%", height: 1 }} />
+      </div>
+
       {/* Grid scroll area */}
-      <div className="flex-1 overflow-auto">
-        <table className="min-w-full text-xs border-separate border-spacing-0 select-none">
+      <div ref={scrollContainerRef} className="flex-1 overflow-auto" onScroll={onMainScroll}>
+        <table ref={tableRef} className="min-w-full text-xs border-separate border-spacing-0 select-none">
           {/* Column headers */}
           <thead>
             <tr>
@@ -658,13 +767,13 @@ function SpreadsheetGrid({
             {/* Existing rows */}
             {rows.map((row, rowIdx) => (
               <tr key={row.id} className="group">
-                {/* Row number */}
-                <td className="border-b border-r bg-muted/30 px-2 text-center text-[10px] text-muted-foreground w-10 h-9">
-                  <div className="flex items-center justify-center gap-1">
-                    <span className="group-hover:hidden">{rowIdx + 1}</span>
+                {/* Row number — fixed w-10, icon overlaid so no layout shift */}
+                <td className="border-b border-r bg-muted/30 text-center text-[10px] text-muted-foreground w-10 h-9">
+                  <div className="relative flex items-center justify-center w-full h-full">
+                    <span className="group-hover:invisible select-none">{rowIdx + 1}</span>
                     <button
                       onClick={() => setHistoryRowId(historyRowId === row.id ? null : row.id)}
-                      className="hidden group-hover:flex items-center text-muted-foreground hover:text-foreground"
+                      className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-foreground transition-opacity"
                       title="Row history"
                     >
                       <History className="size-3" />
@@ -799,7 +908,8 @@ function SpreadsheetGrid({
             <p className="text-xs text-muted-foreground/60 mt-1">Click "Add row" above or press the button in the toolbar.</p>
           </div>
         )}
-      </div>
+      </div>{/* /grid scroll area */}
+      </div>{/* /left flex-col */}
 
       {/* Error toast */}
       {Object.keys(errors).length > 0 && (
@@ -814,7 +924,7 @@ function SpreadsheetGrid({
         </div>
       )}
 
-      {/* Row history panel */}
+      {/* Row history panel (outside the column wrapper so it spans full height) */}
       {historyRowId && (
         <RowHistoryPanel
           orgId={orgId}
