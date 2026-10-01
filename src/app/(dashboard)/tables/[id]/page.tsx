@@ -561,6 +561,13 @@ function SpreadsheetGrid({
 
   const [editing, setEditing] = useState<EditingCell | null>(null)
   const [editValue, setEditValue] = useState<unknown>(null)
+  // Ref that's always in sync with editValue — lets commitEdit read the latest
+  // value synchronously even when called in the same event as onChange (select).
+  const editValueRef = useRef<unknown>(null)
+  function applyEditValue(v: unknown) {
+    editValueRef.current = v
+    setEditValue(v)
+  }
   const [saving, setSaving] = useState<string | null>(null) // rowId being saved
   const [historyRowId, setHistoryRowId] = useState<string | null>(null)
   // Cell-level validation errors: key = `${rowId}:${colKey}`
@@ -578,7 +585,7 @@ function SpreadsheetGrid({
   function startEdit(rowIdx: number, colKey: string) {
     const row = rows[rowIdx]
     setEditing({ rowIdx, colKey })
-    setEditValue(row.data[colKey] ?? null)
+    applyEditValue(row.data[colKey] ?? null)
     setDraftEditing(null)
   }
 
@@ -595,9 +602,9 @@ function SpreadsheetGrid({
     const col = visibleCols.find((c) => c.key === editing.colKey)
     if (!row || !col) { setEditing(null); return }
 
-    // No change?
+    // No change? Read from ref so select commits work synchronously.
     const prev = row.data[editing.colKey]
-    const cur = editValue
+    const cur = editValueRef.current
     if (String(prev ?? "") === String(cur ?? "")) { setEditing(null); return }
 
     setSaving(row.id)
@@ -618,7 +625,7 @@ function SpreadsheetGrid({
     setEditing(null)
   }
 
-  function cancelEdit() { setEditing(null); setEditValue(null) }
+  function cancelEdit() { setEditing(null); applyEditValue(null) }
 
   // ── Commit draft row cell ─────────────────────────────────────────────────────
   function commitDraftCell() {
@@ -810,7 +817,7 @@ function SpreadsheetGrid({
                         <CellEditor
                           col={col}
                           value={editValue}
-                          onChange={setEditValue}
+                          onChange={applyEditValue}
                           onCommit={commitEdit}
                           onCancel={cancelEdit}
                           onTab={tabFromExisting}
