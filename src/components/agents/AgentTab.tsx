@@ -819,9 +819,7 @@ function TablesToolGroup({
 
   // Unique table slugs from tool names (e.g. "leads_search" → "leads")
   const slugs = [...new Set(
-    allToolNames
-      .filter((n) => n !== "query_tables")
-      .map((n) => n.replace(/_(?:search|get|create|update)$/, ""))
+    allToolNames.map((n) => n.replace(/_(?:search|get|create|update)$/, ""))
   )]
 
   function isReadEnabled(slug: string) {
@@ -829,9 +827,6 @@ function TablesToolGroup({
   }
   function isWriteEnabled(slug: string) {
     return enabledSet.has(`${slug}_create`) || enabledSet.has(`${slug}_update`)
-  }
-  function isQueryEnabled() {
-    return enabledSet.has("query_tables")
   }
 
   async function saveEnabled(next: Set<string>) {
@@ -861,11 +856,6 @@ function TablesToolGroup({
     ;[`${slug}_create`, `${slug}_update`].forEach((n) => on ? next.add(n) : next.delete(n))
     saveEnabled(next)
   }
-  function toggleQuery() {
-    const next = new Set(enabledSet)
-    isQueryEnabled() ? next.delete("query_tables") : next.add("query_tables")
-    saveEnabled(next)
-  }
 
   const iconSrc = connectorIconSrc(tool.connector_type, tool.connector_name)
 
@@ -883,22 +873,6 @@ function TablesToolGroup({
           <Trash2 className="size-3.5" />
         </Button>
       </div>
-
-      {/* query_tables global toggle */}
-      {allToolNames.includes("query_tables") && (
-        <div className="flex items-center justify-between rounded-lg bg-muted/40 px-3 py-2">
-          <div>
-            <p className="text-xs font-medium">SQL query across all tables</p>
-            <p className="text-[11px] text-muted-foreground">Read-only SELECT on any table</p>
-          </div>
-          <button onClick={toggleQuery}
-            className={cn("relative inline-flex h-5 w-9 shrink-0 rounded-full border-2 border-transparent transition-colors",
-              isQueryEnabled() ? "bg-primary" : "bg-muted-foreground/30")}>
-            <span className={cn("inline-block h-4 w-4 rounded-full bg-white shadow-sm transition-transform",
-              isQueryEnabled() ? "translate-x-4" : "translate-x-0")} />
-          </button>
-        </div>
-      )}
 
       {/* Per-table access rows */}
       {slugs.length === 0 ? (

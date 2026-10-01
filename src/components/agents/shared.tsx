@@ -164,10 +164,9 @@ export const CONNECTOR_TOOLS: Partial<Record<string, Array<{ name: string; descr
     { name: "cancel_calendly_event",       description: "Cancel an event and notify all invitees" },
     { name: "create_scheduling_link",      description: "Generate a single-use booking link to send to someone" },
   ],
-  // Tables: tools are generated per-table at build time (slug_search, slug_get, slug_create, slug_update + query_tables).
+  // Tables: tools are generated per-table at build time (slug_search, slug_get, slug_create, slug_update).
   // Shown in the UI as a generic note; specific tool names depend on live table slugs.
   tables: [
-    { name: "query_tables",  description: "Run a read-only SQL SELECT across all your business tables" },
     { name: "{slug}_search", description: "Search rows in a specific table (one tool per table)" },
     { name: "{slug}_get",    description: "Get a row by id from a specific table" },
     { name: "{slug}_create", description: "Add a row to a specific table (respects dedup rules)" },
