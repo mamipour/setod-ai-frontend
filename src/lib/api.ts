@@ -1407,6 +1407,8 @@ export const billing = {
     }),
   createPortal: (orgId: string): Promise<{ url: string }> =>
     apiFetch(`/billing/${orgId}/portal`, { method: "POST" }),
+  reactivate: (orgId: string): Promise<{ status: string }> =>
+    apiFetch(`/billing/${orgId}/reactivate`, { method: "POST" }),
 }
 
 // ── Voice ─────────────────────────────────────────────────────────────────────

@@ -85,6 +85,7 @@ function PlanPageInner() {
   const [changing, setChanging] = useState<string | null>(null)
   const [addonLoading, setAddonLoading] = useState<string | null>(null)
   const [portalLoading, setPortalLoading] = useState(false)
+  const [reactivating, setReactivating] = useState(false)
   const [toast, setToast] = useState<{ msg: string; type: "success" | "error" } | null>(null)
 
   const successMsg = params?.get("checkout") === "success"
@@ -143,6 +144,21 @@ function PlanPageInner() {
     }
   }
 
+  async function handleReactivate() {
+    if (!activeOrg?.id) return
+    setReactivating(true)
+    try {
+      await billing.reactivate(activeOrg.id)
+      showToast("Subscription reactivated — your plan will renew as normal")
+      const updated = await billing.getPlan(activeOrg.id)
+      setPlan(updated)
+    } catch (e: unknown) {
+      showToast(e instanceof Error ? e.message : "Reactivation failed", "error")
+    } finally {
+      setReactivating(false)
+    }
+  }
+
   async function handlePortal() {
     if (!activeOrg?.id) return
     setPortalLoading(true)
@@ -159,6 +175,7 @@ function PlanPageInner() {
   }
 
   const isSubscribed = !!plan?.subscription?.stripe_customer_id
+  const anyScheduled = plan?.subscription?.status === "downgrade_scheduled" || plan?.subscription?.status === "cancel_at_period_end"
 
   return (
     <div className="max-w-2xl mx-auto px-4 py-8 space-y-8">
@@ -254,11 +271,43 @@ function PlanPageInner() {
         </div>
       )}
 
-      {/* Plan switch cards — show all plans except current */}
+      {/* Plan switch cards */}
       <div className="rounded-lg border p-6 space-y-4">
+        {/* ── Reactivate banner (cancellation or downgrade scheduled) ── */}
+        {plan?.subscription?.status === "cancel_at_period_end" && (
+          <div className="rounded-lg border border-orange-200 bg-orange-50 dark:border-orange-900 dark:bg-orange-950/30 p-4 flex items-center justify-between gap-4">
+            <div>
+              <p className="text-sm font-medium text-orange-800 dark:text-orange-300">Your subscription is set to cancel</p>
+              <p className="text-xs text-orange-700 dark:text-orange-400 mt-0.5">
+                You keep full access until {plan.subscription.current_period_end ? new Date(plan.subscription.current_period_end).toLocaleDateString("en-CA") : "the end of your billing period"}. Changed your mind?
+              </p>
+            </div>
+            <Button size="sm" onClick={handleReactivate} disabled={reactivating} className="shrink-0">
+              {reactivating ? "Reactivating…" : "Keep subscription"}
+            </Button>
+          </div>
+        )}
+
+        {plan?.subscription?.status === "downgrade_scheduled" && (
+          <div className="rounded-lg border border-orange-200 bg-orange-50 dark:border-orange-900 dark:bg-orange-950/30 p-4 flex items-center justify-between gap-4">
+            <div>
+              <p className="text-sm font-medium text-orange-800 dark:text-orange-300">
+                Downgrade to {PLANS.find(p => p.code === plan.subscription?.pending_plan_code)?.name ?? plan.subscription?.pending_plan_code} scheduled
+              </p>
+              <p className="text-xs text-orange-700 dark:text-orange-400 mt-0.5">
+                Takes effect {plan.subscription.current_period_end ? new Date(plan.subscription.current_period_end).toLocaleDateString("en-CA") : "next billing cycle"}. Changed your mind?
+              </p>
+            </div>
+            <Button size="sm" variant="outline" onClick={handleReactivate} disabled={reactivating} className="shrink-0">
+              {reactivating ? "Cancelling…" : "Cancel downgrade"}
+            </Button>
+          </div>
+        )}
+
         <h2 className="font-semibold text-foreground">
           {plan?.plan_code === "free" ? "Upgrade your plan" : "Change plan"}
         </h2>
+
         <div className="grid gap-3 sm:grid-cols-2">
           {PLANS.filter(p => p.code !== plan?.plan_code).map((p) => {
             const targetRank = PLAN_RANK[p.code] ?? 0
@@ -267,6 +316,7 @@ function PlanPageInner() {
             const isFreeDowngrade = p.code === "free"
             const busy = changing === p.code
             const isAlreadyScheduled = plan?.subscription?.status === "downgrade_scheduled" && plan.subscription?.pending_plan_code === p.code
+            const isCancellingToFree = plan?.subscription?.status === "cancel_at_period_end" && isFreeDowngrade
 
             return (
               <div key={p.code} className={cn(
@@ -288,23 +338,24 @@ function PlanPageInner() {
                     </li>
                   ))}
                 </ul>
-                {isFreeDowngrade ? (
+
+                {isCancellingToFree ? (
+                  // Already scheduled to go to free — show the date, no action needed
+                  <Button variant="outline" className="w-full text-muted-foreground" size="sm" disabled>
+                    Scheduled for {plan?.subscription?.current_period_end ? new Date(plan.subscription.current_period_end).toLocaleDateString("en-CA") : "end of period"}
+                  </Button>
+                ) : isFreeDowngrade ? (
                   <Button
                     variant="outline"
                     className="w-full text-muted-foreground"
                     size="sm"
                     onClick={handlePortal}
-                    disabled={portalLoading}
+                    disabled={portalLoading || anyScheduled}
                   >
                     {portalLoading ? "Opening…" : "Downgrade to Free"}
                   </Button>
                 ) : isAlreadyScheduled ? (
-                  <Button
-                    variant="outline"
-                    className="w-full text-muted-foreground"
-                    size="sm"
-                    disabled
-                  >
+                  <Button variant="outline" className="w-full text-muted-foreground" size="sm" disabled>
                     Scheduled for {plan?.subscription?.current_period_end ? new Date(plan.subscription.current_period_end).toLocaleDateString("en-CA") : "end of period"}
                   </Button>
                 ) : (
@@ -313,9 +364,9 @@ function PlanPageInner() {
                     variant={isDowngrade ? "outline" : "default"}
                     size="sm"
                     onClick={() => handleChangePlan(p.code)}
-                    disabled={!!changing || plan?.subscription?.status === "downgrade_scheduled"}
+                    disabled={!!changing || anyScheduled}
                   >
-                    {busy ? "Scheduling…" : (
+                    {busy ? (isUpgrade ? "Upgrading…" : "Scheduling…") : (
                       <>
                         {isUpgrade ? "Upgrade" : "Downgrade"} to {p.name}
                         {isUpgrade
@@ -330,7 +381,8 @@ function PlanPageInner() {
             )
           })}
         </div>
-        {isSubscribed && (
+
+        {isSubscribed && !anyScheduled && (
           <p className="text-xs text-muted-foreground">
             Upgrades take effect immediately with prorated billing. Downgrades take effect at the end of your current billing period — you keep full access until then.
           </p>
