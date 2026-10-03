@@ -322,18 +322,6 @@ function UserMenu({ user, mini }: { user: { name: string; email: string; avatar_
               <p className="text-[11px] text-muted-foreground truncate">{user.email}</p>
             </div>
             <ThemeSegment />
-            {user.is_staff && (
-              <a
-                href="https://api.setod.com/admin"
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={() => setOpen(false)}
-                className="flex items-center gap-2.5 px-3 py-2 text-sm text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
-              >
-                <ShieldCheck className="size-4 shrink-0 text-primary" />
-                <span className="text-primary font-medium">Admin panel</span>
-              </a>
-            )}
             <Link
               href="/help"
               target="_blank"
@@ -344,6 +332,18 @@ function UserMenu({ user, mini }: { user: { name: string; email: string; avatar_
               <HelpCircle className="size-4 shrink-0" />
               Help & docs
             </Link>
+            {user.is_staff && (
+              <a
+                href="https://api.setod.com/admin"
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => setOpen(false)}
+                className="flex items-center gap-2.5 px-3 py-2 text-sm text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+              >
+                <ShieldCheck className="size-4 shrink-0" />
+                Admin panel
+              </a>
+            )}
             <button
               onClick={handleLogout}
               className="flex w-full items-center gap-2.5 px-3 py-2 text-sm text-muted-foreground hover:bg-muted hover:text-destructive transition-colors"
