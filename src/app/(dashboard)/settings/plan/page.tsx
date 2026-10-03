@@ -296,7 +296,7 @@ function PlanPageInner() {
                     onClick={handlePortal}
                     disabled={portalLoading}
                   >
-                    {portalLoading ? "Opening…" : "Cancel subscription"}
+                    {portalLoading ? "Opening…" : "Downgrade to Free"}
                   </Button>
                 ) : isAlreadyScheduled ? (
                   <Button
