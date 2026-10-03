@@ -14,6 +14,7 @@ export interface CurrentUser {
   email: string
   name: string
   avatar_url: string | null
+  is_staff: boolean
   organizations: OrgMembership[]
 }
 

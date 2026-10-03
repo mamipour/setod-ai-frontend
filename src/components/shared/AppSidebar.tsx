@@ -277,7 +277,7 @@ function ThemeSegment() {
   )
 }
 
-function UserMenu({ user, mini }: { user: { name: string; email: string; avatar_url?: string | null }; mini: boolean }) {
+function UserMenu({ user, mini }: { user: { name: string; email: string; avatar_url?: string | null; is_staff?: boolean }; mini: boolean }) {
   const [open, setOpen] = useState(false)
 
   async function handleLogout() {
@@ -322,6 +322,18 @@ function UserMenu({ user, mini }: { user: { name: string; email: string; avatar_
               <p className="text-[11px] text-muted-foreground truncate">{user.email}</p>
             </div>
             <ThemeSegment />
+            {user.is_staff && (
+              <a
+                href="https://api.setod.com/admin"
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => setOpen(false)}
+                className="flex items-center gap-2.5 px-3 py-2 text-sm text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+              >
+                <ShieldCheck className="size-4 shrink-0 text-primary" />
+                <span className="text-primary font-medium">Admin panel</span>
+              </a>
+            )}
             <Link
               href="/help"
               target="_blank"
@@ -447,7 +459,7 @@ export function AppSidebar() {
         {/* User menu at bottom */}
         {user && (
           <div className="mt-3 border-t pt-3">
-            <UserMenu user={user} mini={mini} />
+            <UserMenu user={{ ...user, is_staff: user?.is_staff ?? false }} mini={mini} />
           </div>
         )}
       </>
