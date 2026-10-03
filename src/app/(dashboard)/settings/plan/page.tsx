@@ -2,7 +2,7 @@
 
 import { Suspense, useEffect, useState } from "react"
 import { useSearchParams } from "next/navigation"
-import { ArrowRight, Check, CreditCard, TrendingUp, Zap } from "lucide-react"
+import { ArrowRight, Check, CreditCard, Mic, TrendingUp, Zap } from "lucide-react"
 import { billing, type OrgPlan, type UsageMeter } from "@/lib/api"
 import { useActiveOrg } from "@/hooks/useActiveOrg"
 import { Button } from "@/components/ui/button"
@@ -61,6 +61,7 @@ function PlanPageInner() {
   const [usage, setUsage] = useState<UsageMeter[]>([])
   const [loading, setLoading] = useState(true)
   const [checkoutLoading, setCheckoutLoading] = useState<string | null>(null)
+  const [addonLoading, setAddonLoading] = useState<string | null>(null)
   const [portalLoading, setPortalLoading] = useState(false)
   const successMsg = params?.get("checkout") === "success"
 
@@ -83,6 +84,17 @@ function PlanPageInner() {
       window.location.href = url
     } catch {
       setCheckoutLoading(null)
+    }
+  }
+
+  async function handleAddon(addonCode: string) {
+    if (!activeOrg?.id) return
+    setAddonLoading(addonCode)
+    try {
+      const { url } = await billing.createAddonCheckout(activeOrg.id, addonCode)
+      window.location.href = url
+    } catch {
+      setAddonLoading(null)
     }
   }
 
@@ -171,6 +183,53 @@ function PlanPageInner() {
           {usage.map((m) => (
             <UsageBar key={m.meter} {...m} />
           ))}
+        </div>
+      )}
+
+      {/* Voice add-ons */}
+      {plan && plan.plan_code !== "free" && !plan.features?.voice && (
+        <div className="rounded-lg border p-6 space-y-4">
+          <div className="flex items-center gap-2">
+            <Mic className="h-5 w-5 text-muted-foreground" />
+            <h2 className="font-semibold text-foreground">Voice add-ons</h2>
+          </div>
+          <p className="text-sm text-muted-foreground">Add a voice package to answer inbound phone calls with your AI agent.</p>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {[
+              { code: "voice_lite",     name: "Voice Lite",     price: "CA$149/mo", minutes: 400,   overage: "CA$0.29/min" },
+              { code: "voice_standard", name: "Voice Standard", price: "CA$299/mo", minutes: 1_000, overage: "CA$0.29/min" },
+            ].map((a) => (
+              <div key={a.code} className="rounded-lg border p-4 space-y-3">
+                <div>
+                  <div className="font-semibold text-foreground">{a.name}</div>
+                  <div className="text-sm text-muted-foreground">{a.price}</div>
+                </div>
+                <ul className="space-y-1.5">
+                  <li className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Check className="h-3.5 w-3.5 text-green-600 shrink-0" />
+                    {a.minutes.toLocaleString()} included minutes/mo
+                  </li>
+                  <li className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Check className="h-3.5 w-3.5 text-green-600 shrink-0" />
+                    {a.overage} overage
+                  </li>
+                </ul>
+                <Button
+                  className="w-full"
+                  size="sm"
+                  onClick={() => handleAddon(a.code)}
+                  disabled={!!addonLoading}
+                >
+                  {addonLoading === a.code ? "Redirecting…" : (
+                    <>
+                      Add {a.name}
+                      <ArrowRight className="h-3.5 w-3.5 ml-1.5" />
+                    </>
+                  )}
+                </Button>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 

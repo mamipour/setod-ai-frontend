@@ -1391,6 +1391,11 @@ export const billing = {
       method: "POST",
       body: JSON.stringify({ plan_code: planCode }),
     }),
+  createAddonCheckout: (orgId: string, addonCode: string): Promise<{ url: string }> =>
+    apiFetch(`/billing/${orgId}/addon-checkout`, {
+      method: "POST",
+      body: JSON.stringify({ addon_code: addonCode }),
+    }),
   createPortal: (orgId: string): Promise<{ url: string }> =>
     apiFetch(`/billing/${orgId}/portal`, { method: "POST" }),
 }
