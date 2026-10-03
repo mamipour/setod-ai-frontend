@@ -1392,6 +1392,13 @@ export const billing = {
       method: "POST",
       body: JSON.stringify({ plan_code: planCode }),
     }),
+  /** Upgrade or downgrade an existing subscription in-place.
+   *  Returns { status: "ok" } for in-place change, or { url } for new subscriber redirect. */
+  changePlan: (orgId: string, planCode: string): Promise<{ status?: string; url?: string }> =>
+    apiFetch(`/billing/${orgId}/change-plan`, {
+      method: "POST",
+      body: JSON.stringify({ plan_code: planCode }),
+    }),
   createAddonCheckout: (orgId: string, addonCode: string): Promise<{ url: string }> =>
     apiFetch(`/billing/${orgId}/addon-checkout`, {
       method: "POST",

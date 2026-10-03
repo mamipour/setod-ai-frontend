@@ -2,7 +2,7 @@
 
 import { Suspense, useEffect, useState } from "react"
 import { useSearchParams } from "next/navigation"
-import { ArrowRight, Check, CreditCard, Mic, TrendingUp, Zap } from "lucide-react"
+import { ArrowRight, Check, CreditCard, Mic, TrendingUp, Zap, ArrowDown } from "lucide-react"
 import { billing, type OrgPlan, type UsageMeter } from "@/lib/api"
 import { useActiveOrg } from "@/hooks/useActiveOrg"
 import { Button } from "@/components/ui/button"
@@ -13,22 +13,44 @@ const METER_LABEL: Record<string, string> = {
   voice_minutes: "Voice minutes",
 }
 
+const PLANS = [
+  {
+    code: "free",
+    name: "Free",
+    price: "CA$0/mo",
+    features: ["3 agents", "3 members", "10k rows", "Community support"],
+  },
+  {
+    code: "pro",
+    name: "Pro",
+    price: "CA$49/mo",
+    features: ["10 agents", "10 members", "100k rows", "Managed AI models"],
+  },
+  {
+    code: "business",
+    name: "Business",
+    price: "CA$149/mo",
+    features: ["Unlimited agents & members", "Unlimited rows", "Voice add-ons", "Priority support"],
+  },
+]
+
+const PLAN_RANK: Record<string, number> = { free: 0, pro: 1, business: 2 }
+
 function UsageBar({ meter, included, used, overage }: { meter: string; included: number; used: number; overage: number }) {
   const label = METER_LABEL[meter] ?? meter
-  const effectiveIncluded = included || 0
-  const pct = effectiveIncluded > 0 ? Math.min(100, (used / effectiveIncluded) * 100) : 0
-  const isOver = used > effectiveIncluded && effectiveIncluded > 0
+  const pct = included > 0 ? Math.min(100, (used / included) * 100) : 0
+  const isOver = used > included && included > 0
 
   return (
     <div className="space-y-1.5">
       <div className="flex items-center justify-between text-sm">
         <span className="font-medium text-foreground">{label}</span>
         <span className={cn("text-muted-foreground tabular-nums", isOver && "text-orange-600 font-medium")}>
-          {Math.round(used).toLocaleString()} / {effectiveIncluded > 0 ? effectiveIncluded.toLocaleString() : "∞"}
+          {Math.round(used).toLocaleString()} / {included > 0 ? included.toLocaleString() : "∞"}
           {overage > 0 && <span className="ml-1 text-orange-600">(+{Math.round(overage).toLocaleString()} overage)</span>}
         </span>
       </div>
-      {effectiveIncluded > 0 && (
+      {included > 0 && (
         <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
           <div
             className={cn("h-full rounded-full transition-all", isOver ? "bg-orange-500" : "bg-primary")}
@@ -60,10 +82,13 @@ function PlanPageInner() {
   const [plan, setPlan] = useState<OrgPlan | null>(null)
   const [usage, setUsage] = useState<UsageMeter[]>([])
   const [loading, setLoading] = useState(true)
-  const [checkoutLoading, setCheckoutLoading] = useState<string | null>(null)
+  const [changing, setChanging] = useState<string | null>(null)
   const [addonLoading, setAddonLoading] = useState<string | null>(null)
   const [portalLoading, setPortalLoading] = useState(false)
+  const [toast, setToast] = useState<{ msg: string; type: "success" | "error" } | null>(null)
+
   const successMsg = params?.get("checkout") === "success"
+  const currentRank = PLAN_RANK[plan?.plan_code ?? "free"] ?? 0
 
   useEffect(() => {
     if (!activeOrg?.id) return
@@ -76,14 +101,31 @@ function PlanPageInner() {
     }).finally(() => setLoading(false))
   }, [activeOrg?.id])
 
-  async function handleUpgrade(planCode: string) {
+  function showToast(msg: string, type: "success" | "error" = "success") {
+    setToast({ msg, type })
+    setTimeout(() => setToast(null), 4000)
+  }
+
+  async function handleChangePlan(planCode: string) {
     if (!activeOrg?.id) return
-    setCheckoutLoading(planCode)
+    setChanging(planCode)
     try {
-      const { url } = await billing.createCheckout(activeOrg.id, planCode)
-      window.location.href = url
-    } catch {
-      setCheckoutLoading(null)
+      const res = await billing.changePlan(activeOrg.id, planCode)
+      if (res.url) {
+        // New subscriber — redirect to Stripe Checkout
+        window.location.href = res.url
+      } else {
+        // In-place change succeeded
+        showToast(`Plan changed to ${PLANS.find(p => p.code === planCode)?.name ?? planCode}`)
+        // Reload plan data
+        const updated = await billing.getPlan(activeOrg.id)
+        setPlan(updated)
+        setChanging(null)
+      }
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : "Plan change failed"
+      showToast(msg, "error")
+      setChanging(null)
     }
   }
 
@@ -113,6 +155,8 @@ function PlanPageInner() {
     return <div className="p-8 text-muted-foreground text-sm">Loading plan…</div>
   }
 
+  const isSubscribed = !!plan?.subscription?.stripe_customer_id
+
   return (
     <div className="max-w-2xl mx-auto px-4 py-8 space-y-8">
       <div>
@@ -120,7 +164,18 @@ function PlanPageInner() {
         <p className="text-sm text-muted-foreground mt-1">Manage your subscription and monitor resource usage.</p>
       </div>
 
-      {successMsg && (
+      {/* Toast */}
+      {toast && (
+        <div className={cn(
+          "rounded-lg border p-4 flex items-start gap-3",
+          toast.type === "success" ? "border-green-200 bg-green-50" : "border-red-200 bg-red-50"
+        )}>
+          <Check className={cn("h-5 w-5 mt-0.5 shrink-0", toast.type === "success" ? "text-green-600" : "text-red-600")} />
+          <p className={cn("font-medium", toast.type === "success" ? "text-green-800" : "text-red-800")}>{toast.msg}</p>
+        </div>
+      )}
+
+      {successMsg && !toast && (
         <div className="rounded-lg border border-green-200 bg-green-50 p-4 flex items-start gap-3">
           <Check className="h-5 w-5 text-green-600 mt-0.5 shrink-0" />
           <div>
@@ -130,7 +185,7 @@ function PlanPageInner() {
         </div>
       )}
 
-      {/* Current plan */}
+      {/* Current plan card */}
       <div className="rounded-lg border p-6 space-y-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -150,12 +205,12 @@ function PlanPageInner() {
               )}
             </div>
           </div>
-          {plan?.subscription?.stripe_customer_id ? (
+          {isSubscribed && (
             <Button variant="outline" size="sm" onClick={handlePortal} disabled={portalLoading}>
               <CreditCard className="h-4 w-4 mr-2" />
               {portalLoading ? "Opening…" : "Manage billing"}
             </Button>
-          ) : null}
+          )}
         </div>
 
         {/* Features */}
@@ -185,6 +240,80 @@ function PlanPageInner() {
           ))}
         </div>
       )}
+
+      {/* Plan switch cards — show all plans except current */}
+      <div className="rounded-lg border p-6 space-y-4">
+        <h2 className="font-semibold text-foreground">
+          {plan?.plan_code === "free" ? "Upgrade your plan" : "Change plan"}
+        </h2>
+        <div className="grid gap-3 sm:grid-cols-2">
+          {PLANS.filter(p => p.code !== plan?.plan_code).map((p) => {
+            const targetRank = PLAN_RANK[p.code] ?? 0
+            const isUpgrade = targetRank > currentRank
+            const isDowngrade = targetRank < currentRank
+            const isFreeDowngrade = p.code === "free"
+            const busy = changing === p.code
+
+            return (
+              <div key={p.code} className={cn(
+                "rounded-lg border p-4 space-y-3",
+                isDowngrade && "border-dashed opacity-80"
+              )}>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="font-semibold text-foreground">{p.name}</div>
+                    <div className="text-sm text-muted-foreground">{p.price}</div>
+                  </div>
+                  <PlanBadge code={p.code} />
+                </div>
+                <ul className="space-y-1.5">
+                  {p.features.map((f) => (
+                    <li key={f} className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Check className="h-3.5 w-3.5 text-green-600 shrink-0" />
+                      {f}
+                    </li>
+                  ))}
+                </ul>
+                {isFreeDowngrade ? (
+                  // Cancelling → redirect to portal
+                  <Button
+                    variant="outline"
+                    className="w-full text-muted-foreground"
+                    size="sm"
+                    onClick={handlePortal}
+                    disabled={portalLoading}
+                  >
+                    {portalLoading ? "Opening…" : "Cancel subscription"}
+                  </Button>
+                ) : (
+                  <Button
+                    className="w-full"
+                    variant={isDowngrade ? "outline" : "default"}
+                    size="sm"
+                    onClick={() => handleChangePlan(p.code)}
+                    disabled={!!changing}
+                  >
+                    {busy ? "Changing…" : (
+                      <>
+                        {isUpgrade ? "Upgrade" : "Downgrade"} to {p.name}
+                        {isUpgrade
+                          ? <ArrowRight className="h-3.5 w-3.5 ml-1.5" />
+                          : <ArrowDown className="h-3.5 w-3.5 ml-1.5" />
+                        }
+                      </>
+                    )}
+                  </Button>
+                )}
+              </div>
+            )
+          })}
+        </div>
+        {isSubscribed && (
+          <p className="text-xs text-muted-foreground">
+            Upgrades take effect immediately with prorated billing. Downgrades take effect at the end of your billing period.
+          </p>
+        )}
+      </div>
 
       {/* Voice add-ons */}
       {plan && plan.plan_code !== "free" && !plan.features?.voice && (
@@ -223,50 +352,6 @@ function PlanPageInner() {
                   {addonLoading === a.code ? "Redirecting…" : (
                     <>
                       Add {a.name}
-                      <ArrowRight className="h-3.5 w-3.5 ml-1.5" />
-                    </>
-                  )}
-                </Button>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Upgrade CTAs */}
-      {plan && plan.plan_code === "free" && (
-        <div className="rounded-lg border p-6 space-y-4">
-          <h2 className="font-semibold text-foreground">Upgrade your plan</h2>
-          <div className="grid gap-3 sm:grid-cols-2">
-            {[
-              { code: "pro", name: "Pro", price: "CA$49/mo", features: ["10 agents", "10 members", "100k rows", "Managed AI models"] },
-              { code: "business", name: "Business", price: "CA$149/mo", features: ["Unlimited agents & members", "Unlimited rows", "Voice add-ons", "Priority support"] },
-            ].map((p) => (
-              <div key={p.code} className="rounded-lg border p-4 space-y-3">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <div className="font-semibold text-foreground">{p.name}</div>
-                    <div className="text-sm text-muted-foreground">{p.price}</div>
-                  </div>
-                  <PlanBadge code={p.code} />
-                </div>
-                <ul className="space-y-1.5">
-                  {p.features.map((f) => (
-                    <li key={f} className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Check className="h-3.5 w-3.5 text-green-600 shrink-0" />
-                      {f}
-                    </li>
-                  ))}
-                </ul>
-                <Button
-                  className="w-full"
-                  size="sm"
-                  onClick={() => handleUpgrade(p.code)}
-                  disabled={!!checkoutLoading}
-                >
-                  {checkoutLoading === p.code ? "Redirecting…" : (
-                    <>
-                      Upgrade to {p.name}
                       <ArrowRight className="h-3.5 w-3.5 ml-1.5" />
                     </>
                   )}
