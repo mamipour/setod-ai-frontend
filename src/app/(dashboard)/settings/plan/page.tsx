@@ -6,6 +6,7 @@ import { ArrowRight, Check, CreditCard, Mic, TrendingUp, Zap, ArrowDown } from "
 import { billing, type OrgPlan, type UsageMeter } from "@/lib/api"
 import { useActiveOrg } from "@/hooks/useActiveOrg"
 import { Button } from "@/components/ui/button"
+import { ChangePlanDialog } from "@/components/billing/ChangePlanDialog"
 import { cn } from "@/lib/utils"
 
 const METER_LABEL: Record<string, string> = {
@@ -86,6 +87,7 @@ function PlanPageInner() {
   const [addonLoading, setAddonLoading] = useState<string | null>(null)
   const [portalLoading, setPortalLoading] = useState(false)
   const [reactivating, setReactivating] = useState(false)
+  const [confirmTarget, setConfirmTarget] = useState<string | null>(null)
   const [toast, setToast] = useState<{ msg: string; type: "success" | "error" } | null>(null)
 
   const successMsg = params?.get("checkout") === "success"
@@ -107,28 +109,38 @@ function PlanPageInner() {
     setTimeout(() => setToast(null), 4000)
   }
 
-  async function handleChangePlan(planCode: string) {
+  /** Button handler: new subscribers go straight to Checkout (Stripe is the confirmation);
+   *  existing subscribers get an in-app confirm first, since the change is immediate/binding. */
+  function handleChangePlan(planCode: string) {
+    if (!activeOrg?.id) return
+    if (plan?.subscription?.stripe_customer_id && plan.plan_code !== "free") {
+      setConfirmTarget(planCode)
+      return
+    }
+    void executeChangePlan(planCode)
+  }
+
+  async function executeChangePlan(planCode: string) {
     if (!activeOrg?.id) return
     setChanging(planCode)
     try {
       const res = await billing.changePlan(activeOrg.id, planCode) as Record<string, string | undefined>
       if (res.url) {
-        window.location.href = res.url
-      } else if (res.effective === "end_of_period") {
-        const date = res.effective_date ?? "the end of the billing period"
-        showToast(`Downgrade to ${PLANS.find(p => p.code === planCode)?.name ?? planCode} scheduled for ${date}`)
-        const updated = await billing.getPlan(activeOrg.id)
-        setPlan(updated)
-        setChanging(null)
-      } else {
-        showToast(`Upgraded to ${PLANS.find(p => p.code === planCode)?.name ?? planCode}`)
-        const updated = await billing.getPlan(activeOrg.id)
-        setPlan(updated)
-        setChanging(null)
+        window.location.assign(res.url)
+        return
       }
+      const name = PLANS.find(p => p.code === planCode)?.name ?? planCode
+      if (res.effective === "end_of_period") {
+        showToast(`Downgrade to ${name} scheduled for ${res.effective_date ?? "the end of the billing period"}`)
+      } else {
+        showToast(`Upgraded to ${name}`)
+      }
+      setPlan(await billing.getPlan(activeOrg.id))
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : "Plan change failed"
       showToast(msg, "error")
+      throw e // let the dialog show it inline too
+    } finally {
       setChanging(null)
     }
   }
@@ -138,7 +150,7 @@ function PlanPageInner() {
     setAddonLoading(addonCode)
     try {
       const { url } = await billing.createAddonCheckout(activeOrg.id, addonCode)
-      window.location.href = url
+      window.location.assign(url)
     } catch {
       setAddonLoading(null)
     }
@@ -164,7 +176,7 @@ function PlanPageInner() {
     setPortalLoading(true)
     try {
       const { url } = await billing.createPortal(activeOrg.id)
-      window.location.href = url
+      window.location.assign(url)
     } catch {
       setPortalLoading(false)
     }
@@ -388,6 +400,15 @@ function PlanPageInner() {
           </p>
         )}
       </div>
+
+      <ChangePlanDialog
+        open={confirmTarget !== null}
+        current={PLANS.find(p => p.code === plan?.plan_code) ?? null}
+        target={PLANS.find(p => p.code === confirmTarget) ?? null}
+        periodEnd={plan?.subscription?.current_period_end ?? null}
+        onClose={() => setConfirmTarget(null)}
+        onConfirm={() => executeChangePlan(confirmTarget!)}
+      />
 
       {/* Voice add-ons */}
       {plan && plan.plan_code !== "free" && !plan.features?.voice && (
