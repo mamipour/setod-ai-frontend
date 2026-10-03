@@ -212,6 +212,8 @@ export function AgentTab({
   const [history, setHistory] = useState<Snapshot[]>([])
   const [historyOpen, setHistoryOpen] = useState(false)
   const [rollingBack, setRollingBack] = useState<string | null>(null)
+  const [managedModels, setManagedModels] = useState<{ id: string; label: string; provider: string }[]>([])
+  const [managedAvailable, setManagedAvailable] = useState(false)
   const [orgSkills, setOrgSkills] = useState<Skill[]>([])
   const [attachedSkills, setAttachedSkills] = useState<Skill[]>([])
   const [skillsLoading, setSkillsLoading] = useState(true)
@@ -249,6 +251,7 @@ export function AgentTab({
       .finally(() => setSkillsLoading(false))
     agents.listCalls(agent.id).then(setAgentCalls).catch(() => {})
     agents.listScenarios(agent.id).then(setScenarios).catch(() => {})
+    agents.platformModels(orgId).then((r) => { setManagedModels(r.models); setManagedAvailable(r.available) }).catch(() => {})
     // Count notes visible to this agent (scope: all-agents or includes this agent id)
     notesApi.list(orgId).then((all) => {
       const now = new Date()
@@ -322,6 +325,7 @@ export function AgentTab({
               brains={brains}
               value={agent.model_connector_id ?? ""}
               onChange={changeBrain}
+              showManaged={managedAvailable}
             />
             {/* Keyed so switching provider remounts with an empty list, rather than showing
                 the previous provider's models until the new ones arrive. */}
@@ -331,6 +335,7 @@ export function AgentTab({
               connectorId={agent.model_connector_id}
               model={agent.model}
               onPatch={onPatch}
+              managedModels={managedAvailable && !agent.model_connector_id ? managedModels : []}
             />
           </div>
         </div>
@@ -745,17 +750,40 @@ function ModelPicker({
   connectorId,
   model,
   onPatch,
+  managedModels = [],
 }: {
   agentId: string
   connectorId: string | null
   model: string
   onPatch: (changes: Partial<Agent>) => void
+  managedModels?: { id: string; label: string; provider: string }[]
 }) {
   const [list, setList] = useState<ModelList | null>(null)
 
   useEffect(() => {
     if (connectorId) agents.models(connectorId).then(setList).catch(() => setList({ models: [] }))
   }, [connectorId])
+
+  // No BYOK connector but managed models are available → show platform model list
+  if (!connectorId && managedModels.length > 0) {
+    return (
+      <select
+        value={model}
+        onChange={async (e) => {
+          const updated = await agents.update(agentId, { model: e.target.value })
+          onPatch({ model: updated.model, has_unpublished_changes: updated.has_unpublished_changes })
+        }}
+        className="h-8 max-w-[45%] rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none"
+      >
+        <option value="">Default</option>
+        {managedModels.map((m) => (
+          <option key={m.id} value={m.id}>
+            {m.label}
+          </option>
+        ))}
+      </select>
+    )
+  }
 
   if (!connectorId) return null
 

@@ -678,6 +678,10 @@ export const agents = {
   models: (connectorId: string): Promise<ModelList> =>
     apiFetch(`/agents/models?connector_id=${connectorId}`),
 
+  /** Setod-managed models available for this org (requires managed_models entitlement). */
+  platformModels: (orgId: string): Promise<{ models: { id: string; label: string; provider: string }[]; available: boolean }> =>
+    apiFetch(`/agents/platform-models?org_id=${orgId}`),
+
   schedulePresets: (): Promise<SchedulePreset[]> => apiFetch("/agents/schedule-presets"),
 
   /** Everything the dashboard needs in one call. */

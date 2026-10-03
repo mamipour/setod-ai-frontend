@@ -176,18 +176,25 @@ export const CONNECTOR_TOOLS: Partial<Record<string, Array<{ name: string; descr
 
 // ── Brain picker ───────────────────────────────────────────────────────────────
 
+/** Sentinel id indicating "use Setod-managed platform key". */
+export const MANAGED_BRAIN_ID = "__setod_managed__"
+
 export function BrainPicker({
   brains,
   value,
   onChange,
+  showManaged = false,
 }: {
   brains: Connector[]
   value: string
   onChange: (id: string) => void
+  /** When true, a "Setod managed" option is prepended (requires managed_models entitlement). */
+  showManaged?: boolean
 }) {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
   const selected = brains.find((b) => b.id === value)
+  const isManagedSelected = !selected && !value && showManaged
 
   useEffect(() => {
     function handleClick(e: MouseEvent) {
@@ -197,10 +204,14 @@ export function BrainPicker({
     return () => document.removeEventListener("mousedown", handleClick)
   }, [])
 
-  const options = [
-    ...(value ? [] : [{ id: "", name: "Not set", type: undefined as string | undefined }]),
+  type Option = { id: string; name: string; type: string | undefined; managed?: boolean }
+  const options: Option[] = [
+    ...(showManaged ? [{ id: MANAGED_BRAIN_ID, name: "Setod managed", type: undefined, managed: true }] : []),
+    ...(!showManaged && !value ? [{ id: "", name: "Not set", type: undefined }] : []),
     ...brains.map((b) => ({ id: b.id, name: b.name, type: b.type as string })),
   ]
+
+  const displayLabel = selected?.name ?? (isManagedSelected || value === MANAGED_BRAIN_ID ? "Setod managed" : "Not set")
 
   return (
     <div ref={ref} className="relative flex-1">
@@ -212,7 +223,10 @@ export function BrainPicker({
         {selected && CONNECTOR_ICON[selected.type] && (
           <Image src={CONNECTOR_ICON[selected.type]!} alt="" width={16} height={16} className="shrink-0" />
         )}
-        <span className="flex-1 truncate text-left">{selected?.name ?? "Not set"}</span>
+        {(isManagedSelected || value === MANAGED_BRAIN_ID) && (
+          <span className="flex size-4 shrink-0 items-center justify-center rounded bg-primary/10 text-[9px] font-bold text-primary">AI</span>
+        )}
+        <span className="flex-1 truncate text-left">{displayLabel}</span>
         <ChevronDown className="size-3.5 shrink-0 text-muted-foreground" />
       </button>
 
@@ -226,14 +240,20 @@ export function BrainPicker({
               className={cn(
                 "flex w-full items-center gap-2 px-2.5 py-2 text-sm transition-colors hover:bg-muted first:rounded-t-lg last:rounded-b-lg",
                 opt.id === value && "bg-primary/5 text-primary",
+                opt.id === MANAGED_BRAIN_ID && value === MANAGED_BRAIN_ID && "bg-primary/5 text-primary",
               )}
             >
-              {opt.type && CONNECTOR_ICON[opt.type] ? (
+              {opt.managed ? (
+                <span className="flex size-4 shrink-0 items-center justify-center rounded bg-primary/10 text-[9px] font-bold text-primary">AI</span>
+              ) : opt.type && CONNECTOR_ICON[opt.type] ? (
                 <Image src={CONNECTOR_ICON[opt.type]!} alt="" width={16} height={16} className="shrink-0" />
               ) : (
                 <div className="size-4 shrink-0" />
               )}
               <span className="truncate">{opt.name}</span>
+              {opt.managed && (
+                <span className="ml-auto shrink-0 rounded-full bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-primary">managed</span>
+              )}
             </button>
           ))}
         </div>
