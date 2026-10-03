@@ -195,7 +195,12 @@ function PlanPageInner() {
                 <span className="font-semibold text-foreground">{plan?.plan_name ?? "—"}</span>
                 {plan && <PlanBadge code={plan.plan_code} />}
               </div>
-              {plan?.subscription?.current_period_end && (
+              {plan?.subscription?.status === "cancel_at_period_end" && plan.subscription.current_period_end && (
+                <p className="text-xs text-orange-600 mt-0.5 font-medium">
+                  Cancels {new Date(plan.subscription.current_period_end).toLocaleDateString("en-CA")} — access continues until then
+                </p>
+              )}
+              {plan?.subscription?.status === "active" && plan.subscription.current_period_end && (
                 <p className="text-xs text-muted-foreground mt-0.5">
                   Renews {new Date(plan.subscription.current_period_end).toLocaleDateString("en-CA")}
                 </p>
