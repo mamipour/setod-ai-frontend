@@ -2,7 +2,7 @@
 
 import Image from "next/image"
 import Link from "next/link"
-import { CalendarClock, Hand, MessageSquare, Zap } from "lucide-react"
+import { CalendarClock, Hand, MessageSquare, Phone, Zap } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import type { Agent, TriggerType } from "@/lib/api"
 import { AgentIcon, AgentStatusBadge, connectorIconSrc, timeAgo } from "@/components/agents/shared"
@@ -52,6 +52,7 @@ const TRIGGER_ICON: Record<TriggerType, React.ElementType> = {
   channel:  MessageSquare,
   manual:   Hand,
   agent:    Zap,
+  phone:    Phone,
 }
 
 const TRIGGER_LABEL: Record<TriggerType, string> = {
@@ -59,6 +60,7 @@ const TRIGGER_LABEL: Record<TriggerType, string> = {
   channel:  "On message",
   manual:   "Manual",
   agent:    "By another agent",
+  phone:    "Phone call",
 }
 
 function TriggerChip({ type }: { type: TriggerType }) {

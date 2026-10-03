@@ -480,6 +480,7 @@ export const TRIGGER_LABEL: Record<TriggerType, string> = {
   channel: "When a message arrives",
   manual: "Manually",
   agent: "Agent call",
+  phone: "Phone call",
 }
 
 /** Matches the overlay pattern the connectors page established. */

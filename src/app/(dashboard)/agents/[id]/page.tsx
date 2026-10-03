@@ -4,7 +4,7 @@ import Image from "next/image"
 import { use, useEffect, useRef, useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { ArrowLeft, BookOpen, CalendarClock, Database, Eye, Hand, History, Loader2, MessageSquare, MoreVertical, Play, Settings2, Sparkles, SlidersHorizontal, Trash2, Zap } from "lucide-react"
+import { ArrowLeft, BookOpen, CalendarClock, Database, Eye, Hand, History, Loader2, MessageSquare, MoreVertical, Phone, Play, Settings2, Sparkles, SlidersHorizontal, Trash2, Zap } from "lucide-react"
 import { agents, type ConnectorType, type SessionDetail, type TriggerType } from "@/lib/api"
 import { useAgent } from "@/hooks/useAgents"
 import { useUser } from "@/hooks/useUser"
@@ -34,12 +34,14 @@ const TRIGGER_ICON: Record<TriggerType, React.ElementType> = {
   channel:  MessageSquare,
   manual:   Hand,
   agent:    Zap,
+  phone:    Phone,
 }
 const TRIGGER_LABEL: Record<TriggerType, string> = {
   schedule: "Scheduled",
   channel:  "On message",
   manual:   "Manual only",
   agent:    "By another agent",
+  phone:    "Phone call",
 }
 
 function HeaderIdentityStrip({ triggerType, connectorTypes, summary }: {

@@ -28,6 +28,17 @@ export interface Invitation {
 
 // ── Core fetch ────────────────────────────────────────────────────────────────
 
+export class ApiError extends Error {
+  constructor(
+    message: string,
+    public readonly status: number,
+    public readonly body: unknown,
+  ) {
+    super(message)
+    this.name = "ApiError"
+  }
+}
+
 async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${API_BASE}${path}`, {
     credentials: "include", // send HttpOnly cookie automatically
@@ -36,8 +47,8 @@ async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
   })
 
   if (!res.ok) {
-    const error = await res.json().catch(() => ({ detail: res.statusText }))
-    const detail = error.detail
+    const body = await res.json().catch(() => ({ detail: res.statusText }))
+    const detail = body?.detail
     const message =
       typeof detail === "string"
         ? detail
@@ -46,7 +57,7 @@ async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
         : detail != null
         ? JSON.stringify(detail)
         : res.statusText || "API error"
-    throw new Error(message)
+    throw new ApiError(message, res.status, body)
   }
 
   if (res.status === 204 || res.headers.get("content-length") === "0") {
@@ -82,6 +93,7 @@ export interface Connector {
   status: ConnectorStatus
   created_at: string
   updated_at: string
+  phone_number?: string | null
 }
 
 export const connectors = {
@@ -363,7 +375,7 @@ export const connectors = {
 // ── Agents ────────────────────────────────────────────────────────────────────
 
 export type AgentStatus = "draft" | "published" | "paused"
-export type TriggerType = "schedule" | "channel" | "manual" | "agent"
+export type TriggerType = "schedule" | "channel" | "manual" | "agent" | "phone"
 export type SessionStatus = "running" | "succeeded" | "error" | "waiting_approval"
 export type MessageRole = "user" | "assistant" | "tool" | "system"
 
@@ -1340,6 +1352,52 @@ export const tablesApi = {
   // Presets
   listPresets: (orgId: string): Promise<Record<string, TablePreset>> => apiFetch(`/tables/presets?org_id=${orgId}`),
   getPreset: (orgId: string, key: string): Promise<TablePreset> => apiFetch(`/tables/presets/${key}?org_id=${orgId}`),
+}
+
+// ── Billing ───────────────────────────────────────────────────────────────────
+
+export interface OrgPlan {
+  plan_code: string
+  plan_name: string
+  features: Record<string, boolean>
+  limits: Record<string, number>
+  included: Record<string, number>
+  subscription: {
+    status: string | null
+    stripe_customer_id: string | null
+    current_period_end: string | null
+  } | null
+}
+
+export interface UsageMeter {
+  meter: string
+  included: number
+  used: number
+  overage: number
+}
+
+export const billing = {
+  getPlan: (orgId: string): Promise<OrgPlan> => apiFetch(`/billing/${orgId}/plan`),
+  getUsage: (orgId: string, year?: number, month?: number): Promise<UsageMeter[]> => {
+    const qs = year && month ? `?year=${year}&month=${month}` : ""
+    return apiFetch(`/billing/${orgId}/usage${qs}`)
+  },
+  createCheckout: (orgId: string, planCode: string): Promise<{ url: string }> =>
+    apiFetch(`/billing/${orgId}/checkout`, {
+      method: "POST",
+      body: JSON.stringify({ plan_code: planCode }),
+    }),
+  createPortal: (orgId: string): Promise<{ url: string }> =>
+    apiFetch(`/billing/${orgId}/portal`, { method: "POST" }),
+}
+
+// ── Voice ─────────────────────────────────────────────────────────────────────
+
+export const voice = {
+  attachNumber: (triggerId: string): Promise<{ voice_url: string }> =>
+    apiFetch(`/voice/attach/${triggerId}`, { method: "POST" }),
+  detachNumber: (triggerId: string): Promise<{ status: string }> =>
+    apiFetch(`/voice/detach/${triggerId}`, { method: "POST" }),
 }
 
 // ── Token-based invitation flow ────────────────────────────────────────────────

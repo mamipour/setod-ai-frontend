@@ -2,13 +2,14 @@
 
 import { useEffect, useRef, useState } from "react"
 import Image from "next/image"
-import { CalendarClock, ChevronDown, Clock, FlaskConical, Loader2, MessageSquare, Play, Plus, RotateCcw, Shield, StickyNote, Trash2 } from "lucide-react"
+import { CalendarClock, ChevronDown, Clock, FlaskConical, Loader2, MessageSquare, Phone, Play, Plus, RotateCcw, Shield, StickyNote, Trash2 } from "lucide-react"
 import {
   agents,
   connectors as connectorsApi,
   notes as notesApi,
   skills as skillsApi,
   tablesApi,
+  voice,
   type Agent,
   type AgentLink,
   type AgentTool,
@@ -578,6 +579,9 @@ export function AgentTab({
           channelConnectors={connectors.filter(
             (c) => (c.type === "telegram_bot" || c.type === "twilio" || c.type === "whatsapp" || c.type === "instagram") && c.status === "active",
           )}
+          twilioConnectors={connectors.filter(
+            (c) => c.type === "twilio" && c.status === "active",
+          )}
           onChange={reload}
         />
       </SectionCard>
@@ -1065,16 +1069,20 @@ function TriggerEditor({
   triggers,
   presets,
   channelConnectors,
+  twilioConnectors,
   onChange,
 }: {
   agentId: string
   triggers: Trigger[]
   presets: SchedulePreset[]
   channelConnectors: Connector[]
+  twilioConnectors: Connector[]
   onChange: () => void
 }) {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [phoneAttaching, setPhoneAttaching] = useState<string | null>(null)
+  const [phoneDetaching, setPhoneDetaching] = useState<string | null>(null)
 
   async function act(fn: () => Promise<unknown>) {
     setBusy(true)
@@ -1089,9 +1097,38 @@ function TriggerEditor({
     }
   }
 
+  // Phone triggers: one trigger per Twilio connector (type=phone, config.connector_id)
+  const phoneTriggers = triggers.filter((t) => t.type === "phone")
+
+  async function attachPhone(triggerId: string) {
+    setPhoneAttaching(triggerId)
+    setError(null)
+    try {
+      await voice.attachNumber(triggerId)
+      onChange()
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Could not attach phone number")
+    } finally {
+      setPhoneAttaching(null)
+    }
+  }
+
+  async function detachPhone(triggerId: string) {
+    setPhoneDetaching(triggerId)
+    setError(null)
+    try {
+      await voice.detachNumber(triggerId)
+      onChange()
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Could not detach phone number")
+    } finally {
+      setPhoneDetaching(null)
+    }
+  }
+
   return (
     <div className="space-y-2">
-      {triggers.map((t) => {
+      {triggers.filter((t) => t.type !== "phone").map((t) => {
         const Icon = t.type === "schedule" ? CalendarClock : t.type === "channel" ? MessageSquare : Play
         return (
         <div key={t.id} className="flex items-center justify-between gap-3 rounded-xl border p-3">
@@ -1140,6 +1177,61 @@ function TriggerEditor({
         )
       })}
 
+      {/* Phone triggers */}
+      {phoneTriggers.map((t) => {
+        const connectorId = (t.config as Record<string, string> | null)?.connector_id
+        const connector = twilioConnectors.find((c) => c.id === connectorId)
+        const isAttaching = phoneAttaching === t.id
+        const isDetaching = phoneDetaching === t.id
+        return (
+          <div key={t.id} className="flex items-center justify-between gap-3 rounded-xl border p-3">
+            <div className="flex min-w-0 items-center gap-2.5">
+              <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
+                <Phone className="size-4" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-sm">{TRIGGER_LABEL.phone}</p>
+                <p className="mt-0.5 truncate text-xs text-muted-foreground">
+                  {connector?.phone_number ?? connector?.name ?? "Unknown number"}
+                  {t.enabled ? " · live" : " · paused"}
+                </p>
+              </div>
+            </div>
+            <div className="flex shrink-0 items-center gap-1">
+              {t.enabled ? (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="text-xs"
+                  disabled={isDetaching || busy}
+                  onClick={() => detachPhone(t.id)}
+                >
+                  {isDetaching ? <Loader2 className="size-3 animate-spin" /> : "Detach"}
+                </Button>
+              ) : (
+                <Button
+                  size="sm"
+                  className="text-xs"
+                  disabled={isAttaching || busy}
+                  onClick={() => attachPhone(t.id)}
+                >
+                  {isAttaching ? <Loader2 className="size-3 animate-spin" /> : "Go live"}
+                </Button>
+              )}
+              <Button
+                size="sm"
+                variant="ghost"
+                className="text-xs text-muted-foreground"
+                disabled={busy}
+                onClick={() => act(() => agents.deleteTrigger(agentId, t.id))}
+              >
+                <Trash2 className="size-3.5" />
+              </Button>
+            </div>
+          </div>
+        )
+      })}
+
       <div className="flex flex-wrap gap-2">
         <select
           defaultValue=""
@@ -1176,6 +1268,31 @@ function TriggerEditor({
             {channelConnectors.map((c) => (
               <option key={c.id} value={c.id}>
                 {c.name}
+              </option>
+            ))}
+          </select>
+        )}
+
+        {twilioConnectors.length > 0 && (
+          <select
+            defaultValue=""
+            disabled={busy}
+            onChange={(e) => {
+              if (!e.target.value) return
+              const connectorId = e.target.value
+              e.target.value = ""
+              const alreadyHasPhone = phoneTriggers.some(
+                (t) => (t.config as Record<string, string> | null)?.connector_id === connectorId,
+              )
+              if (alreadyHasPhone) return
+              act(() => agents.createTrigger(agentId, { type: "phone", config: { connector_id: connectorId } }))
+            }}
+            className="h-8 rounded-lg border border-input bg-transparent px-2.5 text-xs outline-none"
+          >
+            <option value="">Answer calls on…</option>
+            {twilioConnectors.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.phone_number ?? c.name}
               </option>
             ))}
           </select>
