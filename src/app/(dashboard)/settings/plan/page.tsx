@@ -110,14 +110,17 @@ function PlanPageInner() {
     if (!activeOrg?.id) return
     setChanging(planCode)
     try {
-      const res = await billing.changePlan(activeOrg.id, planCode)
+      const res = await billing.changePlan(activeOrg.id, planCode) as Record<string, string | undefined>
       if (res.url) {
-        // New subscriber — redirect to Stripe Checkout
         window.location.href = res.url
+      } else if (res.effective === "end_of_period") {
+        const date = res.effective_date ?? "the end of the billing period"
+        showToast(`Downgrade to ${PLANS.find(p => p.code === planCode)?.name ?? planCode} scheduled for ${date}`)
+        const updated = await billing.getPlan(activeOrg.id)
+        setPlan(updated)
+        setChanging(null)
       } else {
-        // In-place change succeeded
-        showToast(`Plan changed to ${PLANS.find(p => p.code === planCode)?.name ?? planCode}`)
-        // Reload plan data
+        showToast(`Upgraded to ${PLANS.find(p => p.code === planCode)?.name ?? planCode}`)
         const updated = await billing.getPlan(activeOrg.id)
         setPlan(updated)
         setChanging(null)
@@ -195,6 +198,11 @@ function PlanPageInner() {
                 <span className="font-semibold text-foreground">{plan?.plan_name ?? "—"}</span>
                 {plan && <PlanBadge code={plan.plan_code} />}
               </div>
+              {plan?.subscription?.status === "downgrade_scheduled" && plan.subscription.current_period_end && (
+                <p className="text-xs text-orange-600 mt-0.5 font-medium">
+                  Downgrading to {PLANS.find(p => p.code === plan.subscription?.pending_plan_code)?.name ?? plan.subscription?.pending_plan_code} on {new Date(plan.subscription.current_period_end).toLocaleDateString("en-CA")}
+                </p>
+              )}
               {plan?.subscription?.status === "cancel_at_period_end" && plan.subscription.current_period_end && (
                 <p className="text-xs text-orange-600 mt-0.5 font-medium">
                   Cancels {new Date(plan.subscription.current_period_end).toLocaleDateString("en-CA")} — access continues until then
@@ -258,6 +266,7 @@ function PlanPageInner() {
             const isDowngrade = targetRank < currentRank
             const isFreeDowngrade = p.code === "free"
             const busy = changing === p.code
+            const isAlreadyScheduled = plan?.subscription?.status === "downgrade_scheduled" && plan.subscription?.pending_plan_code === p.code
 
             return (
               <div key={p.code} className={cn(
@@ -280,7 +289,6 @@ function PlanPageInner() {
                   ))}
                 </ul>
                 {isFreeDowngrade ? (
-                  // Cancelling → redirect to portal
                   <Button
                     variant="outline"
                     className="w-full text-muted-foreground"
@@ -290,15 +298,24 @@ function PlanPageInner() {
                   >
                     {portalLoading ? "Opening…" : "Cancel subscription"}
                   </Button>
+                ) : isAlreadyScheduled ? (
+                  <Button
+                    variant="outline"
+                    className="w-full text-muted-foreground"
+                    size="sm"
+                    disabled
+                  >
+                    Scheduled for {plan?.subscription?.current_period_end ? new Date(plan.subscription.current_period_end).toLocaleDateString("en-CA") : "end of period"}
+                  </Button>
                 ) : (
                   <Button
                     className="w-full"
                     variant={isDowngrade ? "outline" : "default"}
                     size="sm"
                     onClick={() => handleChangePlan(p.code)}
-                    disabled={!!changing}
+                    disabled={!!changing || plan?.subscription?.status === "downgrade_scheduled"}
                   >
-                    {busy ? "Changing…" : (
+                    {busy ? "Scheduling…" : (
                       <>
                         {isUpgrade ? "Upgrade" : "Downgrade"} to {p.name}
                         {isUpgrade
@@ -315,7 +332,7 @@ function PlanPageInner() {
         </div>
         {isSubscribed && (
           <p className="text-xs text-muted-foreground">
-            Upgrades take effect immediately with prorated billing. Downgrades take effect at the end of your billing period.
+            Upgrades take effect immediately with prorated billing. Downgrades take effect at the end of your current billing period — you keep full access until then.
           </p>
         )}
       </div>

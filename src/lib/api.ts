@@ -1371,6 +1371,7 @@ export interface OrgPlan {
     status: string | null
     stripe_customer_id: string | null
     current_period_end: string | null
+    pending_plan_code: string | null
   } | null
 }
 
