@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 import Link from "next/link"
 import { ArrowRight, ArrowRightLeft, Calendar, CheckCircle2, Mail, Search, Send } from "lucide-react"
 import type { LucideIcon } from "lucide-react"
@@ -33,15 +33,19 @@ const SCENARIOS: FeedEvent[][] = [
   ],
 ]
 
-function AgentFeed() {
-  const [scenarioIndex, setScenarioIndex] = useState(0)
+function AgentFeedScenario({
+  scenarioIndex,
+  events,
+  onDone,
+}: {
+  scenarioIndex: number
+  events: FeedEvent[]
+  onDone: () => void
+}) {
   const [visible, setVisible] = useState<FeedEvent[]>([])
   const [done, setDone] = useState(false)
 
   useEffect(() => {
-    const events = SCENARIOS[scenarioIndex]
-    setVisible([])
-    setDone(false)
     let i = 0
 
     const interval = setInterval(() => {
@@ -56,15 +60,13 @@ function AgentFeed() {
     }, 900)
 
     return () => clearInterval(interval)
-  }, [scenarioIndex])
+  }, [events])
 
   useEffect(() => {
     if (!done) return
-    const t = setTimeout(() => {
-      setScenarioIndex((i) => (i + 1) % SCENARIOS.length)
-    }, 3000)
+    const t = setTimeout(onDone, 3000)
     return () => clearTimeout(t)
-  }, [done])
+  }, [done, onDone])
 
   return (
     <div className="rounded-md border border-border bg-card p-5 text-left">
@@ -95,6 +97,22 @@ function AgentFeed() {
   )
 }
 
+function AgentFeed() {
+  const [scenarioIndex, setScenarioIndex] = useState(0)
+  const advance = useCallback(() => {
+    setScenarioIndex((i) => (i + 1) % SCENARIOS.length)
+  }, [])
+
+  return (
+    <AgentFeedScenario
+      key={scenarioIndex}
+      scenarioIndex={scenarioIndex}
+      events={SCENARIOS[scenarioIndex]}
+      onDone={advance}
+    />
+  )
+}
+
 function Hero() {
   return (
     <section>
@@ -103,6 +121,10 @@ function Hero() {
           <div className="flex flex-col items-center text-center">
             <p className="mb-8 text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
               Now in early access
+            </p>
+
+            <p className="mb-4 text-xs font-medium tracking-[0.08em] text-foreground/80">
+              SETOD = Smart Execution &amp; Task Orchestration Desk
             </p>
 
             <h1 className="text-5xl font-normal tracking-[-0.03em] sm:text-6xl">
