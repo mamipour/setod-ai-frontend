@@ -58,7 +58,7 @@ const NAV_MAIN: { href: string; label: string; Icon: LucideIcon }[] = [
 const NAV_WORKSPACE: { href: string; label: string; Icon: LucideIcon }[] = [
   { href: "/members",       label: "Members",    Icon: Users },
   { href: "/settings",      label: "Settings",   Icon: Settings },
-  { href: "/settings/plan", label: "Plan & Usage", Icon: CreditCard },
+  // { href: "/settings/plan", label: "Plan & Usage", Icon: CreditCard },  // hidden until billing UI is ready for public
 ]
 
 const BADGE_POLL_MS = 30_000
