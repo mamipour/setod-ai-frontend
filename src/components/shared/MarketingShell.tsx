@@ -15,6 +15,8 @@ function Navbar() {
         <Link href="/" className="flex items-center gap-2.5">
           <img src="/logo.svg" alt="setod" className="h-7 w-7 rounded-md" />
           <span className="text-sm tracking-tight">Setod</span>
+          <span className="hidden text-muted-foreground/40 sm:inline">·</span>
+          <span className="hidden text-xs text-muted-foreground/60 tracking-tight sm:inline">AI Task Desk</span>
         </Link>
         {!onLogin && (
           <div className="flex items-center gap-5">
