@@ -103,7 +103,7 @@ function PlanPageInner() {
   const [reactivating, setReactivating] = useState(false)
   const [confirmTarget, setConfirmTarget] = useState<string | null>(null)
   const [addonDialogTarget, setAddonDialogTarget] = useState<CatalogAddon | null>(null)
-  const [addonDialogAction, setAddonDialogAction] = useState<"add" | "remove" | "keep">("add")
+  const [addonDialogAction, setAddonDialogAction] = useState<"add" | "remove">("add")
   const [showAutoRechargeDialog, setShowAutoRechargeDialog] = useState(false)
   const [toast, setToast] = useState<{ msg: string; type: "success" | "error" } | null>(null)
   const [autoRecharge, setAutoRecharge] = useState<{
