@@ -473,7 +473,9 @@ export function AppSidebar() {
         "hidden h-screen shrink-0 flex-col border-r bg-card py-4 transition-[width] duration-200 md:flex",
         collapsed ? "w-16 px-2" : "w-56 px-3",
       )}>
-        {content({ mini: collapsed })}
+        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
+          {content({ mini: collapsed })}
+        </div>
       </aside>
 
       {/* Mobile header */}
@@ -495,7 +497,9 @@ export function AppSidebar() {
               className="absolute right-3 top-4 rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
               <X className="size-4" />
             </button>
-            {content({ mini: false, drawer: true })}
+            <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
+              {content({ mini: false, drawer: true })}
+            </div>
           </aside>
         </div>
       )}
