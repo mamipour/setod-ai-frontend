@@ -499,7 +499,7 @@ function SetupAgent({
         {trigger === "schedule" && (
           <Select value={preset} onValueChange={(v) => v && setPreset(v)}>
             <SelectTrigger className="mt-2 h-8 w-full text-sm">
-              <SelectValue />
+              <SelectValue>{presets.find((p) => p.key === preset)?.label ?? preset}</SelectValue>
             </SelectTrigger>
             <SelectContent>
               {presets.map((p) => <SelectItem key={p.key} value={p.key}>{p.label}</SelectItem>)}
@@ -509,7 +509,9 @@ function SetupAgent({
         {trigger === "channel" && (
           <Select value={channelConnectorId || "__none__"} onValueChange={(v) => setChannelConnectorId(!v || v === "__none__" ? "" : v)}>
             <SelectTrigger className="mt-2 h-8 w-full text-sm">
-              <SelectValue placeholder="Pick an account to listen on…" />
+              <SelectValue>
+                {channelConnectorId ? (channelConnectors.find((c) => c.id === channelConnectorId)?.name ?? channelConnectorId) : "Pick an account to listen on…"}
+              </SelectValue>
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="__none__">Pick an account to listen on…</SelectItem>

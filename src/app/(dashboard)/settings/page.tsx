@@ -237,7 +237,9 @@ function NotificationsRow({ orgId, connectors: allConnectors }: { orgId: string;
               onValueChange={(v) => handleSave(v === "__none__" ? null : v)}
             >
               <SelectTrigger className="w-full text-xs">
-                <SelectValue />
+                <SelectValue>
+                  {selectedId ? (tgClients.find((c) => c.id === selectedId)?.name ?? selectedId) : "None — email only"}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="__none__">None — email only</SelectItem>
@@ -405,7 +407,9 @@ function DataRetentionRow({ orgId }: { orgId: string }) {
               onValueChange={(v) => setRetentionDays(v === "forever" ? null : Number(v))}
             >
               <SelectTrigger className="w-full text-xs">
-                <SelectValue />
+                <SelectValue>
+                  {RETENTION_OPTIONS.find((o) => String(o.value ?? "forever") === String(retentionDays ?? "forever"))?.label ?? "Forever"}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 {RETENTION_OPTIONS.map((o) => <SelectItem key={String(o.value)} value={String(o.value ?? "forever")}>{o.label}</SelectItem>)}

@@ -791,6 +791,7 @@ function ModelPicker({
   // Managed brain → the provider's priced models. No blank "default": the backend infers
   // the provider from the slug so it must always be concrete.
   if (!connectorId && managedModels.length > 0) {
+    const managedLabel = managedModels.find((m) => m.id === model)?.label ?? model
     return (
       <Select
         value={model}
@@ -801,7 +802,7 @@ function ModelPicker({
         }}
       >
         <SelectTrigger className="h-8 max-w-[45%] text-sm">
-          <SelectValue />
+          <SelectValue>{managedLabel}</SelectValue>
         </SelectTrigger>
         <SelectContent>
           {managedModels.map((m) => (
@@ -819,6 +820,7 @@ function ModelPicker({
   const models = list?.models ?? []
   const placeholder = list === null ? "Loading…" : `Default (${list.default ?? "provider"})`
   const BYOK_DEFAULT = "__default__"
+  const byokLabel = model ? (models.find((m) => m.id === model)?.label ?? model) : placeholder
 
   return (
     <Select
@@ -831,7 +833,7 @@ function ModelPicker({
       }}
     >
       <SelectTrigger className="h-8 max-w-[45%] text-sm">
-        <SelectValue placeholder={placeholder} />
+        <SelectValue>{byokLabel}</SelectValue>
       </SelectTrigger>
       <SelectContent>
         <SelectItem value={BYOK_DEFAULT}>{placeholder}</SelectItem>
@@ -1307,7 +1309,9 @@ function TriggerEditor({
           }}
         >
           <SelectTrigger className="h-8 text-xs">
-            <SelectValue />
+            <SelectValue>
+              {scheduleSel === PROMPT ? "Add a schedule…" : presets.find((p) => p.key === scheduleSel)?.label ?? scheduleSel}
+            </SelectValue>
           </SelectTrigger>
           <SelectContent>
             <SelectItem value={PROMPT} disabled>Add a schedule…</SelectItem>
@@ -1326,7 +1330,9 @@ function TriggerEditor({
             }}
           >
             <SelectTrigger className="h-8 text-xs">
-              <SelectValue />
+              <SelectValue>
+                {channelSel === PROMPT ? "Listen for messages from…" : channelConnectors.find((c) => c.id === channelSel)?.name ?? channelSel}
+              </SelectValue>
             </SelectTrigger>
             <SelectContent>
               <SelectItem value={PROMPT} disabled>Listen for messages from…</SelectItem>
@@ -1351,7 +1357,9 @@ function TriggerEditor({
             }}
           >
             <SelectTrigger className="h-8 text-xs">
-              <SelectValue />
+              <SelectValue>
+                {phoneSel === PROMPT ? "Answer calls on…" : (twilioConnectors.find((c) => c.id === phoneSel)?.phone_number ?? twilioConnectors.find((c) => c.id === phoneSel)?.name ?? phoneSel)}
+              </SelectValue>
             </SelectTrigger>
             <SelectContent>
               <SelectItem value={PROMPT} disabled>Answer calls on…</SelectItem>
