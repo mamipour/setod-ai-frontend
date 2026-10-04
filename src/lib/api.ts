@@ -1393,6 +1393,7 @@ export interface CatalogAddon {
   price_usd_monthly: number // cents
   included_minutes: number
   overage_price_per_unit: number // cents per minute
+  features: Record<string, boolean>
 }
 
 export interface CatalogPlan {

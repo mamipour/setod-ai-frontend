@@ -380,31 +380,24 @@ function PlanPageInner() {
           </div>
           {/* Top-up packs */}
           <div>
-            <p className="text-xs font-medium text-foreground mb-2">Top up credits</p>
+            <p className="text-xs font-medium text-foreground mb-2">Extra AI credits</p>
             <div className="flex flex-wrap gap-2">
               {[
-                { id: "pack_500",   label: "$5",   sub: "500¢" },
-                { id: "pack_1000",  label: "$10",  sub: "1k¢" },
-                { id: "pack_2500",  label: "$25",  sub: "2.5k¢" },
-                { id: "pack_5000",  label: "$50",  sub: "5k¢" },
-                { id: "pack_10000", label: "$100", sub: "10k¢" },
+                { id: "pack_500",   label: "$5" },
+                { id: "pack_1000",  label: "$10" },
+                { id: "pack_2500",  label: "$25" },
+                { id: "pack_5000",  label: "$50" },
+                { id: "pack_10000", label: "$100" },
               ].map(pack => (
                 <Button
                   key={pack.id}
                   variant="outline"
                   size="sm"
-                  className="flex-col h-auto py-2 px-3 text-xs"
+                  className="h-8 px-4 text-sm"
                   onClick={() => handleTopup(pack.id)}
                   disabled={!!topupLoading}
                 >
-                  {topupLoading === pack.id ? (
-                    <span>…</span>
-                  ) : (
-                    <>
-                      <span className="font-semibold">{pack.label}</span>
-                      <span className="text-muted-foreground">{pack.sub}</span>
-                    </>
-                  )}
+                  {topupLoading === pack.id ? "…" : pack.label}
                 </Button>
               ))}
             </div>
@@ -547,8 +540,8 @@ function PlanPageInner() {
         onConfirm={() => executeChangePlan(confirmTarget!)}
       />
 
-      {/* Voice add-ons — shown for Pro/Business */}
-      {plan && plan.plan_code !== "free" && catalogAddons.length > 0 && (
+      {/* Voice add-ons — shown for Pro/Business; only voice-type addons */}
+      {plan && plan.plan_code !== "free" && catalogAddons.filter(a => a.features?.voice).length > 0 && (
         <div className="rounded-lg border p-6 space-y-4">
           <div className="flex items-center gap-2">
             <Mic className="h-5 w-5 text-muted-foreground" />
@@ -556,7 +549,7 @@ function PlanPageInner() {
           </div>
           <p className="text-sm text-muted-foreground">Add a voice package to answer inbound phone calls with your AI agent. Billed as a line item on your current subscription.</p>
           <div className="grid gap-3 sm:grid-cols-2">
-            {catalogAddons.map((a) => {
+            {catalogAddons.filter(a => a.features?.voice).map((a) => {
               const isActive = plan.features?.voice && plan.plan_code !== "free"
               const isThisOne = isActive && plan.features?.[`addon_${a.code}`]
               return (
