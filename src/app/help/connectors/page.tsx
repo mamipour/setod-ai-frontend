@@ -99,6 +99,22 @@ export default function ConnectorsHelp() {
           expensive here faster than anywhere else on the platform, so keep the daily budget
           low while you are still testing.
         </P>
+        <P>
+          <strong>Voice calls.</strong> Twilio connectors also support inbound phone calls.
+          On an agent&apos;s <em>When it runs</em> tab, add a <strong>Phone call</strong> trigger
+          and select your Twilio connector — the platform automatically configures the number&apos;s
+          Voice URL with Twilio. When someone calls the number, the agent picks up in real time,
+          speaks with the caller using your chosen AI model, and records the full transcript in
+          the Conversations inbox once the call ends.
+        </P>
+        <Callout tone="warn" title="Voice minutes are billed by the platform">
+          <p>
+            Phone call minutes are metered separately from SMS — Twilio charges for the call,
+            and the platform counts voice minutes against your plan&apos;s included allowance.
+            Calls that exceed the allowance are charged as overage. Check your plan&apos;s
+            voice minute limit under <strong>Settings → Plan</strong>.
+          </p>
+        </Callout>
       </Section>
 
       <Section title="OpenAI and Anthropic" id="ai">

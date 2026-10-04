@@ -113,6 +113,13 @@ export default function SchedulesHelp() {
             <strong>Inbound Webhook</strong> — any system can POST a JSON payload to the
             connector URL. The agent receives the full body as its trigger message.
           </li>
+          <li>
+            <strong>Phone call</strong> — the agent answers inbound calls on a Twilio number
+            in real time, speaking with the caller using your chosen AI model. Add a
+            <strong> Phone call</strong> trigger on the agent&apos;s <em>When it runs</em> tab
+            and select the Twilio connector — the platform sets up the number automatically.
+            Each call becomes a closed conversation with a full transcript once the caller hangs up.
+          </li>
         </List>
         <P>
           If the same connector is used by more than one agent, every matching agent fires

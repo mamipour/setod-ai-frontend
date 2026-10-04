@@ -9,7 +9,7 @@ export default function ConversationsHelp() {
     <div className="space-y-10">
       <DocHeader
         title="Conversations"
-        lede="Every inbound message from Telegram, WhatsApp, Instagram, and SMS is threaded into a conversation your agent can remember — and you can take over when needed."
+        lede="Every inbound message from Telegram, WhatsApp, Instagram, SMS, and phone calls is threaded into a conversation your agent can remember — and you can take over when needed."
       />
 
       <Section title="How it works">
@@ -35,6 +35,7 @@ export default function ConversationsHelp() {
           <li><strong>Instagram DM</strong> — text, image attachments</li>
           <li><strong>Instagram Comment</strong> — text; each commenter × post is a separate thread</li>
           <li><strong>Twilio SMS/MMS</strong> — text + MMS media (images, documents)</li>
+          <li><strong>Phone / Voice</strong> — real-time spoken conversations via Twilio; the full call transcript appears in the thread when the call ends</li>
         </List>
       </Section>
 
@@ -94,7 +95,7 @@ export default function ConversationsHelp() {
         <List>
           <li><strong>Open</strong> — agent is handling replies automatically</li>
           <li><strong>Human</strong> — you have taken over; the agent will not reply until you resume it</li>
-          <li><strong>Closed</strong> — thread archived</li>
+          <li><strong>Closed</strong> — thread archived. Phone call conversations are automatically closed when the caller hangs up.</li>
         </List>
       </Section>
 

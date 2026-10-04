@@ -99,6 +99,12 @@ export default function SettingsHelp() {
             <strong>SMS</strong> goes to Twilio, per message.
           </li>
           <li>
+            <strong>Voice calls</strong> — Twilio charges for the call leg itself; the platform
+            meters voice minutes separately against your plan&apos;s included allowance. Minutes
+            over the allowance are billed as overage. Check <strong>Settings → Plan</strong> for
+            your current usage and limits.
+          </li>
+          <li>
             <strong>Gmail, Telegram and web search</strong> cost nothing.
           </li>
         </List>

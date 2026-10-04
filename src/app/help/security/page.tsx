@@ -57,12 +57,41 @@ export default function SecurityHelp() {
         </p>
       </Callout>
 
-      <Section title="Not built yet">
+      <Section title="Platform security measures">
         <List>
           <li>
-            <strong>Message-arrival triggers.</strong> Agents cannot react the instant
-            something comes in. Poll on a schedule instead.
+            <strong>Rate limiting.</strong> Authentication and agent-run endpoints are
+            rate-limited per IP to prevent abuse. The auth endpoints allow 30 requests per
+            minute; agent endpoints allow 30–60 depending on the operation.
           </li>
+          <li>
+            <strong>Security headers.</strong> Every response includes{" "}
+            <code>X-Content-Type-Options: nosniff</code>,{" "}
+            <code>X-Frame-Options: DENY</code>,{" "}
+            <code>Referrer-Policy: strict-origin-when-cross-origin</code>, and{" "}
+            <code>Strict-Transport-Security</code> on HTTPS.
+          </li>
+          <li>
+            <strong>Session revocation.</strong> Logging out immediately invalidates your
+            session token — if someone copies your cookie, it stops working the moment you
+            sign out from any device.
+          </li>
+          <li>
+            <strong>SSRF protection.</strong> URLs you provide for knowledge, MCP servers,
+            and webhooks are validated to block requests to private networks, localhost, and
+            cloud metadata endpoints before any connection is made.
+          </li>
+          <li>
+            <strong>Voice WebSocket security.</strong> The WebSocket connection that handles
+            live phone calls is protected by a short-lived HMAC-signed token — Twilio must
+            present a valid token generated at call setup time, preventing unauthorised
+            connections to the voice stream.
+          </li>
+        </List>
+      </Section>
+
+      <Section title="Still not built">
+        <List>
           <li>
             <strong>Rich email.</strong> Sending is plain text only, with no formatting and
             no attachments.
@@ -71,18 +100,33 @@ export default function SecurityHelp() {
             <strong>Full email bodies.</strong> Agents read sender, subject and a preview
             snippet, not the whole message.
           </li>
+          <li>
+            <strong>Manual reply delivery.</strong> The human takeover reply box records
+            messages for context, but does not send them through the channel automatically.
+            You still need to reply in Telegram, WhatsApp, etc. directly.
+          </li>
         </List>
       </Section>
 
       <Section title="Now available">
         <List>
           <li>
-            <strong>Tool approvals.</strong> You can now require sign-off before an agent
-            sends a message or takes any other action. Mark individual tools as
-            "requires approval" on the agent's edit page - the agent pauses mid-run and
-            waits until you approve or reject on the Approvals page. See the{" "}
+            <strong>Message-arrival triggers.</strong> Agents can react the instant a
+            message lands on Telegram, WhatsApp, Instagram, Twilio SMS, and inbound webhooks.
+            Add a channel trigger on the agent&apos;s <em>When it runs</em> tab.
+          </li>
+          <li>
+            <strong>Tool approvals.</strong> Require sign-off before an agent sends a message
+            or takes any other action. Mark individual tools as "requires approval" on the
+            agent's edit page — the agent pauses mid-run and waits until you approve or reject
+            on the Approvals page. See the{" "}
             <a href="/help/approvals" className="underline underline-offset-4 hover:text-foreground">Tool approvals</a>{" "}
             help page for details.
+          </li>
+          <li>
+            <strong>Voice / phone calls.</strong> Agents can now answer inbound phone calls
+            via Twilio in real time, with a full call transcript saved to the Conversations
+            inbox after each call.
           </li>
         </List>
       </Section>
