@@ -37,7 +37,8 @@ function planBullets(p: CatalogPlan): string[] {
   }
   // Voice
   if (p.features?.voice) {
-    bullets.push("Voice calling included")
+    const voiceMinutes = p.included?.voice_minutes ?? 0
+    bullets.push(voiceMinutes > 0 ? `${voiceMinutes.toLocaleString()} voice minutes/mo included` : "Voice calling included")
   }
   // Support
   if (p.code === "business") bullets.push("Priority support")

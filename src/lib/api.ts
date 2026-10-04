@@ -1438,6 +1438,7 @@ export interface CatalogPlan {
   max_agents: number // -1 = unlimited
   max_rows: number   // -1 = unlimited
   features: Record<string, boolean>
+  included: Record<string, number>
   sort_order: number
 }
 

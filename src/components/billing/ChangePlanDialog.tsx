@@ -28,7 +28,10 @@ function bullets(p: CatalogPlan): string[] {
   } else {
     b.push("BYOK (bring your own API key)")
   }
-  if (p.features?.voice) b.push("Voice calling")
+  if (p.features?.voice) {
+    const voiceMinutes = p.included?.voice_minutes ?? 0
+    b.push(voiceMinutes > 0 ? `${voiceMinutes.toLocaleString()} voice minutes/mo included` : "Voice calling")
+  }
   if (p.code === "business") b.push("Priority support")
   else if (p.code === "pro") b.push("Priority support")
   else b.push("Community support")
@@ -69,12 +72,23 @@ export function ChangePlanDialog({
 
   // Fetch downgrade impact when dialog opens for a downgrade
   useEffect(() => {
-    if (!open || !target || !current || upgrade) {
-      setImpact(null)
-      return
+    let cancelled = false
+    async function loadImpact() {
+      if (!open || !target || !current || upgrade) {
+        return
+      }
+      try {
+        const nextImpact = await billing.downgradeImpact(orgId, target.code)
+        if (!cancelled) setImpact(nextImpact)
+      } catch {
+        if (!cancelled) setImpact(null)
+      }
     }
-    billing.downgradeImpact(orgId, target.code).then(setImpact).catch(() => setImpact(null))
-  }, [open, target?.code, upgrade, orgId])
+    void loadImpact()
+    return () => {
+      cancelled = true
+    }
+  }, [open, target, current, upgrade, orgId])
 
   if (!current || !target) return null
 
