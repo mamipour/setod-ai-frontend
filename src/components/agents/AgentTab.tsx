@@ -775,7 +775,7 @@ function ModelPicker({
         }}
         className="h-8 max-w-[45%] rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none"
       >
-        <option value="">Default</option>
+        <option value="">Default (lowest-cost model)</option>
         {managedModels.map((m) => (
           <option key={m.id} value={m.id}>
             {m.label}

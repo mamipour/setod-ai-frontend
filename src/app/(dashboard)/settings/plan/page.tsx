@@ -12,7 +12,7 @@ import { AutoRechargeDialog } from "@/components/billing/AutoRechargeDialog"
 import { cn } from "@/lib/utils"
 
 const METER_LABEL: Record<string, string> = {
-  model_credits: "AI credits (USD)",
+  model_credits: "AI credits used (managed models)",
   voice_minutes: "Voice minutes",
 }
 
@@ -52,14 +52,20 @@ function UsageBar({ meter, included, used, overage }: { meter: string; included:
   const label = METER_LABEL[meter] ?? meter
   const pct = included > 0 ? Math.min(100, (used / included) * 100) : 0
   const isOver = used > included && included > 0
+  // model_credits is reported in USD (managed-model spend only); other meters are whole units.
+  const isMoney = meter === "model_credits"
+  const fmtVal = (n: number) =>
+    isMoney
+      ? `$${n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+      : Math.round(n).toLocaleString()
 
   return (
     <div className="space-y-1.5">
       <div className="flex items-center justify-between text-sm">
         <span className="font-medium text-foreground">{label}</span>
         <span className={cn("text-muted-foreground tabular-nums", isOver && "text-orange-600 font-medium")}>
-          {Math.round(used).toLocaleString()} / {included > 0 ? included.toLocaleString() : "∞"}
-          {overage > 0 && <span className="ml-1 text-orange-600">(+{Math.round(overage).toLocaleString()} overage)</span>}
+          {fmtVal(used)} / {included > 0 ? fmtVal(included) : "∞"}
+          {overage > 0 && <span className="ml-1 text-orange-600">(+{fmtVal(overage)} over)</span>}
         </span>
       </div>
       {included > 0 && (
