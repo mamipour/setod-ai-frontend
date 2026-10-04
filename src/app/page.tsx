@@ -119,8 +119,8 @@ function Hero() {
       <div className="mx-auto max-w-5xl px-6 pb-28 pt-24">
         <div className="grid gap-14 lg:grid-cols-2 lg:items-center">
           <div className="flex flex-col items-center text-center">
-            <p className="mb-4 text-xs font-medium tracking-[0.08em] text-foreground">
-              <span className="font-bold">S</span>mart <span className="font-bold">E</span>xecution &amp; <span className="font-bold">T</span>ask <span className="font-bold">O</span>rchestration <span className="font-bold">D</span>esk
+            <p className="mb-4 text-xs font-medium tracking-[0.08em] text-foreground/80">
+              <span className="font-bold text-foreground">S</span>mart <span className="font-bold text-foreground">E</span>xecution &amp; <span className="font-bold text-foreground">T</span>ask <span className="font-bold text-foreground">O</span>rchestration <span className="font-bold text-foreground">D</span>esk
             </p>
 
             <h1 className="text-5xl font-normal tracking-[-0.03em] sm:text-6xl">
