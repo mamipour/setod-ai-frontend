@@ -1367,6 +1367,10 @@ export interface OrgPlan {
   features: Record<string, boolean>
   limits: Record<string, number>
   included: Record<string, number>
+  /** Monthly credit included in the plan (cents). 0 on Free. */
+  monthly_credit_cents?: number
+  /** Current credit ledger balance (cents). Populated when plan includes managed models. */
+  credit_balance_cents?: number
   subscription: {
     status: string | null
     stripe_customer_id: string | null
@@ -1382,12 +1386,38 @@ export interface UsageMeter {
   overage: number
 }
 
+// Catalog types returned by GET /billing/catalog
+export interface CatalogAddon {
+  code: string
+  display_name: string
+  price_usd_monthly: number // cents
+  included_minutes: number
+  overage_price_per_unit: number // cents per minute
+}
+
+export interface CatalogPlan {
+  code: string
+  display_name: string
+  price_usd_monthly: number // cents
+  monthly_credit_cents: number
+  max_agents: number // -1 = unlimited
+  max_rows: number   // -1 = unlimited
+  features: Record<string, boolean>
+  sort_order: number
+}
+
+export interface BillingCatalog {
+  plans: CatalogPlan[]
+  addons: CatalogAddon[]
+}
+
 export const billing = {
   getPlan: (orgId: string): Promise<OrgPlan> => apiFetch(`/billing/${orgId}/plan`),
   getUsage: (orgId: string, year?: number, month?: number): Promise<UsageMeter[]> => {
     const qs = year && month ? `?year=${year}&month=${month}` : ""
     return apiFetch(`/billing/${orgId}/usage${qs}`)
   },
+  getCatalog: (): Promise<BillingCatalog> => apiFetch("/billing/catalog"),
   createCheckout: (orgId: string, planCode: string): Promise<{ url: string }> =>
     apiFetch(`/billing/${orgId}/checkout`, {
       method: "POST",
@@ -1400,15 +1430,46 @@ export const billing = {
       method: "POST",
       body: JSON.stringify({ plan_code: planCode }),
     }),
-  createAddonCheckout: (orgId: string, addonCode: string): Promise<{ url: string }> =>
+  createAddonCheckout: (orgId: string, addonCode: string): Promise<{ url: string; status?: string }> =>
     apiFetch(`/billing/${orgId}/addon-checkout`, {
       method: "POST",
       body: JSON.stringify({ addon_code: addonCode }),
     }),
+  removeAddon: (orgId: string, addonCode: string): Promise<{ status: string }> =>
+    apiFetch(`/billing/${orgId}/addon/${encodeURIComponent(addonCode)}`, { method: "DELETE" }),
   createPortal: (orgId: string): Promise<{ url: string }> =>
     apiFetch(`/billing/${orgId}/portal`, { method: "POST" }),
   reactivate: (orgId: string): Promise<{ status: string }> =>
     apiFetch(`/billing/${orgId}/reactivate`, { method: "POST" }),
+  /** Returns items that would exceed limits on the target plan (null fields = OK). */
+  downgradeImpact: (orgId: string, targetPlan: string): Promise<{
+    agents: { current: number; limit: number; over: number } | null
+    rows: { current: number; limit: number; over: number } | null
+  }> => apiFetch(`/billing/${orgId}/downgrade-impact?target_plan=${encodeURIComponent(targetPlan)}`),
+  /** Start a Stripe Checkout session for a prepaid credit top-up pack. */
+  createTopupCheckout: (orgId: string, packId: string): Promise<{ url: string }> =>
+    apiFetch(`/billing/${orgId}/topup-checkout`, {
+      method: "POST",
+      body: JSON.stringify({ pack_id: packId }),
+    }),
+  getBillingSettings: (orgId: string): Promise<{
+    auto_recharge_enabled: boolean
+    threshold_cents: number
+    recharge_amount_cents: number
+    monthly_cap_cents: number
+    auto_recharged_this_month_cents: number
+    auto_recharge_failed_at: string | null
+  }> => apiFetch(`/billing/${orgId}/billing-settings`),
+  updateBillingSettings: (orgId: string, patch: {
+    auto_recharge_enabled?: boolean
+    threshold_cents?: number
+    recharge_amount_cents?: number
+    monthly_cap_cents?: number
+  }): Promise<{ status: string }> =>
+    apiFetch(`/billing/${orgId}/billing-settings`, {
+      method: "PATCH",
+      body: JSON.stringify(patch),
+    }),
 }
 
 // ── Voice ─────────────────────────────────────────────────────────────────────

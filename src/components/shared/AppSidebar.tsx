@@ -58,8 +58,7 @@ const NAV_MAIN: { href: string; label: string; Icon: LucideIcon }[] = [
 const NAV_WORKSPACE: { href: string; label: string; Icon: LucideIcon }[] = [
   { href: "/members",       label: "Members",    Icon: Users },
   { href: "/settings",      label: "Settings",   Icon: Settings },
-  // Hidden until the billing workflow is finalized — /settings/plan still works via direct link.
-  // { href: "/settings/plan", label: "Plan & Usage", Icon: CreditCard },
+  { href: "/settings/plan", label: "Plan & Usage", Icon: CreditCard },
 ]
 
 const BADGE_POLL_MS = 30_000
