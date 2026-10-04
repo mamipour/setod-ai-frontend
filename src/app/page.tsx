@@ -120,7 +120,7 @@ function Hero() {
         <div className="grid gap-14 lg:grid-cols-2 lg:items-center">
           <div className="flex flex-col items-center text-center">
             <p className="mb-4 text-xs font-medium tracking-[0.08em] text-foreground/80">
-              Smart Execution &amp; Task Orchestration Desk
+              <span className="font-bold">S</span>mart <span className="font-bold">E</span>xecution &amp; <span className="font-bold">T</span>ask <span className="font-bold">O</span>rchestration <span className="font-bold">D</span>esk
             </p>
 
             <h1 className="text-5xl font-normal tracking-[-0.03em] sm:text-6xl">
