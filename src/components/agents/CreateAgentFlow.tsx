@@ -7,9 +7,11 @@ import {
   agents,
   connectors as connectorsApi,
   tablesApi,
+  EMPTY_PLATFORM_MODELS,
   type AgentTemplate,
   type Connector,
   type ConnectorType,
+  type PlatformModels,
   type SchedulePreset,
   type TriggerType,
 } from "@/lib/api"
@@ -17,7 +19,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import Image from "next/image"
-import { AgentIcon, BrainPicker, connectorIconSrc, CONNECTOR_TOOLS, MANAGED_BRAIN_ID, Modal } from "@/components/agents/shared"
+import { AgentIcon, BrainPicker, connectorIconSrc, CONNECTOR_TOOLS, managedBrainId, Modal, parseManagedBrain, PROVIDER_LABEL } from "@/components/agents/shared"
 import { cn } from "@/lib/utils"
 
 // Deliberately not the raw connector type names. The user is choosing "an email account",
@@ -63,7 +65,7 @@ export function CreateAgentFlow({ orgId, onClose, initialTemplateKey }: Props) {
   const [connectors, setConnectors] = useState<Connector[]>([])
   const [presets, setPresets] = useState<SchedulePreset[]>([])
   const [chosen, setChosen] = useState<AgentTemplate | null>(null)
-  const [managedAvailable, setManagedAvailable] = useState(false)
+  const [platform, setPlatform] = useState<PlatformModels>(EMPTY_PLATFORM_MODELS)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -77,12 +79,12 @@ export function CreateAgentFlow({ orgId, onClose, initialTemplateKey }: Props) {
           connectorsApi.list(orgId),
           agents.schedulePresets(),
           // Whether this org's plan includes Setod-managed models (Pro/Business).
-          agents.platformModels(orgId).catch(() => ({ models: [], available: false })),
+          agents.platformModels(orgId).catch(() => EMPTY_PLATFORM_MODELS),
         ])
         setTemplates(t)
         setConnectors(c)
         setPresets(p)
-        setManagedAvailable(pm.available)
+        setPlatform(pm)
         // Preselected template: land on setup directly.
         const preset = initialTemplateKey ? t.find((x) => x.key === initialTemplateKey) : undefined
         if (preset) {
@@ -121,7 +123,7 @@ export function CreateAgentFlow({ orgId, onClose, initialTemplateKey }: Props) {
           orgId={orgId}
           template={chosen}
           connectors={connectors}
-          managedAvailable={managedAvailable}
+          platform={platform}
           presets={presets}
           onBack={() => setStep("pick")}
           onConnectorsChanged={refreshConnectors}
@@ -231,7 +233,7 @@ function SetupAgent({
   orgId,
   template,
   connectors,
-  managedAvailable,
+  platform,
   presets,
   onBack,
   onConnectorsChanged,
@@ -240,8 +242,8 @@ function SetupAgent({
   orgId: string
   template: AgentTemplate
   connectors: Connector[]
-  /** Org's plan includes Setod-managed models, so an agent can be created without a BYOK key. */
-  managedAvailable: boolean
+  /** Setod-managed models for this org; `available` is false when the plan lacks them. */
+  platform: PlatformModels
   presets: SchedulePreset[]
   onBack: () => void
   onConnectorsChanged: () => void
@@ -317,10 +319,14 @@ function SetupAgent({
     return connectors.find((c) => c.type === type && c.status === "active")?.id ?? ""
   }
 
-  // Default brain: the user's pick, else Setod-managed when the plan includes it (so a
-  // Pro/Business user with no API key isn't blocked), else their first BYOK connector.
-  const brainId = chosen.brain || (managedAvailable ? MANAGED_BRAIN_ID : brains[0]?.id) || ""
-  const isManagedBrain = brainId === MANAGED_BRAIN_ID
+  // Managed providers we can offer (must have a default model to set).
+  const managedProviders = platform.available
+    ? (platform.providers ?? []).filter((p) => platform.defaults?.[p])
+    : []
+  // Default brain: the user's pick, else the first managed provider when the plan includes
+  // it (so a Pro/Business user with no API key isn't blocked), else their first BYOK connector.
+  const brainId = chosen.brain || (managedProviders[0] ? managedBrainId(managedProviders[0]) : brains[0]?.id) || ""
+  const managedProvider = parseManagedBrain(brainId)
   const picked = Object.fromEntries(
     wanted
       .map((type) => [
@@ -353,7 +359,9 @@ function SetupAgent({
         icon: template.icon,
         instructions,
         template_key: template.key || null,
-        model_connector_id: isManagedBrain ? null : brainId,
+        // Managed = no connector; the provider is carried by the concrete model slug.
+        model_connector_id: managedProvider ? null : brainId,
+        model: managedProvider ? (platform.defaults?.[managedProvider] ?? "") : "",
         settings: { daily_token_budget: Math.round((budget / 3) * 1_000_000) },
       })
 
@@ -410,7 +418,7 @@ function SetupAgent({
       {/* The model connector, presented as what it does rather than what it is. */}
       <div className="space-y-1.5">
         <Label className="text-xs">AI brain</Label>
-        {brains.length === 0 && !managedAvailable ? (
+        {brains.length === 0 && managedProviders.length === 0 ? (
           <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
             <TriangleAlert className="mr-1.5 inline size-3.5" />
             You need an OpenAI or Anthropic key before an agent can think. Add one on the
@@ -422,12 +430,13 @@ function SetupAgent({
               brains={brains}
               value={brainId}
               onChange={(id) => setChosen((c) => ({ ...c, brain: id }))}
-              showManaged={managedAvailable}
+              managedProviders={managedProviders}
             />
-            {isManagedBrain && (
+            {managedProvider && (
               <p className="text-[11px] text-muted-foreground">
-                Runs on Setod&apos;s keys and draws from your plan&apos;s AI credits. You can pick a specific
-                model after creating the agent.
+                Runs on Setod&apos;s {PROVIDER_LABEL[managedProvider]} key and draws from your plan&apos;s AI
+                credits. Starts on {platform.defaults?.[managedProvider]}; you can change the model after
+                creating the agent.
               </p>
             )}
           </>

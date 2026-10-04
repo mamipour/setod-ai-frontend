@@ -481,6 +481,20 @@ export interface ModelList {
   detail?: string
 }
 
+export type ManagedProvider = "openai" | "anthropic"
+
+export interface PlatformModels {
+  models: { id: string; label: string; provider: string }[]
+  /** False when the org's plan doesn't include managed models. */
+  available: boolean
+  /** Providers Setod has a platform key for (and at least one priced model). */
+  providers?: ManagedProvider[]
+  /** Cheapest priced model per provider; set when the user picks "<Provider> (Managed)". */
+  defaults?: Partial<Record<ManagedProvider, string | null>>
+}
+
+export const EMPTY_PLATFORM_MODELS: PlatformModels = { models: [], available: false, providers: [], defaults: {} }
+
 export interface Tool {
   name: string
   description: string
@@ -680,7 +694,7 @@ export const agents = {
     apiFetch(`/agents/models?connector_id=${connectorId}`),
 
   /** Setod-managed models available for this org (requires managed_models entitlement). */
-  platformModels: (orgId: string): Promise<{ models: { id: string; label: string; provider: string }[]; available: boolean }> =>
+  platformModels: (orgId: string): Promise<PlatformModels> =>
     apiFetch(`/agents/platform-models?org_id=${orgId}`),
 
   schedulePresets: (): Promise<SchedulePreset[]> => apiFetch("/agents/schedule-presets"),

@@ -25,7 +25,7 @@ import {
   Zap,
   type LucideIcon,
 } from "lucide-react"
-import type { AgentStatus, Connector, SessionStatus, TriggerType } from "@/lib/api"
+import type { AgentStatus, Connector, ManagedProvider, SessionStatus, TriggerType } from "@/lib/api"
 import { cn } from "@/lib/utils"
 
 // ── Connector icons ────────────────────────────────────────────────────────────
@@ -176,25 +176,45 @@ export const CONNECTOR_TOOLS: Partial<Record<string, Array<{ name: string; descr
 
 // ── Brain picker ───────────────────────────────────────────────────────────────
 
-/** Sentinel id indicating "use Setod-managed platform key". */
-export const MANAGED_BRAIN_ID = "__setod_managed__"
+// ── Brain ids ─────────────────────────────────────────────────────────────────
+//
+// A "brain" is either a BYOK connector (value = connector UUID) or a Setod-managed
+// provider (value = "__managed__:<provider>").  The backend has no provider column for
+// managed agents — it infers the provider from the model slug — so callers that select a
+// managed brain must also set a concrete model for that provider.
+
+const MANAGED_PREFIX = "__managed__:"
+
+export function managedBrainId(provider: ManagedProvider): string {
+  return MANAGED_PREFIX + provider
+}
+
+/** Provider for a managed brain id, or null if the id is a connector / empty. */
+export function parseManagedBrain(id: string): ManagedProvider | null {
+  return id.startsWith(MANAGED_PREFIX) ? (id.slice(MANAGED_PREFIX.length) as ManagedProvider) : null
+}
+
+/** Which managed provider a model slug runs on (mirrors the backend's inference). */
+export function providerForModel(model: string): ManagedProvider {
+  return model.startsWith("claude") ? "anthropic" : "openai"
+}
+
+export const PROVIDER_LABEL: Record<ManagedProvider, string> = { openai: "OpenAI", anthropic: "Anthropic" }
 
 export function BrainPicker({
   brains,
   value,
   onChange,
-  showManaged = false,
+  managedProviders = [],
 }: {
   brains: Connector[]
   value: string
   onChange: (id: string) => void
-  /** When true, a "Setod managed" option is prepended (requires managed_models entitlement). */
-  showManaged?: boolean
+  /** Providers offered as "<Provider> (Managed)"; empty when the plan lacks managed models. */
+  managedProviders?: ManagedProvider[]
 }) {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
-  const selected = brains.find((b) => b.id === value)
-  const isManagedSelected = !selected && !value && showManaged
 
   useEffect(() => {
     function handleClick(e: MouseEvent) {
@@ -204,14 +224,39 @@ export function BrainPicker({
     return () => document.removeEventListener("mousedown", handleClick)
   }, [])
 
-  type Option = { id: string; name: string; type: string | undefined; managed?: boolean }
+  type Option = { id: string; name: string; sub?: string; type?: string; managed?: boolean }
   const options: Option[] = [
-    ...(showManaged ? [{ id: MANAGED_BRAIN_ID, name: "Setod managed", type: undefined, managed: true }] : []),
-    ...(!showManaged && !value ? [{ id: "", name: "Not set", type: undefined }] : []),
-    ...brains.map((b) => ({ id: b.id, name: b.name, type: b.type as string })),
+    ...managedProviders.map((p) => ({ id: managedBrainId(p), name: `${PROVIDER_LABEL[p]} (Managed)`, type: p, managed: true })),
+    ...brains.map((b) => ({
+      id: b.id,
+      name: `${PROVIDER_LABEL[b.type as ManagedProvider] ?? b.type} (BYOK)`,
+      // Connector names are user-chosen; show them so two keys of the same provider are distinguishable.
+      sub: b.name,
+      type: b.type as string,
+    })),
+    ...(!value && managedProviders.length === 0 ? [{ id: "", name: "Not set" }] : []),
   ]
+  const selected = options.find((o) => o.id === value)
 
-  const displayLabel = selected?.name ?? (isManagedSelected || value === MANAGED_BRAIN_ID ? "Setod managed" : "Not set")
+  function Row({ opt, inList }: { opt: Option | undefined; inList: boolean }) {
+    if (!opt) return <span className="flex-1 truncate text-left text-muted-foreground">Not set</span>
+    return (
+      <>
+        {opt.type && CONNECTOR_ICON[opt.type] ? (
+          <Image src={CONNECTOR_ICON[opt.type]!} alt="" width={16} height={16} className="shrink-0" />
+        ) : (
+          <div className="size-4 shrink-0" />
+        )}
+        <span className="truncate text-left">{opt.name}</span>
+        {opt.sub && <span className="truncate text-xs text-muted-foreground">· {opt.sub}</span>}
+        {opt.managed && (
+          <span className={cn("shrink-0 rounded-full bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-primary", inList && "ml-auto")}>
+            credits
+          </span>
+        )}
+      </>
+    )
+  }
 
   return (
     <div ref={ref} className="relative flex-1">
@@ -220,13 +265,7 @@ export function BrainPicker({
         onClick={() => setOpen((v) => !v)}
         className="flex h-8 w-full items-center gap-2 rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none hover:bg-muted/40"
       >
-        {selected && CONNECTOR_ICON[selected.type] && (
-          <Image src={CONNECTOR_ICON[selected.type]!} alt="" width={16} height={16} className="shrink-0" />
-        )}
-        {(isManagedSelected || value === MANAGED_BRAIN_ID) && (
-          <span className="flex size-4 shrink-0 items-center justify-center rounded bg-primary/10 text-[9px] font-bold text-primary">AI</span>
-        )}
-        <span className="flex-1 truncate text-left">{displayLabel}</span>
+        <span className="flex min-w-0 flex-1 items-center gap-2"><Row opt={selected} inList={false} /></span>
         <ChevronDown className="size-3.5 shrink-0 text-muted-foreground" />
       </button>
 
@@ -240,20 +279,9 @@ export function BrainPicker({
               className={cn(
                 "flex w-full items-center gap-2 px-2.5 py-2 text-sm transition-colors hover:bg-muted first:rounded-t-lg last:rounded-b-lg",
                 opt.id === value && "bg-primary/5 text-primary",
-                opt.id === MANAGED_BRAIN_ID && value === MANAGED_BRAIN_ID && "bg-primary/5 text-primary",
               )}
             >
-              {opt.managed ? (
-                <span className="flex size-4 shrink-0 items-center justify-center rounded bg-primary/10 text-[9px] font-bold text-primary">AI</span>
-              ) : opt.type && CONNECTOR_ICON[opt.type] ? (
-                <Image src={CONNECTOR_ICON[opt.type]!} alt="" width={16} height={16} className="shrink-0" />
-              ) : (
-                <div className="size-4 shrink-0" />
-              )}
-              <span className="truncate">{opt.name}</span>
-              {opt.managed && (
-                <span className="ml-auto shrink-0 rounded-full bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-primary">managed</span>
-              )}
+              <Row opt={opt} inList />
             </button>
           ))}
         </div>

@@ -10,11 +10,13 @@ import {
   skills as skillsApi,
   tablesApi,
   voice,
+  EMPTY_PLATFORM_MODELS,
   type Agent,
   type AgentLink,
   type AgentTool,
   type Connector,
   type ModelList,
+  type PlatformModels,
   type SchedulePreset,
   type Scenario,
   type Skill,
@@ -24,7 +26,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { BrainPicker, connectorIconSrc, MANAGED_BRAIN_ID, Modal, TRIGGER_LABEL, untilNow } from "@/components/agents/shared"
+import { BrainPicker, connectorIconSrc, managedBrainId, Modal, parseManagedBrain, providerForModel, TRIGGER_LABEL, untilNow } from "@/components/agents/shared"
 
 type Snapshot = {
   id: string
@@ -212,8 +214,7 @@ export function AgentTab({
   const [history, setHistory] = useState<Snapshot[]>([])
   const [historyOpen, setHistoryOpen] = useState(false)
   const [rollingBack, setRollingBack] = useState<string | null>(null)
-  const [managedModels, setManagedModels] = useState<{ id: string; label: string; provider: string }[]>([])
-  const [managedAvailable, setManagedAvailable] = useState(false)
+  const [platform, setPlatform] = useState<PlatformModels>(EMPTY_PLATFORM_MODELS)
   const [orgSkills, setOrgSkills] = useState<Skill[]>([])
   const [attachedSkills, setAttachedSkills] = useState<Skill[]>([])
   const [skillsLoading, setSkillsLoading] = useState(true)
@@ -251,7 +252,7 @@ export function AgentTab({
       .finally(() => setSkillsLoading(false))
     agents.listCalls(agent.id).then(setAgentCalls).catch(() => {})
     agents.listScenarios(agent.id).then(setScenarios).catch(() => {})
-    agents.platformModels(orgId).then((r) => { setManagedModels(r.models); setManagedAvailable(r.available) }).catch(() => {})
+    agents.platformModels(orgId).then(setPlatform).catch(() => {})
     // Count notes visible to this agent (scope: all-agents or includes this agent id)
     notesApi.list(orgId).then((all) => {
       const now = new Date()
@@ -292,11 +293,29 @@ export function AgentTab({
     (c) => TOOL_TYPES.includes(c.type) && !attachedIds.has(c.id) && c.status === "active",
   )
 
+  // Managed providers Setod can offer this org.  Only offer a provider we have a default
+  // model for, otherwise picking it couldn't set a concrete model.
+  const managedProviders = platform.available
+    ? (platform.providers ?? []).filter((p) => platform.defaults?.[p])
+    : []
+
+  // What the BrainPicker should show as selected: the BYOK connector, or the managed
+  // provider the current model slug runs on.
+  const brainValue = agent.model_connector_id
+    ?? (managedProviders.length > 0 ? managedBrainId(providerForModel(agent.model)) : "")
+
   async function changeBrain(id: string) {
-    // "Setod managed" is a UI sentinel; the backend models it as no connector.
-    const updated = await agents.update(agent.id, { model_connector_id: id === MANAGED_BRAIN_ID ? null : id })
+    const provider = parseManagedBrain(id)
+    // Managed = no connector.  The backend infers the provider from the model slug, so
+    // switching provider also sets that provider's default model; a BYOK pick clears the
+    // model so the connector's own default applies.
+    const patch = provider
+      ? { model_connector_id: null, model: platform.defaults?.[provider] ?? "" }
+      : { model_connector_id: id, model: "" }
+    const updated = await agents.update(agent.id, patch)
     onPatch({
       model_connector_id: updated.model_connector_id,
+      model: updated.model,
       has_unpublished_changes: updated.has_unpublished_changes,
     })
   }
@@ -324,19 +343,23 @@ export function AgentTab({
           <div className="flex gap-2">
             <BrainPicker
               brains={brains}
-              value={agent.model_connector_id ?? ""}
+              value={brainValue}
               onChange={changeBrain}
-              showManaged={managedAvailable}
+              managedProviders={managedProviders}
             />
-            {/* Keyed so switching provider remounts with an empty list, rather than showing
+            {/* Keyed so switching brain remounts with an empty list, rather than showing
                 the previous provider's models until the new ones arrive. */}
             <ModelPicker
-              key={agent.model_connector_id ?? "none"}
+              key={brainValue || "none"}
               agentId={agent.id}
               connectorId={agent.model_connector_id}
               model={agent.model}
               onPatch={onPatch}
-              managedModels={managedAvailable && !agent.model_connector_id ? managedModels : []}
+              managedModels={
+                !agent.model_connector_id && managedProviders.length > 0
+                  ? platform.models.filter((m) => m.provider === providerForModel(agent.model))
+                  : []
+              }
             />
           </div>
         </div>
@@ -765,7 +788,8 @@ function ModelPicker({
     if (connectorId) agents.models(connectorId).then(setList).catch(() => setList({ models: [] }))
   }, [connectorId])
 
-  // No BYOK connector but managed models are available → show platform model list
+  // Managed brain → the provider's priced models.  No blank "default" here: the backend
+  // infers the managed provider from the slug, so the model must always be concrete.
   if (!connectorId && managedModels.length > 0) {
     return (
       <select
@@ -776,7 +800,6 @@ function ModelPicker({
         }}
         className="h-8 max-w-[45%] rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none"
       >
-        <option value="">Default (lowest-cost model)</option>
         {managedModels.map((m) => (
           <option key={m.id} value={m.id}>
             {m.label}
