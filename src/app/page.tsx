@@ -119,12 +119,8 @@ function Hero() {
       <div className="mx-auto max-w-5xl px-6 pb-28 pt-24">
         <div className="grid gap-14 lg:grid-cols-2 lg:items-center">
           <div className="flex flex-col items-center text-center">
-            <p className="mb-8 text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
-              Now in early access
-            </p>
-
             <p className="mb-4 text-xs font-medium tracking-[0.08em] text-foreground/80">
-              SETOD = Smart Execution &amp; Task Orchestration Desk
+              Smart Execution &amp; Task Orchestration Desk
             </p>
 
             <h1 className="text-5xl font-normal tracking-[-0.03em] sm:text-6xl">
