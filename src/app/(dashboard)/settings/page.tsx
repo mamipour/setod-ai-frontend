@@ -10,6 +10,7 @@ import { useActiveOrg } from "@/hooks/useActiveOrg"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { cn } from "@/lib/utils"
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -230,15 +231,19 @@ function NotificationsRow({ orgId, connectors: allConnectors }: { orgId: string;
         {tgClients.length > 0 ? (
           <div className="space-y-1">
             <Label className="text-xs">Telegram channel (optional)</Label>
-            <select
-              className="w-full rounded-md border bg-background px-2 py-1.5 text-xs"
-              value={selectedId ?? ""}
+            <Select
+              value={selectedId ?? "__none__"}
               disabled={loading || saving}
-              onChange={(e) => handleSave(e.target.value || null)}
+              onValueChange={(v) => handleSave(v === "__none__" ? null : v)}
             >
-              <option value="">None — email only</option>
-              {tgClients.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-            </select>
+              <SelectTrigger className="w-full text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__none__">None — email only</SelectItem>
+                {tgClients.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+              </SelectContent>
+            </Select>
           </div>
         ) : (
           <p className="text-xs text-muted-foreground">
@@ -395,13 +400,17 @@ function DataRetentionRow({ orgId }: { orgId: string }) {
         <div className="space-y-3 max-w-xs">
           <div className="space-y-1">
             <Label className="text-xs">Keep run history for</Label>
-            <select
-              className="w-full rounded-md border bg-background px-2 py-1.5 text-xs"
-              value={retentionDays ?? "forever"}
-              onChange={(e) => setRetentionDays(e.target.value === "forever" ? null : Number(e.target.value))}
+            <Select
+              value={String(retentionDays ?? "forever")}
+              onValueChange={(v) => setRetentionDays(v === "forever" ? null : Number(v))}
             >
-              {RETENTION_OPTIONS.map((o) => <option key={String(o.value)} value={o.value ?? "forever"}>{o.label}</option>)}
-            </select>
+              <SelectTrigger className="w-full text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {RETENTION_OPTIONS.map((o) => <SelectItem key={String(o.value)} value={String(o.value ?? "forever")}>{o.label}</SelectItem>)}
+              </SelectContent>
+            </Select>
           </div>
 
           {retentionDays !== null && (
@@ -525,16 +534,14 @@ function TimezoneRow({ orgId }: { orgId: string }) {
       description="Times in agent prompts, run logs, and notifications use this timezone. Set it to where your team is located."
     >
       <div className="flex items-center gap-2">
-        <select
-          value={tz}
-          onChange={(e) => save(e.target.value)}
-          disabled={saving}
-          className="h-8 rounded-md border bg-transparent px-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring disabled:opacity-50"
-        >
-          {COMMON_TIMEZONES.map((z) => (
-            <option key={z} value={z}>{z}</option>
-          ))}
-        </select>
+        <Select value={tz} onValueChange={(v) => v && save(v)} disabled={saving}>
+          <SelectTrigger className="h-8 text-sm">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {COMMON_TIMEZONES.map((z) => <SelectItem key={z} value={z}>{z}</SelectItem>)}
+          </SelectContent>
+        </Select>
         {saving && <span className="text-xs text-muted-foreground">Saving…</span>}
       </div>
       {error && <p className="mt-1 text-xs text-destructive">{error}</p>}

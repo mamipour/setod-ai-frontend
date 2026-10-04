@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { cn } from "@/lib/utils"
 import { useRouter } from "next/navigation"
 
@@ -171,14 +172,15 @@ export default function MembersPage() {
                   )}
                   {isOwner && m.user_id !== myUserId ? (
                     <>
-                      <select
-                        value={m.role}
-                        onChange={(e) => handleRoleChange(m.user_id, e.target.value as "owner" | "member")}
-                        className="h-7 rounded border bg-background px-1.5 text-xs"
-                      >
-                        <option value="member">Member</option>
-                        <option value="owner">Owner</option>
-                      </select>
+                      <Select value={m.role} onValueChange={(v) => handleRoleChange(m.user_id, v as "owner" | "member")}>
+                        <SelectTrigger size="sm" className="h-7 text-xs">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="member">Member</SelectItem>
+                          <SelectItem value="owner">Owner</SelectItem>
+                        </SelectContent>
+                      </Select>
                       <Button
                         size="icon"
                         variant="ghost"
@@ -280,14 +282,15 @@ export default function MembersPage() {
               </div>
               <div className="space-y-1">
                 <Label className="text-xs">Role</Label>
-                <select
-                  value={inviteRole}
-                  onChange={(e) => setInviteRole(e.target.value as "owner" | "member")}
-                  className="h-8 rounded-md border bg-background px-2 text-xs"
-                >
-                  <option value="member">Member</option>
-                  <option value="owner">Owner</option>
-                </select>
+                <Select value={inviteRole} onValueChange={(v) => setInviteRole(v as "owner" | "member")}>
+                  <SelectTrigger className="h-8 text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="member">Member</SelectItem>
+                    <SelectItem value="owner">Owner</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
 

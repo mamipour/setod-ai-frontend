@@ -788,51 +788,58 @@ function ModelPicker({
     if (connectorId) agents.models(connectorId).then(setList).catch(() => setList({ models: [] }))
   }, [connectorId])
 
-  // Managed brain → the provider's priced models.  No blank "default" here: the backend
-  // infers the managed provider from the slug, so the model must always be concrete.
+  // Managed brain → the provider's priced models. No blank "default": the backend infers
+  // the provider from the slug so it must always be concrete.
   if (!connectorId && managedModels.length > 0) {
     return (
-      <select
+      <Select
         value={model}
-        onChange={async (e) => {
-          const updated = await agents.update(agentId, { model: e.target.value })
+        onValueChange={async (val) => {
+          if (!val) return
+          const updated = await agents.update(agentId, { model: val })
           onPatch({ model: updated.model, has_unpublished_changes: updated.has_unpublished_changes })
         }}
-        className="h-8 max-w-[45%] rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none"
       >
-        {managedModels.map((m) => (
-          <option key={m.id} value={m.id}>
-            {m.label}
-          </option>
-        ))}
-      </select>
+        <SelectTrigger className="h-8 max-w-[45%] text-sm">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {managedModels.map((m) => (
+            <SelectItem key={m.id} value={m.id}>{m.label}</SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
     )
   }
 
   if (!connectorId) return null
 
   // While the list is loading, or if the provider was unreachable, the agent still runs on
-  // the provider's default  -  so this degrades to a disabled control, not an error.
+  // the provider's default — so this degrades to a disabled control, not an error.
   const models = list?.models ?? []
-  const placeholder = list === null ? "Loading models…" : `Default (${list.default ?? "provider"})`
+  const placeholder = list === null ? "Loading…" : `Default (${list.default ?? "provider"})`
+  const BYOK_DEFAULT = "__default__"
 
   return (
-    <select
-      value={model}
+    <Select
+      value={model || BYOK_DEFAULT}
       disabled={models.length === 0}
-      onChange={async (e) => {
-        const updated = await agents.update(agentId, { model: e.target.value })
+      onValueChange={async (val) => {
+        if (!val) return
+        const updated = await agents.update(agentId, { model: val === BYOK_DEFAULT ? "" : val })
         onPatch({ model: updated.model, has_unpublished_changes: updated.has_unpublished_changes })
       }}
-      className="h-8 max-w-[45%] rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none disabled:opacity-60"
     >
-      <option value="">{placeholder}</option>
-      {models.map((m) => (
-        <option key={m.id} value={m.id}>
-          {m.label}
-        </option>
-      ))}
-    </select>
+      <SelectTrigger className="h-8 max-w-[45%] text-sm">
+        <SelectValue placeholder={placeholder} />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value={BYOK_DEFAULT}>{placeholder}</SelectItem>
+        {models.map((m) => (
+          <SelectItem key={m.id} value={m.id}>{m.label}</SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
   )
 }
 
@@ -1135,6 +1142,11 @@ function TriggerEditor({
   const [error, setError] = useState<string | null>(null)
   const [phoneAttaching, setPhoneAttaching] = useState<string | null>(null)
   const [phoneDetaching, setPhoneDetaching] = useState<string | null>(null)
+  // Controlled values for the fire-and-forget "add trigger" selects; reset to prompt after each pick.
+  const PROMPT = "__prompt__"
+  const [scheduleSel, setScheduleSel] = useState(PROMPT)
+  const [channelSel, setChannelSel] = useState(PROMPT)
+  const [phoneSel, setPhoneSel] = useState(PROMPT)
 
   async function act(fn: () => Promise<unknown>) {
     setBusy(true)
@@ -1285,69 +1297,67 @@ function TriggerEditor({
       })}
 
       <div className="flex flex-wrap gap-2">
-        <select
-          defaultValue=""
+        <Select
+          value={scheduleSel}
           disabled={busy}
-          onChange={(e) => {
-            if (!e.target.value) return
-            const preset = e.target.value
-            e.target.value = ""
-            act(() => agents.createTrigger(agentId, { type: "schedule", config: { preset } }))
+          onValueChange={(val) => {
+            if (val === PROMPT) return
+            setScheduleSel(PROMPT)
+            act(() => agents.createTrigger(agentId, { type: "schedule", config: { preset: val } }))
           }}
-          className="h-8 rounded-lg border border-input bg-transparent px-2.5 text-xs outline-none"
         >
-          <option value="">Add a schedule…</option>
-          {presets.map((p) => (
-            <option key={p.key} value={p.key}>
-              {p.label}
-            </option>
-          ))}
-        </select>
+          <SelectTrigger className="h-8 text-xs">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={PROMPT} disabled>Add a schedule…</SelectItem>
+            {presets.map((p) => <SelectItem key={p.key} value={p.key}>{p.label}</SelectItem>)}
+          </SelectContent>
+        </Select>
 
         {channelConnectors.length > 0 && (
-          <select
-            defaultValue=""
+          <Select
+            value={channelSel}
             disabled={busy}
-            onChange={(e) => {
-              if (!e.target.value) return
-              const connectorId = e.target.value
-              e.target.value = ""
-              act(() => agents.createTrigger(agentId, { type: "channel", config: { connector_id: connectorId } }))
+            onValueChange={(val) => {
+              if (val === PROMPT) return
+              setChannelSel(PROMPT)
+              act(() => agents.createTrigger(agentId, { type: "channel", config: { connector_id: val } }))
             }}
-            className="h-8 rounded-lg border border-input bg-transparent px-2.5 text-xs outline-none"
           >
-            <option value="">Listen for messages from…</option>
-            {channelConnectors.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
-          </select>
+            <SelectTrigger className="h-8 text-xs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={PROMPT} disabled>Listen for messages from…</SelectItem>
+              {channelConnectors.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+            </SelectContent>
+          </Select>
         )}
 
         {twilioConnectors.length > 0 && (
-          <select
-            defaultValue=""
+          <Select
+            value={phoneSel}
             disabled={busy}
-            onChange={(e) => {
-              if (!e.target.value) return
-              const connectorId = e.target.value
-              e.target.value = ""
+            onValueChange={(val) => {
+              if (val === PROMPT) return
+              setPhoneSel(PROMPT)
               const alreadyHasPhone = phoneTriggers.some(
-                (t) => (t.config as Record<string, string> | null)?.connector_id === connectorId,
+                (t) => (t.config as Record<string, string> | null)?.connector_id === val,
               )
-              if (alreadyHasPhone) return
-              act(() => agents.createTrigger(agentId, { type: "phone", config: { connector_id: connectorId } }))
+              if (!alreadyHasPhone) {
+                act(() => agents.createTrigger(agentId, { type: "phone", config: { connector_id: val } }))
+              }
             }}
-            className="h-8 rounded-lg border border-input bg-transparent px-2.5 text-xs outline-none"
           >
-            <option value="">Answer calls on…</option>
-            {twilioConnectors.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.phone_number ?? c.name}
-              </option>
-            ))}
-          </select>
+            <SelectTrigger className="h-8 text-xs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={PROMPT} disabled>Answer calls on…</SelectItem>
+              {twilioConnectors.map((c) => <SelectItem key={c.id} value={c.id}>{c.phone_number ?? c.name}</SelectItem>)}
+            </SelectContent>
+          </Select>
         )}
       </div>
 

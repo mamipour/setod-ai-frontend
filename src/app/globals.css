@@ -49,6 +49,7 @@
 }
 
 :root {
+  color-scheme: light;
   --background: #f7f7f4;
   --foreground: #26251e;
   --card: #ffffff;
@@ -87,6 +88,7 @@
 }
 
 .dark {
+  color-scheme: dark;
   --map-edge: #8a8a8a;
   --map-edge-calls: #a58bff;
   --background: #181818;

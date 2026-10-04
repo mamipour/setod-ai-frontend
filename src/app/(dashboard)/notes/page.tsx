@@ -7,6 +7,7 @@ import { useUser } from "@/hooks/useUser"
 import { useActiveOrg } from "@/hooks/useActiveOrg"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 const MAX_BODY = 500
 
@@ -136,14 +137,15 @@ function Composer({
         {/* Visible to */}
         <div className="space-y-1">
           <p className="text-[11px] font-medium text-muted-foreground">Visible to</p>
-          <select
-            className="w-full rounded-md border bg-background px-2 py-1.5 text-xs"
-            value={allAgents ? "all" : "specific"}
-            onChange={(e) => setAllAgents(e.target.value === "all")}
-          >
-            <option value="all">All agents</option>
-            <option value="specific">Specific agents…</option>
-          </select>
+          <Select value={allAgents ? "all" : "specific"} onValueChange={(v) => setAllAgents(v === "all")}>
+            <SelectTrigger className="w-full text-xs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All agents</SelectItem>
+              <SelectItem value="specific">Specific agents…</SelectItem>
+            </SelectContent>
+          </Select>
           {!allAgents && agents.length > 0 && (
             <div className="flex flex-wrap gap-1 pt-1">
               {agents.map((a) => (
@@ -166,16 +168,17 @@ function Composer({
         {/* Expires */}
         <div className="space-y-1">
           <p className="text-[11px] font-medium text-muted-foreground">Expires</p>
-          <select
-            className="w-full rounded-md border bg-background px-2 py-1.5 text-xs"
-            value={expiryPreset}
-            onChange={(e) => setExpiryPreset(e.target.value)}
-          >
-            <option value="never">Never</option>
-            <option value="today">End of today</option>
-            <option value="week">In one week</option>
-            <option value="custom">Custom date…</option>
-          </select>
+          <Select value={expiryPreset} onValueChange={(v) => v && setExpiryPreset(v)}>
+            <SelectTrigger className="w-full text-xs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="never">Never</SelectItem>
+              <SelectItem value="today">End of today</SelectItem>
+              <SelectItem value="week">In one week</SelectItem>
+              <SelectItem value="custom">Custom date…</SelectItem>
+            </SelectContent>
+          </Select>
           {expiryPreset === "custom" && (
             <Input
               type="date"

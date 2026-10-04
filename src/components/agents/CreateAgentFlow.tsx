@@ -18,6 +18,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import Image from "next/image"
 import { AgentIcon, BrainPicker, connectorIconSrc, CONNECTOR_TOOLS, managedBrainId, Modal, parseManagedBrain, PROVIDER_LABEL } from "@/components/agents/shared"
 import { cn } from "@/lib/utils"
@@ -496,31 +497,25 @@ function SetupAgent({
           ))}
         </div>
         {trigger === "schedule" && (
-          <select
-            value={preset}
-            onChange={(e) => setPreset(e.target.value)}
-            className="mt-2 h-8 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none"
-          >
-            {presets.map((p) => (
-              <option key={p.key} value={p.key}>
-                {p.label}
-              </option>
-            ))}
-          </select>
+          <Select value={preset} onValueChange={(v) => v && setPreset(v)}>
+            <SelectTrigger className="mt-2 h-8 w-full text-sm">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {presets.map((p) => <SelectItem key={p.key} value={p.key}>{p.label}</SelectItem>)}
+            </SelectContent>
+          </Select>
         )}
         {trigger === "channel" && (
-          <select
-            value={channelConnectorId}
-            onChange={(e) => setChannelConnectorId(e.target.value)}
-            className="mt-2 h-8 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none"
-          >
-            <option value="">Pick an account to listen on…</option>
-            {channelConnectors.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
-          </select>
+          <Select value={channelConnectorId || "__none__"} onValueChange={(v) => setChannelConnectorId(!v || v === "__none__" ? "" : v)}>
+            <SelectTrigger className="mt-2 h-8 w-full text-sm">
+              <SelectValue placeholder="Pick an account to listen on…" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__none__">Pick an account to listen on…</SelectItem>
+              {channelConnectors.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+            </SelectContent>
+          </Select>
         )}
         {trigger === "channel" && channelConnectors.length === 0 && (
           <p className="text-xs text-amber-700">
@@ -703,17 +698,14 @@ function ConnectorRow({
         {options.length === 1 ? (
           <span className="truncate text-xs text-muted-foreground">{options[0].name}</span>
         ) : (
-          <select
-            value={value || options[0]?.id}
-            onChange={(e) => onChange(e.target.value)}
-            className="h-7 max-w-[55%] rounded-lg border border-input bg-transparent px-2 text-xs outline-none"
-          >
-            {options.map((o) => (
-              <option key={o.id} value={o.id}>
-                {o.name}
-              </option>
-            ))}
-          </select>
+          <Select value={value || options[0]?.id} onValueChange={(v) => v && onChange(v)}>
+            <SelectTrigger size="sm" className="h-7 max-w-[55%] text-xs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {options.map((o) => <SelectItem key={o.id} value={o.id}>{o.name}</SelectItem>)}
+            </SelectContent>
+          </Select>
         )}
       </div>
 

@@ -7,6 +7,7 @@ import { useUser } from "@/hooks/useUser"
 import { useActiveOrg } from "@/hooks/useActiveOrg"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { cn } from "@/lib/utils"
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -61,13 +62,14 @@ function SkillEditor({
         </div>
         <div className="space-y-1.5">
           <label className="text-xs font-medium text-muted-foreground">Category</label>
-          <select
-            value={category}
-            onChange={(e) => setCategory(e.target.value as SkillCategory)}
-            className="w-full rounded-lg border border-input bg-transparent px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-primary/30"
-          >
-            {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
-          </select>
+          <Select value={category} onValueChange={(v) => setCategory(v as SkillCategory)}>
+            <SelectTrigger className="w-full text-sm">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {CATEGORIES.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+            </SelectContent>
+          </Select>
         </div>
       </div>
       <div className="space-y-1.5">
