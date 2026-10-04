@@ -3,10 +3,12 @@
 import { Suspense, useEffect, useState } from "react"
 import { useSearchParams } from "next/navigation"
 import { ArrowRight, Check, CreditCard, Mic, TrendingUp, Zap, ArrowDown, Coins } from "lucide-react"
-import { billing, type OrgPlan, type UsageMeter, type CatalogPlan, type CatalogAddon } from "@/lib/api"
+import { billing, type OrgPlan, type UsageMeter, type CatalogPlan, type CatalogAddon, type ActiveAddon } from "@/lib/api"
 import { useActiveOrg } from "@/hooks/useActiveOrg"
 import { Button } from "@/components/ui/button"
 import { ChangePlanDialog } from "@/components/billing/ChangePlanDialog"
+import { AddonDialog } from "@/components/billing/AddonDialog"
+import { AutoRechargeDialog } from "@/components/billing/AutoRechargeDialog"
 import { cn } from "@/lib/utils"
 
 const METER_LABEL: Record<string, string> = {
@@ -100,6 +102,9 @@ function PlanPageInner() {
   const [portalLoading, setPortalLoading] = useState(false)
   const [reactivating, setReactivating] = useState(false)
   const [confirmTarget, setConfirmTarget] = useState<string | null>(null)
+  const [addonDialogTarget, setAddonDialogTarget] = useState<CatalogAddon | null>(null)
+  const [addonDialogAction, setAddonDialogAction] = useState<"add" | "remove" | "keep">("add")
+  const [showAutoRechargeDialog, setShowAutoRechargeDialog] = useState(false)
   const [toast, setToast] = useState<{ msg: string; type: "success" | "error" } | null>(null)
   const [autoRecharge, setAutoRecharge] = useState<{
     auto_recharge_enabled: boolean
@@ -108,6 +113,7 @@ function PlanPageInner() {
     monthly_cap_cents: number
     auto_recharged_this_month_cents: number
     auto_recharge_failed_at: string | null
+    allow_voice_overage: boolean
   } | null>(null)
 
   const successMsg = params?.get("checkout") === "success"
@@ -170,34 +176,60 @@ function PlanPageInner() {
     }
   }
 
-  async function handleAddon(addonCode: string) {
+  /** Open the confirm dialog before adding/swapping an add-on. */
+  function openAddonDialog(catalogAddon: CatalogAddon) {
+    setAddonDialogTarget(catalogAddon)
+    setAddonDialogAction("add")
+  }
+
+  /** Open the confirm dialog before removing an add-on. */
+  function openRemoveAddonDialog(catalogAddon: CatalogAddon) {
+    setAddonDialogTarget(catalogAddon)
+    setAddonDialogAction("remove")
+  }
+
+  /** Executes after the AddonDialog is confirmed. */
+  async function executeAddonAction(addonCode: string, action: "add" | "remove") {
     if (!activeOrg?.id) return
     setAddonLoading(addonCode)
     try {
-      const res = await billing.createAddonCheckout(activeOrg.id, addonCode) as { url?: string; status?: string }
-      if (res.url) {
-        window.location.assign(res.url)
-        return
+      if (action === "remove") {
+        const res = await billing.removeAddon(activeOrg.id, addonCode)
+        if (res.effective_date) {
+          showToast(`Voice add-on scheduled to end on ${res.effective_date}`)
+        } else {
+          showToast("Voice add-on removal scheduled")
+        }
+      } else {
+        const res = await billing.createAddonCheckout(activeOrg.id, addonCode)
+        if (res.url) {
+          window.location.assign(res.url)
+          return
+        }
+        if (res.effective === "period_end") {
+          showToast(`Switch scheduled for ${res.effective_date ?? "next billing cycle"}`)
+        } else {
+          showToast("Voice add-on activated")
+        }
       }
-      // Inline modification — refresh plan
-      showToast("Voice add-on activated")
       setPlan(await billing.getPlan(activeOrg.id))
     } catch (e: unknown) {
-      showToast(e instanceof Error ? e.message : "Failed to activate add-on", "error")
+      throw e  // re-throw so AddonDialog shows the error inline
     } finally {
       setAddonLoading(null)
     }
   }
 
-  async function handleRemoveAddon(addonCode: string) {
+  /** Undo a scheduled removal or swap-down. */
+  async function handleKeepAddon(addonCode: string) {
     if (!activeOrg?.id) return
     setAddonLoading(addonCode)
     try {
-      await billing.removeAddon(activeOrg.id, addonCode)
-      showToast("Voice add-on removed")
+      await billing.keepAddon(activeOrg.id, addonCode)
+      showToast("Add-on will continue renewing")
       setPlan(await billing.getPlan(activeOrg.id))
     } catch (e: unknown) {
-      showToast(e instanceof Error ? e.message : "Failed to remove add-on", "error")
+      showToast(e instanceof Error ? e.message : "Failed to undo removal", "error")
     } finally {
       setAddonLoading(null)
     }
@@ -214,13 +246,34 @@ function PlanPageInner() {
     }
   }
 
-  async function toggleAutoRecharge() {
+  function handleAutoRechargeToggle() {
+    if (!autoRecharge) return
+    if (!autoRecharge.auto_recharge_enabled) {
+      // Enabling — show confirmation dialog
+      setShowAutoRechargeDialog(true)
+    } else {
+      // Disabling — no confirmation needed
+      void doToggleAutoRecharge()
+    }
+  }
+
+  async function doToggleAutoRecharge() {
     if (!activeOrg?.id || !autoRecharge) return
     const updated = await billing.updateBillingSettings(activeOrg.id, {
       auto_recharge_enabled: !autoRecharge.auto_recharge_enabled,
     })
     if (updated.status === "ok") {
       setAutoRecharge(prev => prev ? { ...prev, auto_recharge_enabled: !prev.auto_recharge_enabled } : prev)
+    }
+  }
+
+  async function toggleVoiceOverage() {
+    if (!activeOrg?.id || !autoRecharge) return
+    const updated = await billing.updateBillingSettings(activeOrg.id, {
+      allow_voice_overage: !autoRecharge.allow_voice_overage,
+    })
+    if (updated.status === "ok") {
+      setAutoRecharge(prev => prev ? { ...prev, allow_voice_overage: !prev.allow_voice_overage } : prev)
     }
   }
 
@@ -384,7 +437,7 @@ function PlanPageInner() {
                 <Button
                   variant={autoRecharge.auto_recharge_enabled ? "default" : "outline"}
                   size="sm"
-                  onClick={toggleAutoRecharge}
+                  onClick={handleAutoRechargeToggle}
                   className="text-xs"
                 >
                   {autoRecharge.auto_recharge_enabled ? "Auto-recharge on" : "Enable auto-recharge"}
@@ -554,7 +607,26 @@ function PlanPageInner() {
         onConfirm={() => executeChangePlan(confirmTarget!)}
       />
 
-      {/* Voice add-ons — shown for Pro/Business; only voice-type addons */}
+      <AddonDialog
+        open={addonDialogTarget !== null}
+        addon={addonDialogTarget}
+        orgId={activeOrg?.id ?? ""}
+        onClose={() => setAddonDialogTarget(null)}
+        onConfirm={() => executeAddonAction(addonDialogTarget!.code, addonDialogAction)}
+      />
+
+      {autoRecharge && (
+        <AutoRechargeDialog
+          open={showAutoRechargeDialog}
+          thresholdCents={autoRecharge.threshold_cents}
+          rechargeAmountCents={autoRecharge.recharge_amount_cents}
+          monthlyCap={autoRecharge.monthly_cap_cents}
+          onClose={() => setShowAutoRechargeDialog(false)}
+          onConfirm={doToggleAutoRecharge}
+        />
+      )}
+
+      {/* Voice add-ons — shown for Pro/Business */}
       {plan && plan.plan_code !== "free" && catalogAddons.filter(a => a.features?.voice).length > 0 && (
         <div className="rounded-lg border p-6 space-y-4">
           <div className="flex items-center gap-2">
@@ -564,16 +636,57 @@ function PlanPageInner() {
           <p className="text-sm text-muted-foreground">Add a voice package to answer inbound phone calls with your AI agent. Billed as a line item on your current subscription.</p>
           <div className="grid gap-3 sm:grid-cols-2">
             {catalogAddons.filter(a => a.features?.voice).map((a) => {
-              const isThisOne = plan.active_addons?.includes(a.code)
+              const addonState: ActiveAddon | undefined = plan.active_addons?.find(oa => oa.code === a.code)
+              const isActive = !!addonState
+              const isScheduledRemoval = isActive && !!addonState?.cancel_at && !addonState?.pending_addon_code
+              const isScheduledSwap = isActive && !!addonState?.pending_addon_code
+              const endDate = addonState?.cancel_at
+                ? new Date(addonState.cancel_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })
+                : null
+
               return (
-                <div key={a.code} className={cn("rounded-lg border p-4 space-y-3", isThisOne && "border-green-300 bg-green-50/50")}>
+                <div key={a.code} className={cn(
+                  "rounded-lg border p-4 space-y-3",
+                  isActive && !isScheduledRemoval && "border-green-300 bg-green-50/50 dark:bg-green-950/20",
+                  isScheduledRemoval && "border-orange-200 bg-orange-50/50 dark:bg-orange-950/20",
+                )}>
                   <div className="flex items-center justify-between">
                     <div>
                       <div className="font-semibold text-foreground">{a.display_name}</div>
                       <div className="text-sm text-muted-foreground">{formatPrice(a.price_usd_monthly)}</div>
                     </div>
-                    {isThisOne && <span className="text-xs font-medium text-green-700 bg-green-100 rounded-full px-2 py-0.5">Active</span>}
+                    {isActive && !isScheduledRemoval && !isScheduledSwap && (
+                      <span className="text-xs font-medium text-green-700 bg-green-100 rounded-full px-2 py-0.5">Active</span>
+                    )}
+                    {isScheduledRemoval && (
+                      <span className="text-xs font-medium text-orange-700 bg-orange-100 rounded-full px-2 py-0.5">Ends {endDate}</span>
+                    )}
+                    {isScheduledSwap && (
+                      <span className="text-xs font-medium text-blue-700 bg-blue-100 rounded-full px-2 py-0.5">Switching {endDate ? `on ${endDate}` : "next period"}</span>
+                    )}
                   </div>
+
+                  {/* Minutes usage bar (only for active, non-expiring) */}
+                  {isActive && !isScheduledRemoval && addonState && (
+                    <div className="space-y-1">
+                      <div className="flex justify-between text-xs text-muted-foreground">
+                        <span>{addonState.used_minutes.toLocaleString()} / {addonState.allowance_minutes.toLocaleString()} min used</span>
+                        {addonState.used_minutes > addonState.allowance_minutes && (
+                          <span className="text-orange-600">+{(addonState.used_minutes - addonState.allowance_minutes).toLocaleString()} overage</span>
+                        )}
+                      </div>
+                      <div className="h-1.5 rounded-full bg-muted overflow-hidden">
+                        <div
+                          className={cn(
+                            "h-full rounded-full transition-all",
+                            addonState.used_minutes > addonState.allowance_minutes ? "bg-orange-500" : "bg-green-500"
+                          )}
+                          style={{ width: `${Math.min(100, addonState.allowance_minutes > 0 ? (addonState.used_minutes / addonState.allowance_minutes) * 100 : 0)}%` }}
+                        />
+                      </div>
+                    </div>
+                  )}
+
                   <ul className="space-y-1.5">
                     <li className="flex items-center gap-2 text-sm text-muted-foreground">
                       <Check className="h-3.5 w-3.5 text-green-600 shrink-0" />
@@ -586,12 +699,43 @@ function PlanPageInner() {
                       </li>
                     )}
                   </ul>
-                  {isThisOne ? (
+
+                  {/* Voice overage toggle — shown only on active add-on */}
+                  {isActive && !isScheduledRemoval && autoRecharge && (
+                    <div className="flex items-center justify-between text-xs text-muted-foreground pt-1 border-t">
+                      <span>Allow overage at ${(a.overage_price_per_unit / 100).toFixed(2)}/min</span>
+                      <button
+                        className={cn(
+                          "relative inline-flex h-4 w-7 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors",
+                          autoRecharge.allow_voice_overage ? "bg-green-500" : "bg-muted-foreground/30"
+                        )}
+                        onClick={toggleVoiceOverage}
+                      >
+                        <span className={cn(
+                          "pointer-events-none block h-3 w-3 rounded-full bg-white shadow-sm ring-0 transition-transform",
+                          autoRecharge.allow_voice_overage ? "translate-x-3" : "translate-x-0"
+                        )} />
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Action buttons */}
+                  {isScheduledRemoval ? (
                     <Button
                       className="w-full"
                       size="sm"
                       variant="outline"
-                      onClick={() => handleRemoveAddon(a.code)}
+                      onClick={() => handleKeepAddon(a.code)}
+                      disabled={!!addonLoading}
+                    >
+                      {addonLoading === a.code ? "Processing…" : `Keep add-on (renews ${endDate})`}
+                    </Button>
+                  ) : isActive ? (
+                    <Button
+                      className="w-full"
+                      size="sm"
+                      variant="outline"
+                      onClick={() => openRemoveAddonDialog(a)}
                       disabled={!!addonLoading}
                     >
                       {addonLoading === a.code ? "Processing…" : "Remove add-on"}
@@ -601,7 +745,7 @@ function PlanPageInner() {
                       className="w-full"
                       size="sm"
                       variant="default"
-                      onClick={() => handleAddon(a.code)}
+                      onClick={() => openAddonDialog(a)}
                       disabled={!!addonLoading}
                     >
                       {addonLoading === a.code ? "Processing…" : (

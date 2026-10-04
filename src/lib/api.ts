@@ -1361,6 +1361,24 @@ export const tablesApi = {
 
 // ── Billing ───────────────────────────────────────────────────────────────────
 
+export interface ActiveAddon {
+  code: string
+  status: string
+  cancel_at: string | null         // ISO — set when removal is scheduled
+  pending_addon_code: string | null // set for swap-down
+  allowance_minutes: number
+  used_minutes: number
+}
+
+export interface AddonPreview {
+  action: "add" | "swap_up" | "swap_down" | "remove"
+  effective: "immediate" | "period_end"
+  amount_due_cents: number
+  minutes_this_period: number
+  period_end: string | null
+  renewal_price_cents: number
+}
+
 export interface OrgPlan {
   plan_code: string
   plan_name: string
@@ -1371,8 +1389,8 @@ export interface OrgPlan {
   monthly_credit_cents?: number
   /** Current credit ledger balance (cents). Populated when plan includes managed models. */
   credit_balance_cents?: number
-  /** Active add-on codes for this org (e.g. ["voice_lite"]). */
-  active_addons?: string[]
+  /** Active add-ons with detail. */
+  active_addons?: ActiveAddon[]
   subscription: {
     status: string | null
     stripe_customer_id: string | null
@@ -1433,13 +1451,18 @@ export const billing = {
       method: "POST",
       body: JSON.stringify({ plan_code: planCode }),
     }),
-  createAddonCheckout: (orgId: string, addonCode: string): Promise<{ url: string; status?: string }> =>
+  /** Preview the charge / effect of adding, swapping, or removing an add-on. */
+  addonPreview: (orgId: string, addonCode: string): Promise<AddonPreview> =>
+    apiFetch(`/billing/${orgId}/addon-preview?addon_code=${encodeURIComponent(addonCode)}`),
+  createAddonCheckout: (orgId: string, addonCode: string): Promise<{ url?: string; status?: string; effective?: string; effective_date?: string }> =>
     apiFetch(`/billing/${orgId}/addon-checkout`, {
       method: "POST",
       body: JSON.stringify({ addon_code: addonCode }),
     }),
-  removeAddon: (orgId: string, addonCode: string): Promise<{ status: string }> =>
+  removeAddon: (orgId: string, addonCode: string): Promise<{ status: string; effective_date?: string }> =>
     apiFetch(`/billing/${orgId}/addon/${encodeURIComponent(addonCode)}`, { method: "DELETE" }),
+  keepAddon: (orgId: string, addonCode: string): Promise<{ status: string }> =>
+    apiFetch(`/billing/${orgId}/addon/${encodeURIComponent(addonCode)}/keep`, { method: "POST" }),
   createPortal: (orgId: string): Promise<{ url: string }> =>
     apiFetch(`/billing/${orgId}/portal`, { method: "POST" }),
   reactivate: (orgId: string): Promise<{ status: string }> =>
@@ -1462,12 +1485,14 @@ export const billing = {
     monthly_cap_cents: number
     auto_recharged_this_month_cents: number
     auto_recharge_failed_at: string | null
+    allow_voice_overage: boolean
   }> => apiFetch(`/billing/${orgId}/billing-settings`),
   updateBillingSettings: (orgId: string, patch: {
     auto_recharge_enabled?: boolean
     threshold_cents?: number
     recharge_amount_cents?: number
     monthly_cap_cents?: number
+    allow_voice_overage?: boolean
   }): Promise<{ status: string }> =>
     apiFetch(`/billing/${orgId}/billing-settings`, {
       method: "PATCH",
