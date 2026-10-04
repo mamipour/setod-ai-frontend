@@ -24,7 +24,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { BrainPicker, connectorIconSrc, Modal, TRIGGER_LABEL, untilNow } from "@/components/agents/shared"
+import { BrainPicker, connectorIconSrc, MANAGED_BRAIN_ID, Modal, TRIGGER_LABEL, untilNow } from "@/components/agents/shared"
 
 type Snapshot = {
   id: string
@@ -293,7 +293,8 @@ export function AgentTab({
   )
 
   async function changeBrain(id: string) {
-    const updated = await agents.update(agent.id, { model_connector_id: id })
+    // "Setod managed" is a UI sentinel; the backend models it as no connector.
+    const updated = await agents.update(agent.id, { model_connector_id: id === MANAGED_BRAIN_ID ? null : id })
     onPatch({
       model_connector_id: updated.model_connector_id,
       has_unpublished_changes: updated.has_unpublished_changes,
