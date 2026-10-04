@@ -1371,6 +1371,8 @@ export interface OrgPlan {
   monthly_credit_cents?: number
   /** Current credit ledger balance (cents). Populated when plan includes managed models. */
   credit_balance_cents?: number
+  /** Active add-on codes for this org (e.g. ["voice_lite"]). */
+  active_addons?: string[]
   subscription: {
     status: string | null
     stripe_customer_id: string | null

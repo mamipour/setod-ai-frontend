@@ -189,6 +189,20 @@ function PlanPageInner() {
     }
   }
 
+  async function handleRemoveAddon(addonCode: string) {
+    if (!activeOrg?.id) return
+    setAddonLoading(addonCode)
+    try {
+      await billing.removeAddon(activeOrg.id, addonCode)
+      showToast("Voice add-on removed")
+      setPlan(await billing.getPlan(activeOrg.id))
+    } catch (e: unknown) {
+      showToast(e instanceof Error ? e.message : "Failed to remove add-on", "error")
+    } finally {
+      setAddonLoading(null)
+    }
+  }
+
   async function handleTopup(packId: string) {
     if (!activeOrg?.id) return
     setTopupLoading(packId)
@@ -550,8 +564,7 @@ function PlanPageInner() {
           <p className="text-sm text-muted-foreground">Add a voice package to answer inbound phone calls with your AI agent. Billed as a line item on your current subscription.</p>
           <div className="grid gap-3 sm:grid-cols-2">
             {catalogAddons.filter(a => a.features?.voice).map((a) => {
-              const isActive = plan.features?.voice && plan.plan_code !== "free"
-              const isThisOne = isActive && plan.features?.[`addon_${a.code}`]
+              const isThisOne = plan.active_addons?.includes(a.code)
               return (
                 <div key={a.code} className={cn("rounded-lg border p-4 space-y-3", isThisOne && "border-green-300 bg-green-50/50")}>
                   <div className="flex items-center justify-between">
@@ -573,20 +586,32 @@ function PlanPageInner() {
                       </li>
                     )}
                   </ul>
-                  <Button
-                    className="w-full"
-                    size="sm"
-                    variant={isThisOne ? "outline" : "default"}
-                    onClick={() => handleAddon(a.code)}
-                    disabled={!!addonLoading}
-                  >
-                    {addonLoading === a.code ? "Processing…" : isThisOne ? "Manage" : (
-                      <>
-                        Add {a.display_name}
-                        <ArrowRight className="h-3.5 w-3.5 ml-1.5" />
-                      </>
-                    )}
-                  </Button>
+                  {isThisOne ? (
+                    <Button
+                      className="w-full"
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleRemoveAddon(a.code)}
+                      disabled={!!addonLoading}
+                    >
+                      {addonLoading === a.code ? "Processing…" : "Remove add-on"}
+                    </Button>
+                  ) : (
+                    <Button
+                      className="w-full"
+                      size="sm"
+                      variant="default"
+                      onClick={() => handleAddon(a.code)}
+                      disabled={!!addonLoading}
+                    >
+                      {addonLoading === a.code ? "Processing…" : (
+                        <>
+                          Add {a.display_name}
+                          <ArrowRight className="h-3.5 w-3.5 ml-1.5" />
+                        </>
+                      )}
+                    </Button>
+                  )}
                 </div>
               )
             })}
