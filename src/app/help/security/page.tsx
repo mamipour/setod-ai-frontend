@@ -82,6 +82,10 @@ export default function SecurityHelp() {
             cloud metadata endpoints before any connection is made.
           </li>
           <li>
+            <strong>Custom code isolation.</strong> Custom code runs in an isolated AWS account
+            with no permissions and no network unless you enable it.
+          </li>
+          <li>
             <strong>Voice WebSocket security.</strong> The WebSocket connection that handles
             live phone calls is protected by a short-lived HMAC-signed token — Twilio must
             present a valid token generated at call setup time, preventing unauthorised

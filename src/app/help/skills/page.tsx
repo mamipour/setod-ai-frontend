@@ -100,6 +100,24 @@ export default function SkillsHelp() {
         </Callout>
       </Section>
 
+      <Section title="Code skills">
+        <P>
+          A code skill is a Python function you write, stored in your workspace, and published
+          as its own isolated function. Once it is attached to an agent, the agent can call it
+          like any other tool. The function must define <C>main(input, context)</C>.{" "}
+          <C>input</C> is the arguments the agent passed. <C>context</C> includes the
+          organisation, agent, and session ids.
+        </P>
+        <List>
+          <li>Timeout is 1–30 seconds. The default is 10.</li>
+          <li>Source, input, and output are each capped at 64 KB. The agent sees at most 16 KB of the result.</li>
+          <li>An agent can call code skills at most 25 times in one run.</li>
+          <li>Network access is off unless you turn it on. With it off, the function cannot open connections.</li>
+          <li>Secrets are write-only. You can replace them, but the saved values are never shown again.</li>
+          <li>Code skills are available on Pro and Business plans.</li>
+        </List>
+      </Section>
+
       <Section title="Writing a good skill">
         <List>
           <li>

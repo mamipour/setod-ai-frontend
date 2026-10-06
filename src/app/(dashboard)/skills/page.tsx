@@ -3,6 +3,7 @@
 import { useEffect, useId, useRef, useState } from "react"
 import { BookOpen, ChevronDown, ChevronUp, Edit2, Plus, Trash2, Wand2, X } from "lucide-react"
 import { skills, type Skill, type SkillCategory } from "@/lib/api"
+import { CodeSkillsPanel } from "@/components/code-skills/CodeSkillsPanel"
 import { useUser } from "@/hooks/useUser"
 import { useActiveOrg } from "@/hooks/useActiveOrg"
 import { Button } from "@/components/ui/button"
@@ -198,6 +199,7 @@ export default function SkillsPage() {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const [activeCategory, setActiveCategory] = useState<SkillCategory | "All">("All")
+  const [tab, setTab] = useState<"prompt" | "code">("prompt")
   const createRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -256,15 +258,39 @@ export default function SkillsPage() {
       <div className="flex items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Skills</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Reusable prompt fragments attached to agents. Each skill adds one focused rule to an agent&apos;s behaviour.
+          <div className="mt-3 flex gap-2">
+            {(["prompt", "code"] as const).map((value) => (
+              <button
+                key={value}
+                type="button"
+                onClick={() => setTab(value)}
+                className={cn(
+                  "rounded-full border px-3 py-1 text-xs font-medium",
+                  tab === value
+                    ? "border-primary bg-primary text-primary-foreground"
+                    : "border-input text-muted-foreground hover:text-foreground",
+                )}
+              >
+                {value === "prompt" ? "Prompt skills" : "Code skills"}
+              </button>
+            ))}
+          </div>
+          <p className="mt-3 text-sm text-muted-foreground">
+            {tab === "prompt"
+              ? "Reusable prompt fragments attached to agents. Each skill adds one focused rule to an agent's behaviour."
+              : "Python functions your agents can call. Each one is published as its own isolated function."}
           </p>
         </div>
-        <Button onClick={() => { setCreating(true); setEditingId(null) }} className="shrink-0 gap-1.5">
-          <Plus className="size-4" />
-          New skill
-        </Button>
+        {tab === "prompt" && (
+          <Button onClick={() => { setCreating(true); setEditingId(null) }} className="shrink-0 gap-1.5">
+            <Plus className="size-4" />
+            New skill
+          </Button>
+        )}
       </div>
+
+      {tab === "code" && <CodeSkillsPanel />}
+      {tab === "prompt" && <>
 
       {/* Empty state */}
       {!loading && allSkills.length === 0 && (
@@ -390,6 +416,7 @@ export default function SkillsPage() {
           </p>
         </div>
       )}
+      </>}
     </div>
   )
 }

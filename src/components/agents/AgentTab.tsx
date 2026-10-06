@@ -8,6 +8,9 @@ import {
   connectors as connectorsApi,
   notes as notesApi,
   skills as skillsApi,
+  codeSkills as codeSkillsApi,
+  type AgentCodeSkill,
+  type CodeSkill,
   tablesApi,
   voice,
   EMPTY_PLATFORM_MODELS,
@@ -217,6 +220,8 @@ export function AgentTab({
   const [platform, setPlatform] = useState<PlatformModels>(EMPTY_PLATFORM_MODELS)
   const [orgSkills, setOrgSkills] = useState<Skill[]>([])
   const [attachedSkills, setAttachedSkills] = useState<Skill[]>([])
+  const [orgCodeSkills, setOrgCodeSkills] = useState<CodeSkill[]>([])
+  const [attachedCodeSkills, setAttachedCodeSkills] = useState<AgentCodeSkill[]>([])
   const [skillsLoading, setSkillsLoading] = useState(true)
   const [liveNoteCount, setLiveNoteCount] = useState<number | null>(null)
   const [agentCalls, setAgentCalls] = useState<AgentLink[]>([])
@@ -250,6 +255,10 @@ export function AgentTab({
     Promise.all([skillsApi.list(orgId), skillsApi.listForAgent(agent.id)])
       .then(([all, attached]) => { setOrgSkills(all); setAttachedSkills(attached) })
       .finally(() => setSkillsLoading(false))
+    Promise.all([
+      codeSkillsApi.list(orgId).catch(() => [] as CodeSkill[]),
+      codeSkillsApi.listForAgent(agent.id).catch(() => [] as AgentCodeSkill[]),
+    ]).then(([all, attached]) => { setOrgCodeSkills(all); setAttachedCodeSkills(attached) })
     agents.listCalls(agent.id).then(setAgentCalls).catch(() => {})
     agents.listScenarios(agent.id).then(setScenarios).catch(() => {})
     agents.platformModels(orgId).then(setPlatform).catch(() => {})
@@ -565,6 +574,57 @@ export function AgentTab({
                   )} />
                   {skill.name}
                 </button>
+              )
+            })}
+          </div>
+        )}
+        {orgCodeSkills.length > 0 && (
+          <div className="space-y-2 border-t pt-3">
+            <p className="text-xs font-medium text-muted-foreground">Code skills</p>
+            {orgCodeSkills.map((skill) => {
+              const attached = attachedCodeSkills.find((s) => s.id === skill.id)
+              const ready = skill.deploy_status === "ready"
+              return (
+                <div key={skill.id} className={cn("flex flex-wrap items-center gap-3", !ready && "opacity-60")}>
+                  <button
+                    type="button"
+                    disabled={!ready}
+                    onClick={async () => {
+                      if (!ready) return
+                      if (attached) {
+                        await codeSkillsApi.detach(agent.id, skill.id)
+                        setAttachedCodeSkills((prev) => prev.filter((s) => s.id !== skill.id))
+                      } else {
+                        await codeSkillsApi.attach(agent.id, skill.id, false)
+                        setAttachedCodeSkills((prev) => [...prev, { ...skill, requires_approval: false }])
+                      }
+                    }}
+                    className={cn(
+                      "flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium",
+                      attached
+                        ? "border-green-300 bg-green-50 text-green-700"
+                        : "border-input text-muted-foreground",
+                    )}
+                  >
+                    <span className={cn("size-1.5 rounded-full", attached ? "bg-green-500" : "bg-muted-foreground/30")} />
+                    {skill.name}
+                    {!ready && <span className="text-[10px]">{skill.deploy_status}</span>}
+                  </button>
+                  {attached && (
+                    <label className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                      <input
+                        type="checkbox"
+                        checked={attached.requires_approval}
+                        onChange={async (e) => {
+                          const requires = e.target.checked
+                          await codeSkillsApi.attach(agent.id, skill.id, requires)
+                          setAttachedCodeSkills((prev) => prev.map((s) => s.id === skill.id ? { ...s, requires_approval: requires } : s))
+                        }}
+                      />
+                      Require approval
+                    </label>
+                  )}
+                </div>
               )
             })}
           </div>
