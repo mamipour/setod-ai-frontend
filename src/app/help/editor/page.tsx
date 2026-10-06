@@ -37,7 +37,7 @@ export default function EditorHelp() {
           <li>Create a token and copy the command. The token is shown only once.</li>
           <li>Run the command in a terminal, then open Claude Code in the project.</li>
           <li>
-            Install the skill: <C>/plugin marketplace add setod/skills</C>, then{" "}
+            Install the skill: <C>/plugin marketplace add mamipour/setod-skills</C>, then{" "}
             <C>/plugin install setod-fde@setod</C>.
           </li>
         </Steps>
@@ -50,7 +50,7 @@ export default function EditorHelp() {
           Authorization header. Restart Cursor so it picks up the server.
         </P>
         <P>
-          Install the skill with <C>npx skills add setod/skills</C>. Later,{" "}
+          Install the skill with <C>npx skills add mamipour/setod-skills</C>. Later,{" "}
           <C>npx skills update</C> pulls a newer skill when the server says yours is behind.
         </P>
       </Section>
@@ -58,10 +58,10 @@ export default function EditorHelp() {
       <Section title="Install the skill">
         <List>
           <li>
-            Cursor and most other clients: <C>npx skills add setod/skills</C>
+            Cursor and most other clients: <C>npx skills add mamipour/setod-skills</C>
           </li>
           <li>
-            Claude Code: <C>/plugin marketplace add setod/skills</C>, then{" "}
+            Claude Code: <C>/plugin marketplace add mamipour/setod-skills</C>, then{" "}
             <C>/plugin install setod-fde@setod</C>
           </li>
         </List>
