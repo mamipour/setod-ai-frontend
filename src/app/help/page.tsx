@@ -1,3 +1,4 @@
+import Link from "next/link"
 import { Callout, DocHeader, List, NextUp, P, Section, Steps, C } from "@/components/help/doc"
 import { nextPage } from "./nav"
 
@@ -29,9 +30,9 @@ export default function HelpIndex() {
             workspace, set up once.
           </li>
           <li>
-            <strong>Tool</strong>  -  one thing an agent can do with a connector, like{" "}
-            <C>send_email</C> or <C>read_unread_emails</C>. You do not create tools; attaching
-            a connector grants its whole set.
+            <strong>Tool</strong>  -  one thing an agent can do, like <C>send_email</C> or{" "}
+            <C>read_unread_emails</C>. Attaching a connector grants that account&apos;s tools.
+            A code skill is a tool you write yourself.
           </li>
           <li>
             <strong>Agent</strong>  -  instructions plus connectors plus a trigger.
@@ -96,6 +97,20 @@ export default function HelpIndex() {
             has already handled so it does not reply twice.
           </li>
         </List>
+      </Section>
+
+      <Section title="Code you can publish">
+        <P>
+          A prompt skill tells an agent how to behave. A code skill is a Python function you
+          write, publish, and attach. The agent then calls it the same way it calls{" "}
+          <C>send_email</C>. The function defines <C>main(input, context)</C>. Network access
+          stays off until you turn it on, and secret values are never shown again after you
+          save them. Code skills are on Pro and Business plans. The limits are on the{" "}
+          <Link href="/help/skills#code-skills" className="underline underline-offset-4 hover:text-foreground">
+            Skills
+          </Link>{" "}
+          page.
+        </P>
       </Section>
 
       <NextUp {...nextPage("/help")!} />

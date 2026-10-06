@@ -100,7 +100,7 @@ export default function SkillsHelp() {
         </Callout>
       </Section>
 
-      <Section title="Code skills">
+      <Section id="code-skills" title="Code skills">
         <P>
           A code skill is a Python function you write, stored in your workspace, and published
           as its own isolated function. Once it is attached to an agent, the agent can call it
