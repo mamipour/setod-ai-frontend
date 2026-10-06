@@ -229,7 +229,7 @@ function CellEditor({
         }}
         onBlur={onCommit}
         rows={3}
-        className="w-full min-w-[200px] resize-none bg-transparent text-xs outline-none"
+        className="w-full min-w-[200px] resize-none bg-transparent text-xs outline-none focus-visible:ring-1 focus-visible:ring-primary"
         autoFocus
       />
     )
@@ -249,7 +249,7 @@ function CellEditor({
       onChange={(e) => onChange(e.target.value)}
       onKeyDown={handleKeyDown}
       onBlur={onCommit}
-      className="w-full min-w-[80px] bg-transparent text-xs outline-none"
+      className="w-full min-w-[80px] bg-transparent text-xs outline-none focus-visible:ring-1 focus-visible:ring-primary"
     />
   )
 }
@@ -316,7 +316,7 @@ function RowHistoryPanel({
     <div className="flex flex-col gap-3 w-72 border-l bg-background p-4 overflow-y-auto shrink-0">
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold">Row history</h3>
-        <button onClick={onClose} className="rounded p-0.5 hover:bg-accent"><X className="size-3.5" /></button>
+        <button type="button" aria-label="Close row history" onClick={onClose} className="rounded p-0.5 hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring"><X aria-hidden className="size-3.5" /></button>
       </div>
       {loading ? (
         <Loader2 className="size-4 animate-spin text-muted-foreground" />
@@ -1270,14 +1270,14 @@ function SpreadsheetGrid({
             <div className="flex items-center gap-2 rounded-lg bg-destructive px-3 py-2 text-xs text-destructive-foreground shadow-lg">
               <AlertCircle className="size-3.5 shrink-0" />
               {colError}
-              <button onClick={() => setColError("")}><X className="size-3" /></button>
+              <button type="button" aria-label="Dismiss" onClick={() => setColError("")} className="rounded focus-visible:ring-2 focus-visible:ring-ring"><X aria-hidden className="size-3" /></button>
             </div>
           )}
           {Object.entries(errors).map(([id, msg]) => (
             <div key={id} className="flex items-center gap-2 rounded-lg bg-destructive px-3 py-2 text-xs text-destructive-foreground shadow-lg">
               <AlertCircle className="size-3.5 shrink-0" />
               {msg}
-              <button onClick={() => setErrors((p) => { const n = { ...p }; delete n[id]; return n })}><X className="size-3" /></button>
+              <button type="button" aria-label="Dismiss" onClick={() => setErrors((p) => { const n = { ...p }; delete n[id]; return n })} className="rounded focus-visible:ring-2 focus-visible:ring-ring"><X aria-hidden className="size-3" /></button>
             </div>
           ))}
         </div>

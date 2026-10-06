@@ -47,12 +47,12 @@ export function GmailConnectorModal({ orgId, onSaved }: { orgId: string; onSaved
       </Button>
 
       {open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
-          <div className="absolute inset-0 bg-black/40" onClick={() => setOpen(false)} />
+        <div className="fixed inset-0 z-50 flex items-center justify-center overscroll-contain">
+          <button type="button" aria-label="Close" className="absolute inset-0 cursor-default border-0 bg-black/40 p-0" onClick={() => setOpen(false)} />
           <div className="relative z-10 w-full max-w-md rounded-xl border bg-card shadow-xl p-6 space-y-5">
             <div className="flex items-center justify-between">
               <h2 className="font-semibold text-base">Connect Gmail</h2>
-              <button onClick={() => setOpen(false)} className="text-muted-foreground hover:text-foreground"><X className="size-4" /></button>
+              <button type="button" aria-label="Close" onClick={() => setOpen(false)} className="rounded text-muted-foreground hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"><X aria-hidden className="size-4" /></button>
             </div>
 
             <div className="rounded-md bg-muted/60 border px-4 py-3 text-xs text-muted-foreground space-y-1.5">
@@ -149,8 +149,8 @@ export function WebhookModal({ orgId, onSaved }: { orgId: string; onSaved: () =>
         Connect
       </Button>
       {open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
-          <div className="absolute inset-0 bg-black/40" onClick={handleClose} />
+        <div className="fixed inset-0 z-50 flex items-center justify-center overscroll-contain">
+          <button type="button" aria-label="Close" className="absolute inset-0 cursor-default border-0 bg-black/40 p-0" onClick={handleClose} />
           <div className="relative z-10 w-full max-w-md rounded-xl border bg-card shadow-xl p-6 space-y-4">
             <h2 className="text-base font-semibold">Inbound Webhook</h2>
             {!result ? (
@@ -253,8 +253,8 @@ export function SlackWebhookModal({ orgId, onSaved }: { orgId: string; onSaved: 
         Connect
       </Button>
       {open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
-          <div className="absolute inset-0 bg-black/40" onClick={handleClose} />
+        <div className="fixed inset-0 z-50 flex items-center justify-center overscroll-contain">
+          <button type="button" aria-label="Close" className="absolute inset-0 cursor-default border-0 bg-black/40 p-0" onClick={handleClose} />
           <div className="relative z-10 w-full max-w-md rounded-xl border bg-card shadow-xl p-6 space-y-4">
             <h2 className="text-base font-semibold">Connect Slack Webhook</h2>
             <p className="text-sm text-muted-foreground">
@@ -326,8 +326,8 @@ export function GoogleSheetsModal({ orgId, onSaved }: { orgId: string; onSaved: 
         Connect
       </Button>
       {open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
-          <div className="absolute inset-0 bg-black/40" onClick={handleClose} />
+        <div className="fixed inset-0 z-50 flex items-center justify-center overscroll-contain">
+          <button type="button" aria-label="Close" className="absolute inset-0 cursor-default border-0 bg-black/40 p-0" onClick={handleClose} />
           <div className="relative z-10 w-full max-w-lg rounded-xl border bg-card shadow-xl p-6 space-y-4">
             <h2 className="text-base font-semibold">Connect Google Sheets</h2>
             <ol className="text-xs text-muted-foreground space-y-1 list-decimal list-inside">
@@ -428,8 +428,8 @@ export function HubSpotModal({ orgId, onSaved }: { orgId: string; onSaved: () =>
         Connect
       </Button>
       {open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
-          <div className="absolute inset-0 bg-black/40" onClick={handleClose} />
+        <div className="fixed inset-0 z-50 flex items-center justify-center overscroll-contain">
+          <button type="button" aria-label="Close" className="absolute inset-0 cursor-default border-0 bg-black/40 p-0" onClick={handleClose} />
           <div className="relative z-10 w-full max-w-md rounded-xl border bg-card shadow-xl p-6 space-y-4">
             <h2 className="text-base font-semibold">Connect HubSpot</h2>
             <ol className="text-xs text-muted-foreground space-y-1 list-decimal list-inside">
@@ -502,8 +502,8 @@ export function PipedriveModal({ orgId, onSaved }: { orgId: string; onSaved: () 
         Connect
       </Button>
       {open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
-          <div className="absolute inset-0 bg-black/40" onClick={handleClose} />
+        <div className="fixed inset-0 z-50 flex items-center justify-center overscroll-contain">
+          <button type="button" aria-label="Close" className="absolute inset-0 cursor-default border-0 bg-black/40 p-0" onClick={handleClose} />
           <div className="relative z-10 w-full max-w-md rounded-xl border bg-card shadow-xl p-6 space-y-4">
             <h2 className="text-base font-semibold">Connect Pipedrive</h2>
             <p className="text-sm text-muted-foreground">
@@ -577,8 +577,8 @@ export function AirtableModal({ orgId, onSaved }: { orgId: string; onSaved: () =
         Connect
       </Button>
       {open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
-          <div className="absolute inset-0 bg-black/40" onClick={handleClose} />
+        <div className="fixed inset-0 z-50 flex items-center justify-center overscroll-contain">
+          <button type="button" aria-label="Close" className="absolute inset-0 cursor-default border-0 bg-black/40 p-0" onClick={handleClose} />
           <div className="relative z-10 w-full max-w-md rounded-xl border bg-card shadow-xl p-6 space-y-4">
             <h2 className="text-base font-semibold">Connect Airtable</h2>
             <ol className="text-xs text-muted-foreground space-y-1 list-decimal list-inside">
@@ -653,8 +653,8 @@ export function ShopifyModal({ orgId, onSaved }: { orgId: string; onSaved: () =>
         Connect
       </Button>
       {open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
-          <div className="absolute inset-0 bg-black/40" onClick={handleClose} />
+        <div className="fixed inset-0 z-50 flex items-center justify-center overscroll-contain">
+          <button type="button" aria-label="Close" className="absolute inset-0 cursor-default border-0 bg-black/40 p-0" onClick={handleClose} />
           <div className="relative z-10 w-full max-w-md rounded-xl border bg-card shadow-xl p-6 space-y-4">
             <h2 className="text-base font-semibold">Connect Shopify</h2>
             <ol className="text-xs text-muted-foreground space-y-1 list-decimal list-inside">
@@ -737,8 +737,8 @@ export function CalendlyModal({ orgId, onSaved }: { orgId: string; onSaved: () =
         Connect
       </Button>
       {open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
-          <div className="absolute inset-0 bg-black/40" onClick={handleClose} />
+        <div className="fixed inset-0 z-50 flex items-center justify-center overscroll-contain">
+          <button type="button" aria-label="Close" className="absolute inset-0 cursor-default border-0 bg-black/40 p-0" onClick={handleClose} />
           <div className="relative z-10 w-full max-w-md rounded-xl border bg-card shadow-xl p-6 space-y-4">
             <h2 className="text-base font-semibold">Connect Calendly</h2>
             <ol className="text-xs text-muted-foreground space-y-1 list-decimal list-inside">
@@ -816,8 +816,8 @@ export function WhatsAppModal({ orgId, onSaved }: { orgId: string; onSaved: () =
         Connect
       </Button>
       {open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
-          <div className="absolute inset-0 bg-black/40" onClick={handleClose} />
+        <div className="fixed inset-0 z-50 flex items-center justify-center overscroll-contain">
+          <button type="button" aria-label="Close" className="absolute inset-0 cursor-default border-0 bg-black/40 p-0" onClick={handleClose} />
           <div className="relative z-10 w-full max-w-md rounded-xl border bg-card shadow-xl p-6 space-y-4">
             <h2 className="text-base font-semibold">Connect WhatsApp Business</h2>
             <p className="text-sm text-muted-foreground">
@@ -938,8 +938,8 @@ export function TwilioModal({ orgId, onSaved }: { orgId: string; onSaved: () => 
       </Button>
 
       {open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
-          <div className="absolute inset-0 bg-black/40" onClick={handleClose} />
+        <div className="fixed inset-0 z-50 flex items-center justify-center overscroll-contain">
+          <button type="button" aria-label="Close" className="absolute inset-0 cursor-default border-0 bg-black/40 p-0" onClick={handleClose} />
           <div className="relative z-10 w-full max-w-md rounded-xl border bg-card shadow-xl p-6 space-y-5">
 
             <div className="flex items-center justify-between">
@@ -949,7 +949,7 @@ export function TwilioModal({ orgId, onSaved }: { orgId: string; onSaved: () => 
                   {step === "form" ? "Step 1 of 2  -  Account credentials" : "Step 2 of 2  -  Confirm & save"}
                 </p>
               </div>
-              <button onClick={handleClose} className="text-muted-foreground hover:text-foreground"><X className="size-4" /></button>
+              <button type="button" aria-label="Close" onClick={handleClose} className="rounded text-muted-foreground hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"><X aria-hidden className="size-4" /></button>
             </div>
 
             {step === "form" && (
@@ -1114,8 +1114,8 @@ export function TelegramClientModal({ orgId, onSaved }: { orgId: string; onSaved
       </Button>
 
       {open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
-          <div className="absolute inset-0 bg-black/40" onClick={handleClose} />
+        <div className="fixed inset-0 z-50 flex items-center justify-center overscroll-contain">
+          <button type="button" aria-label="Close" className="absolute inset-0 cursor-default border-0 bg-black/40 p-0" onClick={handleClose} />
           <div className="relative z-10 w-full max-w-md rounded-xl border bg-card shadow-xl p-6 space-y-5">
 
             {/* Header */}
@@ -1124,7 +1124,7 @@ export function TelegramClientModal({ orgId, onSaved }: { orgId: string; onSaved
                 <h2 className="font-semibold text-base">Connect Telegram Account</h2>
                 <p className="text-xs text-muted-foreground mt-0.5">{stepLabel[step]}</p>
               </div>
-              <button onClick={handleClose} className="text-muted-foreground hover:text-foreground"><X className="size-4" /></button>
+              <button type="button" aria-label="Close" onClick={handleClose} className="rounded text-muted-foreground hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"><X aria-hidden className="size-4" /></button>
             </div>
 
             {/* Step 1  -  phone */}
@@ -1343,8 +1343,8 @@ export function TelegramBotModal({ orgId, onSaved }: { orgId: string; onSaved: (
       </Button>
 
       {open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
-          <div className="absolute inset-0 bg-black/40" onClick={handleClose} />
+        <div className="fixed inset-0 z-50 flex items-center justify-center overscroll-contain">
+          <button type="button" aria-label="Close" className="absolute inset-0 cursor-default border-0 bg-black/40 p-0" onClick={handleClose} />
           <div className="relative z-10 w-full max-w-md rounded-xl border bg-card shadow-xl p-6 space-y-5">
             <div className="flex items-center justify-between">
               <div>
@@ -1355,7 +1355,7 @@ export function TelegramBotModal({ orgId, onSaved }: { orgId: string; onSaved: (
                   {step === "confirm" && "Step 3 of 3  -  Confirm"}
                 </p>
               </div>
-              <button onClick={handleClose} className="text-muted-foreground hover:text-foreground"><X className="size-4" /></button>
+              <button type="button" aria-label="Close" onClick={handleClose} className="rounded text-muted-foreground hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"><X aria-hidden className="size-4" /></button>
             </div>
 
             {step === "token" && (
@@ -1367,7 +1367,7 @@ export function TelegramBotModal({ orgId, onSaved }: { orgId: string; onSaved: (
                 </p>
                 <div className="space-y-1.5">
                   <Label className="text-xs">Bot Token</Label>
-                  <Input type="password" placeholder="7123456789:AAF..." value={token}
+                  <Input type="password" placeholder="7123456789:AAF…" value={token}
                     onChange={(e) => { setToken(e.target.value); setTokenError(null) }}
                     className="text-xs font-mono"
                     onKeyDown={(e) => e.key === "Enter" && token.trim() && handleValidateToken()} />
@@ -1523,7 +1523,7 @@ export function McpConnectorModal({
         Connect
       </Button>
       {open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center overscroll-contain bg-black/40 p-4">
           <div className="w-full max-w-md rounded-xl border bg-card p-5 shadow-lg space-y-4">
             <div>
               <h3 className="text-sm font-semibold">Connect {label}</h3>
@@ -1718,7 +1718,7 @@ export function McpOauthAppModal({
         {starting && !open ? "Opening…" : buttonLabel}
       </Button>
       {open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center overscroll-contain bg-black/40 p-4">
           <div className="w-full max-w-md rounded-xl border bg-card p-5 shadow-lg space-y-4">
             <div>
               <h3 className="text-sm font-semibold">Connect {label}</h3>

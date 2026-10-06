@@ -100,7 +100,7 @@ export function AgentCard({ agent }: { agent: Agent }) {
 
   return (
     <Link href={`/agents/${agent.id}`} className="block group">
-      <Card className="h-full bg-gradient-to-t from-primary/[0.03] to-card shadow-xs transition-all group-hover:shadow-sm group-hover:from-primary/[0.06]">
+      <Card className="h-full bg-gradient-to-t from-primary/[0.03] to-card shadow-xs transition-[box-shadow,background-image] group-hover:shadow-sm group-hover:from-primary/[0.06]">
         <CardHeader className="pb-2">
           <div className="flex items-start justify-between gap-3">
             <div className="flex min-w-0 items-center gap-3">

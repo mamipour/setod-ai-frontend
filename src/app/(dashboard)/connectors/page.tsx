@@ -87,16 +87,16 @@ function ConnectorsPageInner() {
 
       {/* Success banner */}
       {justConnected && (
-        <div className="flex items-center gap-2 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800">
-          <Check className="size-4 shrink-0" />
+        <div role="status" aria-live="polite" className="flex items-center gap-2 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800">
+          <Check aria-hidden className="size-4 shrink-0" />
           <span>
             {justConnected?.startsWith("__reconnected__")
               ? `${justConnected.replace("__reconnected__", "")} reconnected successfully.`
               : justConnected === "mcp" ? "MCP server connected successfully."
               : `${justConnected} connected successfully.`}
           </span>
-          <button className="ml-auto text-green-600 hover:text-green-800" onClick={() => setJustConnected(null)}>
-            <X className="size-4" />
+          <button type="button" aria-label="Dismiss" className="ml-auto rounded text-green-600 hover:text-green-800 focus-visible:ring-2 focus-visible:ring-ring" onClick={() => setJustConnected(null)}>
+            <X aria-hidden className="size-4" />
           </button>
         </div>
       )}
@@ -166,17 +166,21 @@ function ConnectorsPageInner() {
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
           {/* Search */}
           <div className="relative w-full sm:max-w-xs">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground pointer-events-none" />
+            <Search aria-hidden className="absolute left-3 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground pointer-events-none" />
+            <label htmlFor="connector-search" className="sr-only">Search connectors</label>
             <input
+              id="connector-search"
+              name="q"
               type="text"
+              autoComplete="off"
               value={search}
               onChange={(e) => { setSearch(e.target.value); setActiveCategory("All") }}
               placeholder="Search connectors…"
-              className="w-full rounded-lg border bg-background py-1.5 pl-8 pr-3 text-sm outline-none focus:ring-2 focus:ring-primary/30 transition"
+              className="w-full rounded-lg border bg-background py-1.5 pl-8 pr-8 text-sm outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
             />
             {search && (
-              <button onClick={() => setSearch("")} className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
-                <X className="size-3.5" />
+              <button type="button" aria-label="Clear search" onClick={() => setSearch("")} className="absolute right-2 top-1/2 -translate-y-1/2 rounded text-muted-foreground hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring">
+                <X aria-hidden className="size-3.5" />
               </button>
             )}
           </div>

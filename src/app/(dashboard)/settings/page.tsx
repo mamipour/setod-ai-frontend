@@ -461,21 +461,22 @@ function WorkspaceNameRow({ orgId }: { orgId: string }) {
     <SettingRow label="Workspace name" description="Only owners can rename the workspace.">
       {editing ? (
         <div className="flex items-center gap-2 max-w-xs">
-          <Input autoFocus value={name} onChange={(e) => setName(e.target.value)}
+          <label htmlFor="workspace-name" className="sr-only">Workspace name</label>
+          <Input id="workspace-name" name="organization" autoComplete="organization" autoFocus value={name} onChange={(e) => setName(e.target.value)}
             onKeyDown={(e) => { if (e.key === "Enter") save(); if (e.key === "Escape") { setEditing(false); setName(activeOrg?.name ?? "") } }}
             className="h-8 text-sm" />
-          <Button size="icon" variant="ghost" className="size-8 shrink-0" onClick={save} disabled={saving}>
-            <CheckIcon className="size-4 text-green-600" />
+          <Button size="icon" variant="ghost" className="size-8 shrink-0" aria-label="Save workspace name" onClick={save} disabled={saving}>
+            <CheckIcon aria-hidden className="size-4 text-green-600" />
           </Button>
-          <Button size="icon" variant="ghost" className="size-8 shrink-0" onClick={() => { setEditing(false); setName(activeOrg?.name ?? "") }}>
-            <XIcon className="size-4" />
+          <Button size="icon" variant="ghost" className="size-8 shrink-0" aria-label="Cancel rename" onClick={() => { setEditing(false); setName(activeOrg?.name ?? "") }}>
+            <XIcon aria-hidden className="size-4" />
           </Button>
         </div>
       ) : (
         <div className="flex items-center gap-2">
           <span className="text-sm font-medium">{activeOrg?.name}</span>
-          <Button size="icon" variant="ghost" className="size-7" onClick={() => setEditing(true)}>
-            <Pencil className="size-3.5 text-muted-foreground" />
+          <Button size="icon" variant="ghost" className="size-7" aria-label="Rename workspace" onClick={() => setEditing(true)}>
+            <Pencil aria-hidden className="size-3.5 text-muted-foreground" />
           </Button>
         </div>
       )}

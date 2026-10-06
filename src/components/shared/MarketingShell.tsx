@@ -13,7 +13,7 @@ function Navbar() {
     <header className="sticky top-0 z-50 border-b border-border bg-background">
       <div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-6">
         <Link href="/" className="flex items-center gap-2.5">
-          <img src="/logo.svg" alt="setod" className="h-7 w-7 rounded-md" />
+          <img src="/logo.svg" alt="setod" width={28} height={28} className="h-7 w-7 rounded-md" />
           <span className="text-sm tracking-tight">Setod</span>
         </Link>
         {!onLogin && (
@@ -45,7 +45,7 @@ function Footer() {
     <footer className="border-t border-border py-10">
       <div className="mx-auto flex max-w-5xl flex-col items-center justify-between gap-4 px-6 text-xs text-muted-foreground sm:flex-row">
         <div className="flex items-center gap-2">
-          <img src="/logo.svg" alt="setod" className="h-5 w-5 rounded" />
+          <img src="/logo.svg" alt="setod" width={20} height={20} className="h-5 w-5 rounded" />
           <span>© {new Date().getFullYear()} setod</span>
         </div>
         <div className="flex gap-5">
@@ -63,7 +63,7 @@ export function MarketingShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen bg-background text-foreground">
       <Navbar />
-      <main>{children}</main>
+      <main id="main">{children}</main>
       <Footer />
     </div>
   )

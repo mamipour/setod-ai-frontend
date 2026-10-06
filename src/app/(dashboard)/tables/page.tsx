@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { Plus, Table2, Loader2, ChevronRight, FileSpreadsheet, Trash2 } from "lucide-react"
 import { tablesApi, type OrgTable, type TablePreset } from "@/lib/api"
@@ -208,38 +209,34 @@ function CreateTableDialog({
 
 // ── Table card ─────────────────────────────────────────────────────────────────
 function TableCard({ table, onDelete }: { table: OrgTable; onDelete: () => void }) {
-  const router = useRouter()
   return (
-    // div+role rather than <button>: the delete control is itself a button and
-    // nested interactive elements are invalid HTML.
-    <div
-      role="link"
-      tabIndex={0}
-      onClick={() => router.push(`/tables/${table.id}`)}
-      onKeyDown={(e) => { if (e.key === "Enter") router.push(`/tables/${table.id}`) }}
-      className="group flex w-full cursor-pointer items-center justify-between gap-3 rounded-xl border bg-card px-4 py-3 text-left transition-colors hover:bg-accent/40"
-    >
-      <div className="flex items-center gap-3 min-w-0">
-        <Table2 className="size-4 shrink-0 text-muted-foreground" />
-        <div className="min-w-0">
-          <p className="truncate text-sm font-medium">{table.name}</p>
-          {table.description && (
-            <p className="truncate text-xs text-muted-foreground">{table.description}</p>
-          )}
+    <div className="group flex w-full items-center gap-3 rounded-xl border bg-card px-4 py-3 transition-colors hover:bg-accent/40">
+      <Link
+        href={`/tables/${table.id}`}
+        className="flex min-w-0 flex-1 items-center justify-between gap-3 text-left"
+      >
+        <div className="flex items-center gap-3 min-w-0">
+          <Table2 aria-hidden className="size-4 shrink-0 text-muted-foreground" />
+          <div className="min-w-0">
+            <p className="truncate text-sm font-medium">{table.name}</p>
+            {table.description && (
+              <p className="truncate text-xs text-muted-foreground">{table.description}</p>
+            )}
+          </div>
         </div>
-      </div>
-      <div className="flex items-center gap-3 shrink-0 text-xs text-muted-foreground">
-        <span>{table.columns.length} col{table.columns.length !== 1 ? "s" : ""}</span>
-        <button
-          type="button"
-          onClick={(e) => { e.stopPropagation(); onDelete() }}
-          title="Delete table"
-          className="rounded p-1 opacity-0 transition-opacity hover:bg-destructive/10 hover:text-destructive group-hover:opacity-100"
-        >
-          <Trash2 className="size-3.5" />
-        </button>
-        <ChevronRight className="size-3.5 opacity-0 transition-opacity group-hover:opacity-100" />
-      </div>
+        <span className="flex shrink-0 items-center gap-3 text-xs text-muted-foreground">
+          <span>{table.columns.length} col{table.columns.length !== 1 ? "s" : ""}</span>
+          <ChevronRight aria-hidden className="size-3.5 opacity-0 transition-opacity group-hover:opacity-100" />
+        </span>
+      </Link>
+      <button
+        type="button"
+        aria-label={`Delete ${table.name}`}
+        onClick={onDelete}
+        className="rounded p-1 text-muted-foreground opacity-0 transition-opacity hover:bg-destructive/10 hover:text-destructive focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-ring group-hover:opacity-100"
+      >
+        <Trash2 aria-hidden className="size-3.5" />
+      </button>
     </div>
   )
 }

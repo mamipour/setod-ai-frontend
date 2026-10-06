@@ -553,7 +553,7 @@ export function AgentTab({
                     }
                   }}
                   className={cn(
-                    "flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition-all",
+                    "flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition-colors",
                     isOn
                       ? "border-green-300 bg-green-50 text-green-700 hover:bg-green-100"
                       : "border-input bg-transparent text-muted-foreground hover:border-foreground/30 hover:text-foreground",

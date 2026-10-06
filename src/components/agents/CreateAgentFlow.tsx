@@ -407,8 +407,11 @@ function SetupAgent({
       </div>
 
       <div className="space-y-1.5">
-        <Label className="text-xs">Name</Label>
+        <Label htmlFor="agent-name" className="text-xs">Name</Label>
         <Input
+          id="agent-name"
+          name="agent-name"
+          autoComplete="off"
           value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder="e.g. Missed Call Recovery"
@@ -418,7 +421,7 @@ function SetupAgent({
 
       {/* The model connector, presented as what it does rather than what it is. */}
       <div className="space-y-1.5">
-        <Label className="text-xs">AI brain</Label>
+        <Label id="agent-brain-label" className="text-xs">AI brain</Label>
         {brains.length === 0 && managedProviders.length === 0 ? (
           <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
             <TriangleAlert className="mr-1.5 inline size-3.5" />
@@ -430,6 +433,7 @@ function SetupAgent({
             <BrainPicker
               brains={brains}
               value={brainId}
+              labelledBy="agent-brain-label"
               onChange={(id) => setChosen((c) => ({ ...c, brain: id }))}
               managedProviders={managedProviders}
             />
@@ -479,11 +483,14 @@ function SetupAgent({
       )}
 
       <div className="space-y-1.5">
-        <Label className="text-xs">When should it run?</Label>
-        <div className="grid grid-cols-3 gap-2">
+        <Label id="agent-trigger-label" className="text-xs">When should it run?</Label>
+        <div role="radiogroup" aria-labelledby="agent-trigger-label" className="grid grid-cols-3 gap-2">
           {(["schedule", "channel", "manual"] as TriggerType[]).map((t) => (
             <button
               key={t}
+              type="button"
+              role="radio"
+              aria-checked={trigger === t}
               onClick={() => setTrigger(t)}
               className={cn(
                 "rounded-lg border px-3 py-2 text-xs transition-colors",
@@ -529,13 +536,16 @@ function SetupAgent({
       {/* Visible by default. The user is granting this thing the ability to message their
           customers, and a readable instruction sheet is what makes that feel safe. */}
       <div className="space-y-1.5">
-        <Label className="text-xs">What it will do</Label>
+        <Label htmlFor="agent-instructions" className="text-xs">What it will do</Label>
         <textarea
+          id="agent-instructions"
+          name="instructions"
+          autoComplete="off"
           value={instructions}
           onChange={(e) => setInstructions(e.target.value)}
           rows={12}
           placeholder="Describe what the agent should do, in plain language."
-          className="w-full rounded-lg border border-input bg-transparent p-3 font-mono text-xs leading-relaxed outline-none"
+          className="w-full rounded-lg border border-input bg-transparent p-3 font-mono text-xs leading-relaxed outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
         />
         <p className="text-xs text-muted-foreground">
           These are the exact instructions the agent receives. Edit anything you disagree with.
@@ -543,11 +553,14 @@ function SetupAgent({
       </div>
 
       <div className="space-y-1.5">
-        <Label className="text-xs">Stop if it costs more than</Label>
-        <div className="flex gap-2">
+        <Label id="agent-budget-label" className="text-xs">Stop if it costs more than</Label>
+        <div role="radiogroup" aria-labelledby="agent-budget-label" className="flex gap-2">
           {BUDGETS.map((b) => (
             <button
               key={b}
+              type="button"
+              role="radio"
+              aria-checked={budget === b}
               onClick={() => setBudget(b)}
               className={cn(
                 "rounded-lg border px-3 py-1.5 text-xs transition-colors",

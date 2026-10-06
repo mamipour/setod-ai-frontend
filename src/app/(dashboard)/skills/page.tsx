@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useId, useRef, useState } from "react"
 import { BookOpen, ChevronDown, ChevronUp, Edit2, Plus, Trash2, Wand2, X } from "lucide-react"
 import { skills, type Skill, type SkillCategory } from "@/lib/api"
 import { useUser } from "@/hooks/useUser"
@@ -47,23 +47,27 @@ function SkillEditor({
   const [tagline, setTagline] = useState(initial.tagline ?? "")
   const [category, setCategory] = useState<SkillCategory>(initial.category ?? "Custom")
   const [content, setContent] = useState(initial.content ?? "")
+  const fieldId = useId()
 
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-1.5">
-          <label className="text-xs font-medium text-muted-foreground">Name</label>
+          <label htmlFor={`${fieldId}-name`} className="text-xs font-medium text-muted-foreground">Name</label>
           <input
+            id={`${fieldId}-name`}
+            name="name"
+            autoComplete="off"
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="e.g. Professional tone"
-            className="w-full rounded-lg border border-input bg-transparent px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-primary/30"
+            className="w-full rounded-lg border border-input bg-transparent px-3 py-2 text-sm outline-none focus-visible:ring-1 focus-visible:ring-primary/30"
           />
         </div>
         <div className="space-y-1.5">
-          <label className="text-xs font-medium text-muted-foreground">Category</label>
+          <label id={`${fieldId}-category`} className="text-xs font-medium text-muted-foreground">Category</label>
           <Select value={category} onValueChange={(v) => setCategory(v as SkillCategory)}>
-            <SelectTrigger className="w-full text-sm">
+            <SelectTrigger aria-labelledby={`${fieldId}-category`} className="w-full text-sm">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -73,22 +77,28 @@ function SkillEditor({
         </div>
       </div>
       <div className="space-y-1.5">
-        <label className="text-xs font-medium text-muted-foreground">Tagline</label>
+        <label htmlFor={`${fieldId}-tagline`} className="text-xs font-medium text-muted-foreground">Tagline</label>
         <input
+          id={`${fieldId}-tagline`}
+          name="tagline"
+          autoComplete="off"
           value={tagline}
           onChange={(e) => setTagline(e.target.value)}
           placeholder="One-line description shown in the UI"
-          className="w-full rounded-lg border border-input bg-transparent px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-primary/30"
+          className="w-full rounded-lg border border-input bg-transparent px-3 py-2 text-sm outline-none focus-visible:ring-1 focus-visible:ring-primary/30"
         />
       </div>
       <div className="space-y-1.5">
-        <label className="text-xs font-medium text-muted-foreground">Content</label>
+        <label htmlFor={`${fieldId}-content`} className="text-xs font-medium text-muted-foreground">Content</label>
         <textarea
+          id={`${fieldId}-content`}
+          name="content"
+          autoComplete="off"
           value={content}
           onChange={(e) => setContent(e.target.value)}
           rows={8}
-          placeholder="The prompt fragment injected into the agent system prompt when this skill is attached..."
-          className="w-full rounded-lg border border-input bg-transparent p-3 font-mono text-xs leading-relaxed outline-none focus:ring-1 focus:ring-primary/30"
+          placeholder="The prompt fragment injected into the agent system prompt when this skill is attached…"
+          className="w-full rounded-lg border border-input bg-transparent p-3 font-mono text-xs leading-relaxed outline-none focus-visible:ring-1 focus-visible:ring-primary/30"
         />
       </div>
       <div className="flex justify-end gap-2 border-t pt-3">
@@ -279,10 +289,11 @@ export default function SkillsPage() {
             <h2 className="text-sm font-semibold">New skill</h2>
             <button
               type="button"
+              aria-label="Close"
               onClick={() => setCreating(false)}
-              className="flex size-6 items-center justify-center rounded text-muted-foreground hover:bg-muted"
+              className="flex size-6 items-center justify-center rounded text-muted-foreground hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring"
             >
-              <X className="size-3.5" />
+              <X aria-hidden className="size-3.5" />
             </button>
           </div>
           <SkillEditor
@@ -339,10 +350,11 @@ export default function SkillsPage() {
                   <h2 className="text-sm font-semibold">Edit skill</h2>
                   <button
                     type="button"
+                    aria-label="Close"
                     onClick={() => setEditingId(null)}
-                    className="flex size-6 items-center justify-center rounded text-muted-foreground hover:bg-muted"
+                    className="flex size-6 items-center justify-center rounded text-muted-foreground hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring"
                   >
-                    <X className="size-3.5" />
+                    <X aria-hidden className="size-3.5" />
                   </button>
                 </div>
                 <SkillEditor

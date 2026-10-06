@@ -52,8 +52,12 @@ export default function AgentsPage() {
       {/* Search */}
       {!loading && list.length > 0 && (
         <div className="relative max-w-sm">
-          <Search className="pointer-events-none absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+          <Search aria-hidden className="pointer-events-none absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+          <label htmlFor="agent-search" className="sr-only">Search agents</label>
           <Input
+            id="agent-search"
+            name="q"
+            autoComplete="off"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search agents…"
@@ -61,10 +65,12 @@ export default function AgentsPage() {
           />
           {search && (
             <button
+              type="button"
+              aria-label="Clear search"
               onClick={() => setSearch("")}
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded text-muted-foreground hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
             >
-              <X className="size-3.5" />
+              <X aria-hidden className="size-3.5" />
             </button>
           )}
         </div>

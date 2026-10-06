@@ -185,10 +185,10 @@ function AcceptInviteInner() {
 
 export default function AcceptInvitePage() {
   return (
-    <div className="min-h-screen bg-muted/30 flex items-center justify-center p-6">
+    <main id="main" className="min-h-screen bg-muted/30 flex items-center justify-center p-6">
       <div className="w-full max-w-sm rounded-2xl border bg-card p-8 shadow-sm">
         <div className="mb-6 flex justify-center">
-          <img src="/logo.svg" alt="Setod" className="h-8 w-8 rounded-lg" />
+          <img src="/logo.svg" alt="Setod" width={32} height={32} className="h-8 w-8 rounded-lg" />
         </div>
         <Suspense fallback={
           <div className="flex justify-center py-8">
@@ -198,6 +198,6 @@ export default function AcceptInvitePage() {
           <AcceptInviteInner />
         </Suspense>
       </div>
-    </div>
+    </main>
   )
 }

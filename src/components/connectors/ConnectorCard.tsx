@@ -267,8 +267,8 @@ export function ConnectedCard({ connector, orgId, onDelete, onUpdated }: {
 
       {/* Twilio  -  prompt for destination number */}
       {twilioPrompt && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
-          <div className="absolute inset-0 bg-black/40" onClick={() => setTwilioPrompt(false)} />
+        <div className="fixed inset-0 z-50 flex items-center justify-center overscroll-contain">
+          <button type="button" aria-label="Close" className="absolute inset-0 cursor-default border-0 bg-black/40 p-0" onClick={() => setTwilioPrompt(false)} />
           <div className="relative z-10 w-full max-w-sm rounded-xl border bg-card shadow-xl p-6 space-y-4">
             <h2 className="font-semibold text-sm">Send test SMS</h2>
             <div className="space-y-1.5">
@@ -368,8 +368,8 @@ export function UpdateCredentialsModal({ connector, orgId, onUpdated }: {
         Reconnect
       </Button>
       {open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
-          <div className="absolute inset-0 bg-black/40" onClick={() => { setOpen(false); reset() }} />
+        <div className="fixed inset-0 z-50 flex items-center justify-center overscroll-contain">
+          <button type="button" aria-label="Close" className="absolute inset-0 cursor-default border-0 bg-black/40 p-0" onClick={() => { setOpen(false); reset() }} />
           <div className="relative z-10 w-full max-w-md rounded-xl border bg-card shadow-xl p-6 space-y-4">
             <div>
               <h2 className="font-semibold text-base">Reconnect</h2>
@@ -383,7 +383,7 @@ export function UpdateCredentialsModal({ connector, orgId, onUpdated }: {
                   <Label className="text-xs">{f.label}</Label>
                   {f.type === "textarea" ? (
                     <textarea
-                      className="w-full min-h-[80px] rounded-md border bg-background px-3 py-2 text-sm font-mono resize-y focus:outline-none focus:ring-1 focus:ring-ring"
+                      className="w-full min-h-[80px] rounded-md border bg-background px-3 py-2 text-sm font-mono resize-y outline-none focus-visible:ring-1 focus-visible:ring-ring"
                       placeholder={f.placeholder}
                       value={values[f.key] ?? ""}
                       onChange={e => setValues(v => ({ ...v, [f.key]: e.target.value }))}

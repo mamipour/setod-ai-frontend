@@ -229,9 +229,10 @@ export default function ConversationsPage() {
             size="icon"
             onClick={loadList}
             disabled={loadingList}
+            aria-label="Refresh conversations"
             className="h-7 w-7"
           >
-            <RefreshCw size={14} className={cn(loadingList && "animate-spin")} />
+            <RefreshCw aria-hidden size={14} className={cn(loadingList && "animate-spin")} />
           </Button>
         </div>
 
@@ -301,9 +302,10 @@ export default function ConversationsPage() {
                 variant="ghost"
                 size="icon"
                 onClick={handleBack}
+                aria-label="Back to conversations"
                 className="md:hidden h-8 w-8"
               >
-                <ArrowLeft size={16} />
+                <ArrowLeft aria-hidden size={16} />
               </Button>
               <div className="flex-1 min-w-0">
                 <p className="font-semibold text-sm truncate">
@@ -366,11 +368,15 @@ export default function ConversationsPage() {
             {/* Reply composer (only when status = human) */}
             {currentStatus === "human" && (
               <div className="border-t px-4 py-3 flex gap-2 items-end">
+                <label htmlFor="reply-text" className="sr-only">Reply</label>
                 <textarea
+                  id="reply-text"
+                  name="reply"
+                  autoComplete="off"
                   value={replyText}
                   onChange={(e) => setReplyText(e.target.value)}
                   placeholder="Type your reply…"
-                  className="flex-1 resize-none border rounded-md px-3 py-2 text-sm bg-background min-h-[60px] focus:outline-none focus:ring-2 focus:ring-ring"
+                  className="flex-1 resize-none border rounded-md px-3 py-2 text-sm bg-background min-h-[60px] outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   onKeyDown={(e) => {
                     if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
                       handleSendReply()
@@ -381,12 +387,13 @@ export default function ConversationsPage() {
                   size="icon"
                   onClick={handleSendReply}
                   disabled={sending || !replyText.trim()}
+                  aria-label={sending ? "Sending reply" : "Send reply"}
                   className="h-10 w-10 shrink-0"
                 >
                   {sending ? (
-                    <RefreshCw size={16} className="animate-spin" />
+                    <RefreshCw aria-hidden size={16} className="animate-spin" />
                   ) : (
-                    <Send size={16} />
+                    <Send aria-hidden size={16} />
                   )}
                 </Button>
               </div>

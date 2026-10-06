@@ -134,7 +134,7 @@ function WorkspacePicker({ mini }: { mini: boolean }) {
 
   const dropdown = (
     <>
-      <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
+      <button type="button" aria-label="Close workspace menu" className="fixed inset-0 z-40 cursor-default border-0 bg-transparent p-0" onClick={() => setOpen(false)} />
       <div className={cn(
         "absolute z-50 rounded-xl border bg-popover shadow-lg py-1",
         mini ? "left-10 top-0 w-52" : "left-0 right-0 mt-1 top-full"
@@ -261,7 +261,7 @@ function ThemeSegment() {
               title={label}
               aria-label={`Switch to ${label} theme`}
               className={cn(
-                "flex items-center justify-center gap-1 rounded px-1.5 py-0.5 text-[11px] transition-all",
+                "flex items-center justify-center gap-1 rounded px-1.5 py-0.5 text-[11px] transition-[color,background-color,box-shadow]",
                 theme === value
                   ? "bg-background text-foreground shadow-xs font-medium"
                   : "text-muted-foreground hover:text-foreground",
@@ -312,7 +312,7 @@ function UserMenu({ user, mini }: { user: { name: string; email: string; avatar_
 
       {open && (
         <>
-          <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
+          <button type="button" aria-label="Close account menu" className="fixed inset-0 z-40 cursor-default border-0 bg-transparent p-0" onClick={() => setOpen(false)} />
           <div className={cn(
             "absolute z-50 bottom-full mb-1 rounded-xl border bg-popover shadow-lg py-1 w-52",
             mini ? "left-10 bottom-0 mb-0" : "left-0 right-0",
@@ -411,12 +411,12 @@ export function AppSidebar() {
           {mini ? (
             <button onClick={toggleCollapsed} aria-label="Expand sidebar" title="Expand sidebar"
               className="group relative flex size-8 shrink-0 items-center justify-center rounded-lg">
-              <img src="/logo.svg" alt="setod" className="w-8 h-8 rounded-lg group-hover:opacity-0 transition-opacity" />
+              <img src="/logo.svg" alt="" width={32} height={32} className="w-8 h-8 rounded-lg group-hover:opacity-0 transition-opacity" />
               <PanelLeft className="absolute size-4 text-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
             </button>
           ) : (
             <>
-              <img src="/logo.svg" alt="setod" className="w-8 h-8 shrink-0 rounded-lg" />
+              <img src="/logo.svg" alt="setod" width={32} height={32} className="w-8 h-8 shrink-0 rounded-lg" />
               <span className="min-w-0 flex-1 truncate text-sm font-semibold">Setod</span>
               {!drawer && (
                 <button onClick={toggleCollapsed} aria-label="Collapse sidebar" title="Collapse sidebar"
@@ -484,15 +484,15 @@ export function AppSidebar() {
           className="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
           <Menu className="size-5" />
         </button>
-        <img src="/logo.svg" alt="setod" className="w-6 h-6 rounded-md" />
+        <img src="/logo.svg" alt="setod" width={24} height={24} className="w-6 h-6 rounded-md" />
         <span className="truncate text-sm font-semibold">{activeOrg?.name ?? "Platform"}</span>
       </header>
 
       {/* Mobile drawer */}
       {drawerOpen && (
         <div className="fixed inset-0 z-50 md:hidden">
-          <div className="absolute inset-0 bg-black/40 animate-in fade-in" onClick={() => setDrawerOpen(false)} />
-          <aside className="absolute inset-y-0 left-0 flex w-60 flex-col border-r bg-card px-3 py-4 shadow-xl animate-in slide-in-from-left duration-200">
+          <button type="button" aria-label="Close navigation" className="absolute inset-0 cursor-default border-0 bg-black/40 p-0 animate-in fade-in motion-reduce:animate-none" onClick={() => setDrawerOpen(false)} />
+          <aside className="absolute inset-y-0 left-0 z-10 flex w-60 flex-col overscroll-contain border-r bg-card px-3 py-4 shadow-xl animate-in slide-in-from-left duration-200 motion-reduce:animate-none">
             <button onClick={() => setDrawerOpen(false)} aria-label="Close navigation"
               className="absolute right-3 top-4 rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
               <X className="size-4" />

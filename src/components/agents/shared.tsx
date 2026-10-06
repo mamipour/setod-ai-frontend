@@ -206,12 +206,14 @@ export function BrainPicker({
   value,
   onChange,
   managedProviders = [],
+  labelledBy,
 }: {
   brains: Connector[]
   value: string
   onChange: (id: string) => void
   /** Providers offered as "<Provider> (Managed)"; empty when the plan lacks managed models. */
   managedProviders?: ManagedProvider[]
+  labelledBy?: string
 }) {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
@@ -262,8 +264,9 @@ export function BrainPicker({
     <div ref={ref} className="relative flex-1">
       <button
         type="button"
+        aria-labelledby={labelledBy}
         onClick={() => setOpen((v) => !v)}
-        className="flex h-8 w-full items-center gap-2 rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none hover:bg-muted/40"
+        className="flex h-8 w-full items-center gap-2 rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none hover:bg-muted/40 focus-visible:ring-2 focus-visible:ring-ring"
       >
         <span className="flex min-w-0 flex-1 items-center gap-2"><Row opt={selected} inList={false} /></span>
         <ChevronDown className="size-3.5 shrink-0 text-muted-foreground" />
@@ -545,11 +548,11 @@ export function Modal({
 }) {
   if (!open) return null
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
+    <div className="fixed inset-0 z-50 flex items-center justify-center overscroll-contain p-4">
+      <button type="button" aria-label="Close" className="absolute inset-0 cursor-default border-0 bg-black/40 p-0" onClick={onClose} />
       <div
         className={cn(
-          "relative z-10 w-full max-h-[85vh] overflow-y-auto rounded-xl border bg-card p-6 shadow-xl",
+          "relative z-10 w-full max-h-[85vh] overflow-y-auto overscroll-contain rounded-xl border bg-card p-6 shadow-xl",
           width,
         )}
       >

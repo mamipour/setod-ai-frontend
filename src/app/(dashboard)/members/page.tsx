@@ -185,9 +185,10 @@ export default function MembersPage() {
                         size="icon"
                         variant="ghost"
                         className="size-7 text-muted-foreground hover:text-destructive"
+                        aria-label={`Remove ${m.name || m.email}`}
                         onClick={() => handleRemove(m.user_id)}
                       >
-                        <Trash2 className="size-3.5" />
+                        <Trash2 aria-hidden className="size-3.5" />
                       </Button>
                     </>
                   ) : (
@@ -242,10 +243,10 @@ export default function MembersPage() {
                   size="icon"
                   variant="ghost"
                   className="size-7 text-muted-foreground hover:text-destructive shrink-0"
-                  title="Withdraw invitation"
+                  aria-label={`Withdraw invitation for ${inv.email}`}
                   onClick={() => handleWithdraw(inv.id)}
                 >
-                  <X className="size-3.5" />
+                  <X aria-hidden className="size-3.5" />
                 </Button>
               </div>
             ))}
@@ -267,11 +268,15 @@ export default function MembersPage() {
           <CardContent className="space-y-3 pt-0">
             <div className="flex gap-2">
               <div className="flex-1 space-y-1">
-                <Label className="text-xs">Email address</Label>
+                <Label htmlFor="invite-email" className="text-xs">Email address</Label>
                 <div className="relative">
-                  <Mail className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
+                  <Mail aria-hidden className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
                   <Input
+                    id="invite-email"
+                    name="email"
                     type="email"
+                    autoComplete="email"
+                    spellCheck={false}
                     placeholder="colleague@company.com"
                     value={inviteEmail}
                     onChange={(e) => setInviteEmail(e.target.value)}
@@ -281,9 +286,9 @@ export default function MembersPage() {
                 </div>
               </div>
               <div className="space-y-1">
-                <Label className="text-xs">Role</Label>
+                <Label htmlFor="invite-role" className="text-xs">Role</Label>
                 <Select value={inviteRole} onValueChange={(v) => setInviteRole(v as "owner" | "member")}>
-                  <SelectTrigger className="h-8 text-xs">
+                  <SelectTrigger id="invite-role" className="h-8 text-xs">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>

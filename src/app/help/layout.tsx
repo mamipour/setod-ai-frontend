@@ -36,7 +36,9 @@ export default function HelpPublicLayout({ children }: { children: React.ReactNo
         <HelpNav />
 
         {/* Article */}
-        <article className="min-w-0 flex-1 space-y-8 pb-20">{children}</article>
+        <main id="main" className="min-w-0 flex-1 pb-20">
+          <article className="space-y-8">{children}</article>
+        </main>
       </div>
     </div>
   )

@@ -72,7 +72,7 @@ function UsageBar({ meter, included, used, overage }: { meter: string; included:
       {included > 0 && (
         <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
           <div
-            className={cn("h-full rounded-full transition-all", isOver ? "bg-orange-500" : "bg-primary")}
+            className={cn("h-full rounded-full transition-[width]", isOver ? "bg-orange-500" : "bg-primary")}
             style={{ width: `${pct}%` }}
           />
         </div>
@@ -685,7 +685,7 @@ function PlanPageInner() {
                       <div className="h-1.5 rounded-full bg-muted overflow-hidden">
                         <div
                           className={cn(
-                            "h-full rounded-full transition-all",
+                            "h-full rounded-full transition-[width]",
                             addonState.used_minutes > addonState.allowance_minutes ? "bg-orange-500" : "bg-green-500"
                           )}
                           style={{ width: `${Math.min(100, addonState.allowance_minutes > 0 ? (addonState.used_minutes / addonState.allowance_minutes) * 100 : 0)}%` }}
