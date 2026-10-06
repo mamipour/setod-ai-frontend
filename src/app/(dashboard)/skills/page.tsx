@@ -281,12 +281,6 @@ export default function SkillsPage() {
               : "Python functions your agents can call. Each one is published as its own isolated function."}
           </p>
         </div>
-        {tab === "prompt" && (
-          <Button onClick={() => { setCreating(true); setEditingId(null) }} className="shrink-0 gap-1.5">
-            <Plus className="size-4" />
-            New skill
-          </Button>
-        )}
       </div>
 
       {tab === "code" && <CodeSkillsPanel />}
@@ -331,10 +325,11 @@ export default function SkillsPage() {
         </div>
       )}
 
-      {/* Category filter pills */}
-      {!loading && allSkills.length > 0 && (
-        <div className="flex flex-wrap gap-2">
-          {(["All", ...CATEGORIES] as const).map((cat) => {
+      {/* Category filter pills, with the create action on the same row */}
+      {(loading || allSkills.length > 0) && (
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-wrap gap-2">
+          {!loading && allSkills.length > 0 && (["All", ...CATEGORIES] as const).map((cat) => {
             const count = cat === "All" ? allSkills.length : (categoryCounts[cat] ?? 0)
             if (cat !== "All" && count === 0) return null
             return (
@@ -359,6 +354,11 @@ export default function SkillsPage() {
               </button>
             )
           })}
+          </div>
+          <Button onClick={() => { setCreating(true); setEditingId(null) }} className="ml-auto shrink-0 gap-1.5">
+            <Plus className="size-4" />
+            New skill
+          </Button>
         </div>
       )}
 
