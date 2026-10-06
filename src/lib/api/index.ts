@@ -16,6 +16,7 @@
  *   billing.ts       — OrgPlan, billing
  *   voice.ts         — voice, tokenInvitations
  *   code-skills.ts   — CodeSkill, codeSkills
+ *   mcp.ts           — ApiToken, mcp
  */
 export { API_BASE, ApiError } from "./base"
 export * from "./auth"
@@ -28,3 +29,4 @@ export * from "./tables"
 export * from "./billing"
 export * from "./voice"
 export * from "./code-skills"
+export * from "./mcp"

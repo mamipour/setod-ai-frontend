@@ -113,6 +113,18 @@ export default function HelpIndex() {
         </P>
       </Section>
 
+      <Section title="From your editor">
+        <P>
+          Claude Code and Cursor can build and diagnose agents in a workspace once you
+          create a personal access token. An MCP connector is the other direction: it lets
+          one of your agents call a server such as GitHub or Slack.{" "}
+          <Link href="/help/editor" className="underline underline-offset-4 hover:text-foreground">
+            Use Setod from your editor
+          </Link>
+          .
+        </P>
+      </Section>
+
       <NextUp {...nextPage("/help")!} />
     </>
   )

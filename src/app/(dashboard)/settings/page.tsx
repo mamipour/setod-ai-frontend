@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { cn } from "@/lib/utils"
+import { DeveloperSection } from "@/components/settings/DeveloperSection"
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -562,6 +563,7 @@ const NAV_ITEMS = [
   { id: "web-search",   label: "Web Search" },
   { id: "data-privacy", label: "Data & Privacy" },
   { id: "workspace",    label: "Workspace" },
+  { id: "developer",    label: "Developer" },
 ]
 
 function SideNav({ active, onSelect }: { active: string; onSelect: (id: string) => void }) {
@@ -666,6 +668,10 @@ function SettingsPageInner() {
           <Section id="workspace" title="Workspace">
             <WorkspaceNameRow orgId={orgId} />
             <TimezoneRow orgId={orgId} />
+          </Section>
+
+          <Section id="developer" title="Developer">
+            <DeveloperSection key={orgId} orgId={orgId} isOwner={activeOrg?.role === "owner"} />
           </Section>
 
         </div>
