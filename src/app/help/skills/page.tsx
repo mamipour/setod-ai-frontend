@@ -8,15 +8,43 @@ export default function SkillsHelp() {
     <>
       <DocHeader
         title="Skills"
-        lede="Reusable behaviour rules that any agent can opt into — attach once, applied on every run."
+        lede="Two different features share this page. A prompt skill is text added to an agent's instructions. A code skill is a Python function the agent calls like any other tool."
       />
 
-      <Section title="What a skill is">
+      <Section title="Two kinds">
         <P>
-          A skill is a short prompt fragment stored in your workspace&apos;s Skills library.
-          When you attach a skill to an agent, its text is automatically injected into that
-          agent&apos;s system prompt on every run — you do not need to copy anything into
-          the instructions yourself.
+          A prompt skill changes how an agent behaves. A code skill does work the agent
+          cannot do with the connectors it already has: parse a file, call an API, calculate
+          a date. They are attached in different places and they are not interchangeable.
+        </P>
+        <P>
+          Code skills are next. Everything after that is prompt skills.
+        </P>
+      </Section>
+
+      <Section id="code-skills" title="Code skills">
+        <P>
+          A code skill is a Python function you write, stored in your workspace, and published
+          as its own isolated function. Once it is attached to an agent, the agent can call it
+          like any other tool. The function must define <C>main(input, context)</C>.{" "}
+          <C>input</C> is the arguments the agent passed. <C>context</C> includes the
+          organisation, agent, and session ids.
+        </P>
+        <List>
+          <li>Timeout is 1–30 seconds. The default is 10.</li>
+          <li>Source, input, and output are each capped at 64 KB. The agent sees at most 16 KB of the result.</li>
+          <li>An agent can call code skills at most 25 times in one run.</li>
+          <li>Network access is off unless you turn it on. With it off, the function cannot open connections.</li>
+          <li>Secrets are write-only. You can replace them, but the saved values are never shown again.</li>
+          <li>Code skills are available on Pro and Business plans.</li>
+        </List>
+      </Section>
+
+      <Section title="Prompt skills">
+        <P>
+          A prompt skill is a short prompt fragment stored in your workspace&apos;s Skills library.
+          When you attach one to an agent, its text is injected into that agent&apos;s system
+          prompt on every run — you do not need to copy anything into the instructions yourself.
         </P>
         <P>
           Skills are meant to be narrow and reusable. A skill called &ldquo;Silence when
@@ -85,7 +113,7 @@ export default function SkillsHelp() {
 
       <Section title="Managing your library">
         <P>
-          Go to <strong>Skills</strong> in the sidebar to see your full library. From there
+          Go to <strong>Skills</strong> in the sidebar to see your prompt-skill library. From there
           you can:
         </P>
         <List>
@@ -100,25 +128,7 @@ export default function SkillsHelp() {
         </Callout>
       </Section>
 
-      <Section id="code-skills" title="Code skills">
-        <P>
-          A code skill is a Python function you write, stored in your workspace, and published
-          as its own isolated function. Once it is attached to an agent, the agent can call it
-          like any other tool. The function must define <C>main(input, context)</C>.{" "}
-          <C>input</C> is the arguments the agent passed. <C>context</C> includes the
-          organisation, agent, and session ids.
-        </P>
-        <List>
-          <li>Timeout is 1–30 seconds. The default is 10.</li>
-          <li>Source, input, and output are each capped at 64 KB. The agent sees at most 16 KB of the result.</li>
-          <li>An agent can call code skills at most 25 times in one run.</li>
-          <li>Network access is off unless you turn it on. With it off, the function cannot open connections.</li>
-          <li>Secrets are write-only. You can replace them, but the saved values are never shown again.</li>
-          <li>Code skills are available on Pro and Business plans.</li>
-        </List>
-      </Section>
-
-      <Section title="Writing a good skill">
+      <Section title="Writing a good prompt skill">
         <List>
           <li>
             <strong>One concern per skill.</strong> A skill that tries to handle tone, safety,
@@ -134,9 +144,9 @@ export default function SkillsHelp() {
             model to follow reliably and use more tokens on every run.
           </li>
           <li>
-            <strong>Avoid duplicating connector logic.</strong> Skills cannot call tools.
-            They can only instruct the agent on how to behave — not what tools to use or
-            how to authenticate.
+            <strong>Avoid duplicating connector logic.</strong> A prompt skill cannot call
+            tools. It only tells the agent how to behave. Running your own code is a code
+            skill, above.
           </li>
         </List>
       </Section>

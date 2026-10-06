@@ -2,13 +2,13 @@ import Link from "next/link"
 import { Callout, C, DocHeader, List, NextUp, P, Section, Steps } from "@/components/help/doc"
 import { nextPage } from "../nav"
 
-export const metadata = { title: "Help - Use Setod from your editor" }
+export const metadata = { title: "Help - Coding Agents" }
 
 export default function EditorHelp() {
   return (
     <>
       <DocHeader
-        title="Use Setod from your editor"
+        title="Coding Agents"
         lede="An MCP connector lets an agent call another server. This page is the other direction: Claude or Cursor calls Setod, and builds or diagnoses agents in your workspace."
       />
 

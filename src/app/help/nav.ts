@@ -9,7 +9,7 @@ export const HELP_NAV = [
   { href: "/help/notes", title: "Workspace notes" },
   { href: "/help/agent-calls", title: "Agent calls agent" },
   { href: "/help/skills", title: "Skills" },
-  { href: "/help/editor", title: "Use Setod from your editor" },
+  { href: "/help/editor", title: "Coding Agents" },
   { href: "/help/schedules", title: "Triggers and schedules" },
   { href: "/help/publishing", title: "Testing and publishing" },
   { href: "/help/runs", title: "Runs and troubleshooting" },
