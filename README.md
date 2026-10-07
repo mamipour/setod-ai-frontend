@@ -4,13 +4,13 @@
 
 <h1 align="center">Setod — Dashboard</h1>
 
-Next.js dashboard for [Setod](https://setod.com): an AI agent platform for small-business back-office work. This is the UI. The API, worker, and database live in [`setod-ai-backend`](https://github.com/mamipour/setod-ai-backend).
+Next.js dashboard for [Setod](https://setod.com): an AI agent platform for small and medium size business back-office work. This is the UI. The API, worker, and database live in [`setod-ai-backend`](https://github.com/mamipour/setod-ai-backend).
 
 Sign-in is Google OAuth through the API. The dashboard never holds model keys or account passwords itself — those stay encrypted on the backend.
 
 ## What you can do here
 
-- **Connect accounts** once per workspace (Gmail + Calendar via App Password, Telegram bot or account, Twilio, OpenAI, Anthropic, MCP servers, optional Tavily for web search).
+- **Connect accounts** once per workspace: Gmail and Google Calendar (via App Password), Telegram bot or account, Twilio SMS, WhatsApp Business, Instagram, Slack, HubSpot, Pipedrive, Airtable, Shopify, Calendly, inbound webhooks, OpenAI, Anthropic, MCP servers (GitHub, Linear, Notion, Slack, Atlassian, Zapier), and optional Tavily for web search.
 - **Build an agent** from a template (Emergency Email Triage, Telegram Group Lead Finder) or from scratch: instructions in plain English, tools from the accounts you attached, a schedule.
 - **Talk to Copilot** while writing instructions. It can look up a URL or a past run, then give you a prompt to copy in. It cannot save or publish anything.
 - **Test, then publish.** A test run is a real run — it uses the connected accounts and actually sends. Until you publish, the agent never runs on its own. Edits after that go to a draft.
