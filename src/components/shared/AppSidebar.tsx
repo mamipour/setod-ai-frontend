@@ -252,8 +252,8 @@ function ThemeSegment() {
   const { theme, setTheme } = useTheme()
   return (
     <div className="px-3 py-1.5 border-b">
-      <div className="flex items-center justify-center">
-        <div className="flex rounded-md bg-muted p-0.5">
+      <div className="flex min-w-0 items-center justify-center">
+        <div className="flex w-full min-w-0 rounded-md bg-muted p-0.5">
           {THEMES.map(({ value, icon: Icon, label }) => (
             <button
               key={value}
@@ -261,7 +261,7 @@ function ThemeSegment() {
               title={label}
               aria-label={`Switch to ${label} theme`}
               className={cn(
-                "flex items-center justify-center gap-1 rounded px-1.5 py-0.5 text-[11px] transition-[color,background-color,box-shadow]",
+                "flex min-w-0 flex-1 items-center justify-center gap-1 rounded px-1 py-0.5 text-[11px] transition-[color,background-color,box-shadow]",
                 theme === value
                   ? "bg-background text-foreground shadow-xs font-medium"
                   : "text-muted-foreground hover:text-foreground",
@@ -314,8 +314,8 @@ function UserMenu({ user, mini }: { user: { name: string; email: string; avatar_
         <>
           <button type="button" aria-label="Close account menu" className="fixed inset-0 z-40 cursor-default border-0 bg-transparent p-0" onClick={() => setOpen(false)} />
           <div className={cn(
-            "absolute z-50 bottom-full mb-1 rounded-xl border bg-popover shadow-lg py-1 w-52",
-            mini ? "left-10 bottom-0 mb-0" : "left-0 right-0",
+            "absolute z-50 bottom-full mb-1 rounded-xl border bg-popover shadow-lg py-1",
+            mini ? "left-10 bottom-0 mb-0 w-52" : "inset-x-0",
           )}>
             <div className="px-3 py-2 border-b">
               <p className="text-xs font-medium truncate">{user.name}</p>
@@ -456,15 +456,15 @@ export function AppSidebar() {
           ))}
         </nav>
 
-        {/* User menu at bottom */}
-        {user && (
-          <div className="mt-3 border-t pt-3">
-            <UserMenu user={{ ...user, is_staff: user?.is_staff ?? false }} mini={mini} />
-          </div>
-        )}
       </>
     )
   }
+
+  const userFooter = (mini: boolean) => user ? (
+    <div className="mt-3 shrink-0 border-t pt-3">
+      <UserMenu user={{ ...user, is_staff: user.is_staff ?? false }} mini={mini} />
+    </div>
+  ) : null
 
   return (
     <>
@@ -473,9 +473,10 @@ export function AppSidebar() {
         "hidden h-screen shrink-0 flex-col border-r bg-card py-4 transition-[width] duration-200 md:flex",
         collapsed ? "w-16 px-2" : "w-56 px-3",
       )}>
-        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
+        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden">
           {content({ mini: collapsed })}
         </div>
+        {userFooter(collapsed)}
       </aside>
 
       {/* Mobile header */}
@@ -497,9 +498,10 @@ export function AppSidebar() {
               className="absolute right-3 top-4 rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
               <X className="size-4" />
             </button>
-            <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
+            <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden">
               {content({ mini: false, drawer: true })}
             </div>
+            {userFooter(false)}
           </aside>
         </div>
       )}
