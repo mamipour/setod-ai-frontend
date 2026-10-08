@@ -2,47 +2,56 @@
   <img src="public/logo.svg" alt="Setod" width="56" />
 </p>
 
-<h1 align="center">Setod — Dashboard</h1>
+# Setod — Dashboard
 
-Next.js dashboard for [Setod](https://setod.com): an AI agent platform for small and medium size business back-office work. This is the UI. The API, worker, and database live in [`setod-ai-backend`](https://github.com/mamipour/setod-ai-backend).
+Next.js dashboard for [Setod](https://setod.com): an AI agent platform for small and medium size business back-office work. You connect accounts, write instructions, and put an agent on a schedule.
 
-Sign-in is Google OAuth through the API. The dashboard never holds model keys or account passwords itself — those stay encrypted on the backend.
+Actively maintained. The service people use is [setod.com](https://setod.com). This repository is the MIT source for the UI. The API, worker, and database are [`setod-ai-backend`](https://github.com/mamipour/setod-ai-backend).
 
-## What you can do here
+A star helps other people find the repo.
 
-- **Connect accounts** once per workspace: Gmail and Google Calendar (via App Password), Telegram bot or account, Twilio SMS, WhatsApp Business, Instagram, Slack, HubSpot, Pipedrive, Airtable, Shopify, Calendly, inbound webhooks, OpenAI, Anthropic, MCP servers (GitHub, Linear, Notion, Slack, Atlassian, Zapier), and optional Tavily for web search.
-- **Build an agent** from a template (Emergency Email Triage, Telegram Group Lead Finder) or from scratch: instructions in plain English, tools from the accounts you attached, a schedule.
-- **Talk to Copilot** while writing instructions. It can look up a URL or a past run, then give you a prompt to copy in. It cannot save or publish anything.
-- **Test, then publish.** A test run is a real run — it uses the connected accounts and actually sends. Until you publish, the agent never runs on its own. Edits after that go to a draft.
-- **Read every run** as a full transcript: what the model saw, which tools it called, what they returned.
-- **Skills, notes, knowledge, approvals** — reusable rules, facts the agent should know, uploaded documents, and a pause before irreversible actions.
+## What you do here
+
+Sign in with Google, through the API. This app does not store model keys or account passwords. Those stay encrypted on the backend.
+
+- Connect accounts once per workspace: Gmail and Google Calendar (App Password), Telegram bot or account, Twilio SMS, WhatsApp Business, Instagram, Slack, HubSpot, Pipedrive, Airtable, Shopify, Calendly, inbound webhooks, OpenAI, Anthropic, MCP servers (GitHub, Linear, Notion, Slack, Atlassian, Zapier), and optional Tavily for web search.
+- Start from a template, including Emergency Email Triage and Telegram Group Lead Finder, or from a blank agent.
+- Ask Copilot while you write. It can look up a URL or a past run, then hand you a prompt to copy in. It cannot save or publish.
+- Test, then publish. A test run uses the connected accounts and really sends. Until you publish, the agent does not run on its own. Later edits stay in a draft.
+- Read each run as a transcript: what the model saw, which tools it called, and what they returned.
+- Add skills, notes, uploaded documents, and a pause before irreversible actions.
+
+## Why this UI exists
+
+The decision is the instruction and the accounts, not a graph of steps. Publish freezes the instructions. The accounts stay live. A send can wait until a person approves it.
+
+Use [setod.com](https://setod.com) if you want that without running servers. Clone this repo if you want to change the dashboard.
 
 ## Requirements
 
-- Node.js 20+
-- The [Platform API](https://github.com/mamipour/setod-ai-backend) running (and its worker, if you want scheduled agents to fire)
+- Node.js 20 or newer (Next.js 16)
+- The [API](https://github.com/mamipour/setod-ai-backend) running. Scheduled agents also need its worker.
 
 ## Setup
 
 ```bash
-npm install
+npm install --legacy-peer-deps
 cp .env.example .env.local
 ```
 
-`.env.local` needs one value:
+The install flag is the one the production build uses. `.env.local` needs:
 
 ```
 NEXT_PUBLIC_API_URL=http://localhost:8000
 ```
 
-No trailing slash. In production this is the public API origin (for example `https://api.setod.com`).
+No trailing slash. In production this is the public API origin, for example `https://api.setod.com`.
 
 ```bash
 ./run.sh
-# or: npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000).
+`./run.sh` runs `npm run dev`. Open [http://localhost:3000](http://localhost:3000).
 
 ## Scripts
 
@@ -53,11 +62,11 @@ npm run start    # serve the production build
 npm run lint     # eslint
 ```
 
-`npm run build` fetches Inter and Geist Mono from Google Fonts at compile time, so the machine that builds needs outbound access to `fonts.googleapis.com`.
+`npm run build` loads Geist and Geist Mono from Google Fonts, so the build machine needs outbound access to `fonts.googleapis.com`.
 
 ## Stack
 
-Next.js 16 (App Router), React 19, Tailwind 4. Pages under `src/app/(dashboard)/` talk to the API through `src/lib/api.ts`.
+Next.js 16.3 (App Router), React 19, Tailwind 4. Pages under `src/app/(dashboard)/` call the API through `src/lib/api.ts`.
 
 ## License
 
